@@ -1,3 +1,4 @@
+// ১. হোম ইন্টারফেস (কাউন্টডাউন + ৩টি অ্যাডভান্সড মেকানিজম ট্র্যাকার সহ)
 export function renderHomeSection(studentName) {
     return `
         <div class="premium-name-card">
@@ -39,10 +40,47 @@ export function renderHomeSection(studentName) {
                 <p style="font-size: 12px; margin: 0; font-weight: 600; line-height: 1.4; font-style: italic;">"Every single MCQ you solve correctly brings you closer to your stethoscope."</p>
             </div>
         </div>
+
+        <div class="card-mneet border-blue">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; margin-bottom: 8px;">
+                <span>Syllabus Target Coverage</span>
+                <span style="color: var(--gold);" id="syllabus-percent-badge">38%</span>
+            </div>
+            <div style="width: 100%; background-color: var(--bg-input); height: 8px; border-radius: 4px; overflow: hidden;">
+                <div style="background-color: var(--gold); width: 38%; height: 100%;"></div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="card-mneet border-blue" style="padding: 12px 16px;">
+                <span style="font-size: 13px; font-weight: 800; color: var(--gold);"><i class="fas fa-play-circle mr-2"></i>Lectures: 45h / 180h Done</span>
+                <div style="font-size: 10px; color: var(--text-para); margin-top:2px;">Remaining: 135h | Topper Benchmark: 165h</div>
+            </div>
+            <div class="card-mneet border-blue" style="padding: 12px 16px;">
+                <span style="font-size: 13px; font-weight: 800; color: var(--gold);"><i class="fas fa-pen-nib mr-2"></i>Ques Attempted: 650 / 5000</span>
+                <div style="font-size: 10px; color: var(--text-para); margin-top:2px;">Remaining: 4350 Qs | Topper Benchmark: 4200 Qs</div>
+            </div>
+            <div class="card-mneet border-blue" style="padding: 12px 16px;">
+                <span style="font-size: 13px; font-weight: 800; color: var(--gold);"><i class="fas fa-hourglass-half mr-2"></i>Self Study: 120h / 900h</span>
+                <div style="font-size: 10px; color: var(--text-para); margin-top:2px;">Remaining: 780h | Topper Benchmark: 760h</div>
+            </div>
+        </div>
     `;
 }
 
-// 📚 স্তর ১: ৪টি মেনু সম্বলিত স্টাডি জোন ফ্রন্ট গেট
+// 🔔 ২. নোটিফিকেশন ইন্টারফেস
+export function renderNotificationSection() {
+    return `
+        <h2 style="font-size: 20px; font-weight: 800; color: var(--neon-red); margin-bottom: 14px;"><i class="fas fa-bell mr-2"></i>Live Notification Updates</h2>
+        <div class="card-mneet border-red" style="padding: 14px;">
+            <span style="font-size: 10px; background-color: rgba(239,68,68,0.1); padding: 2px 6px; border-radius: 6px; color: var(--neon-red); font-weight:700;">UPDATE</span>
+            <h4 style="margin: 8px 0 4px 0; font-size: 13px;">New Quiz Engine Live!</h4>
+            <p style="margin: 0; font-size: 11px; color: var(--text-para);">Earn +10 BP Coins on every correct answer in the Topic wise Quiz zone now!</p>
+        </div>
+    `;
+}
+
+// 📚 ৩. স্টাডি জোন রুট উইন্ডো
 export function renderStudySection() {
     return `
         <h2 style="font-size: 20px; font-weight: 800; color: var(--gold); margin-bottom: 14px;">STUDY ARCHIVE</h2>
@@ -61,73 +99,30 @@ export function renderStudySection() {
     `;
 }
 
-// 🧬 স্তর ২: সাবজেক্ট সিলেকশন গেট
+// 📦 ৪. বাকি স্ট্যাটিক উইজেট ম্যাপস
+export function renderBatchesSection() {
+    return `<h2 style="font-size:20px; font-weight:800; color:var(--gold);">AVAILABLE BATCHES</h2><div class="card-mneet border-gold" style="padding:16px;"><h3 style="margin:0 0 6px 0; font-size:15px;">Target NEET Dropper Pro</h3><button class="btn-mneet" style="margin-top:14px;">Enroll & Purchase</button></div>`;
+}
+export function renderTestSection() {
+    return `<h2 style="font-size:20px; font-weight:800; color:var(--gold);">TEST SERIES</h2><div class="card-mneet border-purple" style="padding:12px;"><select class="input-field"><option>All India mNEET Major Test Pack</option></select></div>`;
+}
+export function renderMStoreSection() {
+    return `<h2 style="font-size:20px; font-weight:800; color:var(--gold);">mSTORE MARKETPLACE</h2><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div class="card-mneet border-blue" style="padding:10px;"><h4 style="font-size:12px;">NCERT Punch Biology</h4><p style="color:var(--gold); font-weight:800; margin:4px 0;">₹380</p><button class="btn-mneet" style="padding:6px; font-size:11px;">Buy Now</button></div></div>`;
+}
+
+// ৪-স্তরের সাবজেক্ট ও ১০-প্লেয়ার এরিনা এক্সটেনশনগুলো নিচে লোড হচ্ছে
 export function renderSubjectGate(originRow) {
-    return `
-        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 14px; text-transform: uppercase;">Select Subject</h2>
-        <div class="card-mneet border-green node-row subject-select-btn" data-subject="biology" data-origin="${originRow}">
-            <div style="display:flex; align-items:center; gap:12px; font-size:14px; font-weight:800;"><i class="fas fa-dna" style="color:var(--neon-green);"></i><span>🧬 BIOLOGY CORE</span></div>
-        </div>
-        <div class="card-mneet border-red node-row subject-select-btn" data-subject="chemistry" data-origin="${originRow}">
-            <div style="display:flex; align-items:center; gap:12px; font-size:14px; font-weight:800;"><i class="fas fa-flask" style="color:var(--neon-red);"></i><span>🧪 CHEMISTRY CORE</span></div>
-        </div>
-        <div class="card-mneet border-blue node-row subject-select-btn" data-subject="physics" data-origin="${originRow}">
-            <div style="display:flex; align-items:center; gap:12px; font-size:14px; font-weight:800;"><i class="fas fa-bolt" style="color:var(--neon-blue);"></i><span>⚡ PHYSICS CORE</span></div>
-        </div>
-    `;
+    return `<h2 style="font-size:18px; font-weight:800; margin-bottom:14px;">SELECT SUBJECT</h2><div class="card-mneet border-green node-row subject-select-btn" data-subject="biology" data-origin="${originRow}"><div style="display:flex; align-items:center; gap:12px; font-size:14px; font-weight:800;"><i class="fas fa-dna" style="color:var(--neon-green);"></i><span>🧬 BIOLOGY CORE</span></div></div><div class="card-mneet border-red node-row subject-select-btn" data-subject="chemistry" data-origin="${originRow}"><div style="display:flex; align-items:center; gap:12px; font-size:14px; font-weight:800;"><i class="fas fa-flask" style="color:var(--neon-red);"></i><span>🧪 CHEMISTRY CORE</span></div></div>`;
 }
-
-// 📑 স্তর ৩: চ্যাপ্টার প্লেলিস্ট
 export function renderChapterPlaylist(subject, originRow) {
-    return `
-        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 14px; text-transform: uppercase;">${subject} Chapters</h2>
-        <div style="display:flex; flex-direction:column; gap:10px;">
-            <div class="card-mneet border-gold chapter-item-btn" data-chapter="cell_division" data-subject="${subject}" data-origin="${originRow}" style="padding:14px; cursor:pointer;">
-                <h4 style="font-size:14px; margin:0;">Cell Cycle and Cell Division</h4>
-                <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-para); margin-top:6px;">
-                    <span>🔥 High Yield (Red Tag)</span>
-                    <span style="color:var(--gold); font-weight:700;">✅ Verified</span>
-                </div>
-            </div>
-            <div class="card-mneet border-blue chapter-item-btn" data-chapter="biomolecules" data-subject="${subject}" data-origin="${originRow}" style="padding:14px; cursor:pointer;">
-                <h4 style="font-size:14px; margin:0;">Biomolecules and Proteins</h4>
-                <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-para); margin-top:6px;">
-                    <span>⚡ Medium Priority</span>
-                    <span style="color:var(--neon-blue); font-weight:700;">+50 BP Value</span>
-                </div>
-            </div>
-        </div>
-    `;
+    return `<h2 style="font-size:18px; font-weight:800; margin-bottom:14px; text-transform:uppercase;">${subject} Chapters</h2><div class="card-mneet border-gold chapter-item-btn" data-chapter="cell_division" data-subject="${subject}" data-origin="${originRow}" style="padding:14px; cursor:pointer;"><h4 style="font-size:14px; margin:0;">Cell Cycle and Cell Division</h4></div>`;
 }
-
-// ⚔️ স্তর ৪: ১০-প্লেয়ার আল্ট্রা-অ্যাডভান্সড লাইভ ব্যাটল রুম এরিনা ইউআই
 export function renderBattleLobbyView(roomCode, currentParticipantsCount) {
-    return `
-        <div class="card-mneet border-purple" style="text-align:center; padding:20px;">
-            <span style="font-size:10px; background-color:rgba(139,92,246,0.1); padding:4px 8px; border-radius:6px; color:var(--neon-purple); font-weight:800;">10-PLAYER LIVE ARENA</span>
-            <h3 style="font-size:22px; margin:12px 0 6px 0; font-weight:900;">BATTLE ROOM CODE</h3>
-            <div style="font-size:26px; font-family:monospace; font-weight:900; color:var(--gold); background:var(--bg-input); padding:10px; border-radius:12px; letter-spacing:4px; margin-bottom:12px;">
-                ${roomCode}
-            </div>
-            <p style="font-size:12px; color:var(--text-para);">Share this code with up to 10 friends. The quiz begins automatically when the slots fill or room creator locks start.</p>
-        </div>
-
-        <div class="card-mneet border-blue">
-            <h4 style="font-size:13px; margin-bottom:12px; font-weight:800;"><i class="fas fa-users mr-2"></i>Joined Surgeons Slots (${currentParticipantsCount}/10)</h4>
-            <div id="battle-participants-list" style="display:flex; flex-direction:column; gap:8px;">
-                <div class="battle-user-badge"><span>🥇 1. Waiting for players...</span><span style="color:var(--gold);">READY</span></div>
-            </div>
-        </div>
-
-        <button id="force-start-battle-btn" class="btn-mneet" style="background: linear-gradient(135deg, var(--neon-purple) 0%, var(--neon-blue) 100%) !important; color:white !important;">
-            Launch Multiplayer Battle ⚔️
-        </button>
-    `;
+    return `<div class="card-mneet border-purple" style="text-align:center; padding:20px;"><span style="font-size:10px; color:var(--neon-purple); font-weight:800;">10-PLAYER LIVE ARENA</span><h3 style="font-size:22px; margin:12px 0 6px 0;">BATTLE CODE</h3><div style="font-size:26px; font-family:monospace; font-weight:900; color:var(--gold); background:var(--bg-input); padding:10px; border-radius:12px; letter-spacing:4px;">${roomCode}</div></div><div class="card-mneet border-blue"><h4>Slots Joined (${currentParticipantsCount}/10)</h4><div id="battle-participants-list" style="margin-top:10px;"></div></div>`;
 }
-
-export function renderNotificationSection() { return ``; }
-export function renderWPCommunitySection() { return ``; }
-export function renderBPCoinGamingSection() { return ``; }
-export function renderBatchesSection() { return ``; }
-export function renderTestSection() { return ``; }
-export function renderMStoreSection() { return ``; }
+export function renderWPCommunitySection() {
+    return `<h2 style="font-size: 20px; font-weight: 800; color: var(--neon-green); margin-bottom: 14px;"><i class="fab fa-whatsapp mr-2"></i>mNEET Elite Club</h2><div class="card-mneet border-green" style="height: calc(100vh - 260px); display: flex; flex-direction: column; padding: 10px;"><div id="chat-messages-box" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;"></div><div style="display:flex; gap:8px; border-top:1px solid var(--border-line); padding-top:10px;"><label for="chat-photo-file" style="color:var(--neon-green); font-size:18px; cursor:pointer;"><i class="fas fa-camera"></i></label><input type="file" id="chat-photo-file" accept="image/*" style="display:none;"><input type="text" id="chat-text-input" placeholder="Type message..." style="flex:1;"><button id="chat-send-btn" class="link-btn" style="color:var(--neon-green);"><i class="fas fa-paper-plane"></i></button></div></div>`;
+}
+export function renderBPCoinGamingSection(userCurrentBP, userCurrentRank) {
+    return `<h2 style="font-size:20px; font-weight:800; color:var(--gold); margin-bottom:14px;">Gaming Rank System</h2><div class="card-mneet border-gold" style="padding:16px;"><h3>${userCurrentRank}</h3><p style="color:var(--gold); font-weight:900; margin-top:4px;">${userCurrentBP} BP</p></div>`;
+}
