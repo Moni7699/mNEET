@@ -1,11 +1,3 @@
-// admin_logic.js এর ওপরে এই ইম্পোর্ট লাইনটি বসাও:
-import { loadAdminSpecialManager } from "./admin_special.js";
-// admin_logic.js এর ওপরে এই ইম্পোর্ট লাইনটি বসাও:
-import { loadAdminQuizManager } from "./admin_quiz.js";
-// admin_logic.js এর ওপরে এই ইম্পোর্ট লাইনটি বসাও:
-import { loadAdminLecturesManager } from "./admin_lectures.js";
-// admin_logic.js এর ওপরে এই লাইনটি বসাও:
-import { loadAdminNcertManager } from "./admin_ncert.js";
 import { auth, db } from "./firebase-config.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { ref, get, set, update, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -14,12 +6,12 @@ import {
     renderAdminMStoreSection, renderAdminSubjectGate, renderAdminChapterPlaylist
 } from "./admin_view.js";
 
-// ৫টি স্পেশাল অ্যাডমিন মিরর অ্যাকশন ফাইলের ইম্পোর্টস (যা পরে তৈরি হবে)
-let loadAdminNcertManager = null;
-let loadAdminLecturesManager = null;
-let loadAdminQuizManager = null;
-let loadAdminSpecialManager = null;
-let loadAdminDoubtsManager = null;
+// 📦 ৫টি স্পেশাল অ্যাডমিন মিরর অ্যাকশন ফাইলের ইম্পোর্টস
+import { loadAdminNcertManager } from "./admin_ncert.js";
+import { loadAdminLecturesManager } from "./admin_lectures.js";
+import { loadAdminQuizManager } from "./admin_quiz.js";
+import { loadAdminSpecialManager } from "./admin_special.js";
+import { loadAdminDoubtsManager } from "./admin_doubts.js";
 
 const renderArea = document.getElementById("admin-main-render-area");
 const backBtn = document.getElementById("admin-back-btn");
@@ -32,10 +24,13 @@ let cacheAdminData = null;
 // ================= ১. অ্যাডমিন অথেন্টিকেশন ও অ্যাক্সেস কন্ট্রোল =================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        // সিকিউরিটি চেক: ইউজার আসলেই অ্যাডমিন কি না তা ডাটাবেজ থেকে ভেরিফাই করা
+        // সিকিউরিটি চেক: ইউজার অ্যাডমিন কি না তা ভেরিফাই করা
         const snap = await get(ref(db, 'users/' + user.uid));
         if (snap.exists() && snap.val().role === "admin") {
             cacheAdminData = snap.val();
+            
+            // টপ বার ও সাইড ড্রয়ার অ্যাকশন বাইন্ডিং
+            bindGlobalAdminActions();
             loadAdminTab("home");
         } else {
             alert("Unauthorized Access! Redirecting to student area.");
@@ -45,6 +40,36 @@ onAuthStateChanged(auth, async (user) => {
         window.location.href = "index.html";
     }
 });
+
+function bindGlobalAdminActions() {
+    // হেডার উইজেট অ্যাকশন
+    document.getElementById("admin-broadcast-btn").onclick = () => {
+        const msg = prompt("Enter global system broadcast notice:");
+        if (msg) alert("Notice Broadcasted (Logic integration pending)");
+    };
+
+    // সাইড ড্রয়ার টগলস
+    document.getElementById("admin-drawer-open-btn").onclick = () => { 
+        drawer.className = "drawer-open"; 
+        overlay.classList.remove("hidden-widget"); 
+    };
+    
+    const closeDrawer = () => { 
+        drawer.className = "drawer-closed"; 
+        overlay.classList.add("hidden-widget"); 
+    };
+    
+    document.getElementById("admin-drawer-close-btn").onclick = closeDrawer;
+    overlay.onclick = closeDrawer;
+    
+    document.getElementById("admin-theme-toggle").onchange = (e) => { 
+        document.body.className = e.target.checked ? "theme-dark" : "theme-white"; 
+    };
+
+    document.getElementById("admin-logout-btn").onclick = () => {
+        signOut(auth).then(() => { window.location.href = "index.html"; });
+    };
+}
 
 // ================= ২. বটম ট্যাব ও রাউটিং মেকানিজম =================
 const footerTabs = document.querySelectorAll(".footer-tab");
@@ -105,7 +130,7 @@ function listenLiveStudentsDirectory() {
         const allUsers = snapshot.val();
         Object.keys(allUsers).forEach(uid => {
             const user = allUsers[uid];
-            if (user.role === "admin") return; // অ্যাডমিনকে লিস্টে দেখানোর দরকার নেই
+            if (user.role === "admin") return; 
 
             const tr = `
                 <tr style="border-bottom: 1px solid var(--border-line);">
@@ -116,14 +141,14 @@ function listenLiveStudentsDirectory() {
                     <td style="padding: 12px; color:var(--gold); font-weight:700;">${user.customTargetCollege || "Not Set"}</td>
                     <td style="padding: 12px; font-weight:800; color:var(--neon-green);">${user.bpCoins || 0} BP</td>
                     <td style="padding: 12px;">
-                        <button class="adjust-bp-btn link-btn" data-uid="${uid}" data-current="${user.bpCoins || 0}" style="color:var(--gold); margin-right:10px;"><i class="fas fa-edit"></i></button>
+                        <button class="adjust-bp-btn link-btn" data-uid="${uid}" data-current="${user.bpCoins || 0}" style="color:var(--gold); font-size: 14px;"><i class="fas fa-edit"></i></button>
                     </td>
                 </tr>
             `;
             tableBody.insertAdjacentHTML("beforeend", tr);
         });
 
-        // বিপি কয়েন ইনস্ট্যান্ট এডিট অ্যাকশন বাইন্ডিং
+        // বিপি কয়েন ইনস্ট্যান্ট এডিট অ্যাকশন
         document.querySelectorAll(".adjust-bp-btn").forEach(btn => {
             btn.onclick = async () => {
                 const uid = btn.getAttribute("data-uid");
@@ -143,7 +168,7 @@ function bindStudyCardsRouting() {
         card.onclick = () => {
             const origin = card.getAttribute("data-origin");
             if (origin === "doubts") {
-                if (loadAdminDoubtsManager) loadAdminDoubtsManager(renderArea);
+                loadAdminDoubtsManager(renderArea);
             } else {
                 renderArea.innerHTML = renderAdminSubjectGate(origin);
                 bindSubjectGateClicks();
@@ -164,12 +189,10 @@ function bindSubjectGateClicks() {
 }
 
 function bindChapterPlaylistActions(subject, originCard) {
-    // চ্যাপ্টার ক্রিয়েশন ট্রিগার
     document.getElementById("admin-create-chapter-node-btn").onclick = async () => {
         const title = document.getElementById("new-chapter-title-input").value.trim();
         if (!title) return;
 
-        // চ্যাপ্টারের নামের ওপর ভিত্তি করে একটি ইউনিক স্লাগ বা আইডি তৈরি
         const chapterId = title.toLowerCase().replace(/[^a-z0-9]/g, "_");
         await set(ref(db, `chapters/${subject}/${chapterId}`), { id: chapterId, title: title, timestamp: Date.now() });
         
@@ -192,43 +215,33 @@ async function refreshAdminChaptersList(subject, originCard) {
         Object.keys(chaptersData).forEach(id => {
             const ch = chaptersData[id];
             const div = `
-                <div class="card-mneet border-gold admin-chapter-item-btn" data-chapter="${ch.id}" data-subject="${subject}" data-origin="${originCard}" style="padding:14px; cursor:pointer;">
+                <div class="card-mneet border-gold admin-chapter-item-btn" data-chapter="${ch.id}" data-subject="${subject}" data-origin="${originCard}" style="padding:14px; cursor:pointer; margin-bottom: 8px;">
                     <h4 style="font-size:14px; margin:0;">${ch.title}</h4>
                 </div>
             `;
             container.insertAdjacentHTML("beforeend", div);
         });
 
-        // চ্যাপ্টার ক্লিক ইভেন্ট - এটি স্পেশাল আপলোডার ম্যানেজারগুলোকে কল করবে
+        // চ্যাপ্টার ক্লিক ইভেন্ট - ডেডিকেটেড অ্যাডমিন ফাইল কল
         document.querySelectorAll(".admin-chapter-item-btn").forEach(item => {
             item.onclick = () => {
                 const origin = item.getAttribute("data-origin");
                 const sub = item.getAttribute("data-subject");
                 const chap = item.getAttribute("data-chapter");
 
-                if (origin === "ncert" && loadAdminNcertManager) loadAdminNcertManager(sub, chap, renderArea);
-                else if (origin === "lectures" && loadAdminLecturesManager) loadAdminLecturesManager(sub, chap, renderArea);
-                else if (origin === "quiz" && loadAdminQuizManager) loadAdminQuizManager(sub, chap, renderArea);
-                else if (origin === "special" && loadAdminSpecialManager) loadAdminSpecialManager(sub, chap, renderArea);
+                if (origin === "ncert") loadAdminNcertManager(sub, chap, renderArea);
+                else if (origin === "lectures") loadAdminLecturesManager(sub, chap, renderArea);
+                else if (origin === "quiz") loadAdminQuizManager(sub, chap, renderArea);
+                else if (origin === "special") loadAdminSpecialManager(sub, chap, renderArea);
             };
         });
     }
 }
 
-// ================= ৫. গ্লোবাল উইজেটস ও সাইড ড্রয়ার =================
+// ================= ৫. গ্লোবাল ব্যাক বাটন =================
 backBtn.addEventListener("click", () => {
     footerTabs.forEach(t => t.classList.remove("active-tab"));
     document.querySelector('[data-target="home"]')?.classList.add("active-tab");
     loadAdminTab("home");
 });
-
-document.getElementById("admin-drawer-open-btn").onclick = () => { drawer.className = "drawer-open"; overlay.classList.remove("hidden-widget"); };
-const closeDrawer = () => { drawer.className = "drawer-closed"; overlay.classList.add("hidden-widget"); };
-document.getElementById("admin-drawer-close-btn").onclick = closeDrawer;
-overlay.onclick = closeDrawer;
-document.getElementById("admin-theme-toggle").onchange = (e) => { document.body.className = e.target.checked ? "theme-dark" : "theme-white"; };
-
-document.getElementById("admin-logout-btn").onclick = () => {
-    signOut(auth).then(() => { window.location.href = "index.html"; });
-};
-                         
+            
