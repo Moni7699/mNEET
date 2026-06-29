@@ -1,37 +1,58 @@
-/* কাস্টম গোল্ডেন এবং ব্ল্যাক থিম ভেরিয়েবল */
+/* ================= THEME DESIGN SYSTEM ================= */
+.theme-dark {
+    --bg-main: #0F0F0F;
+    --bg-header-footer: #1A1A1A;
+    --bg-card: #161616;
+    --bg-input: #222222;
+    --text-main: #FFFFFF;
+    --text-muted: #A0A0A0;
+    --border-color: #2A2A2A;
+    --m-color: #FFFFFF;
+}
+
+.theme-white {
+    --bg-main: #F4F6F9;
+    --bg-header-footer: #FFFFFF;
+    --bg-card: #FFFFFF;
+    --bg-input: #EBF0F5;
+    --text-main: #1A1A1A;
+    --text-muted: #666666;
+    --border-color: #E2E8F0;
+    --m-color: #000000; /* হোয়াইট মোডে 'm' কালো দেখাবে সুন্দর লাগবে */
+}
+
+/* কমন ভেরিয়েবল */
 :root {
-    --bg-black: #0F0F0F;
-    --card-black: #1A1A1A;
     --golden: #D4AF37;
     --golden-hover: #AA8C2C;
-    --white: #FFFFFF;
-    --gray: #A0A0A0;
 }
 
+/* গ্লোবাল বডি থিম রেন্ডারিং */
 body {
-    background-color: var(--bg-black);
-    color: var(--white);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    padding: 0;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-/* গোল্ডেন টেক্সট এবং বাটন স্টাইল */
+#main-header, #main-footer, #profile-drawer {
+    background-color: var(--bg-header-footer);
+    border-color: var(--border-color);
+}
+
+.card-bg {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+}
+
+#logo-m { color: var(--m-color); }
 .text-golden { color: var(--golden); }
-.bg-golden { background-color: var(--golden); color: var(--bg-black); }
-.bg-golden:hover { background-color: var(--golden-hover); }
+.bg-golden { background-color: var(--golden); }
 
-/* ইনপুট ফিল্ড স্টাইল */
-input {
-    background-color: #252525 !important;
-    border: 1px solid #3D3D3D !important;
-    color: white !important;
-}
-input:focus {
-    border-color: var(--golden) !important;
-    outline: none;
+/* ইনপুট ও ড্রপডাউন */
+select, input {
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-main) !important;
 }
 
-/* হাইড করার জন্য ক্লাস */
 .hidden { display: none !important; }
-
