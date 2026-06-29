@@ -3,18 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mNEET - Platform</title>
-    <link rel="stylesheet" href="style.css">
+    <title>mNEET - Student Terminal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ================= EMBEDDED REAL-TIME THEME SYSTEM ================= */
+        :root {
+            --gold: #F3B917;
+            --wp-green: #25D366;
+            --neon-blue: #2563EB;
+            --neon-purple: #8B5CF6;
+            --neon-red: #EF4444;
+            --neon-green: #10B981;
+        }
+
+        /* DARK THEME */
+        .theme-dark {
+            --bg-app: #090D16;
+            --bg-surface: #131A26;
+            --bg-input: #030712;
+            --text-title: #FFFFFF;
+            --text-para: #94A3B8;
+            --border-line: #1E293B;
+            --drawer-overlay: rgba(0, 0, 0, 0.75);
+            --m-logo: #FFFFFF;
+        }
+
+        /* WHITE THEME (ক্রিস্প মিনিমাল লুক - কার্ডগুলো বর্ডারড ও হোয়াইট) */
+        .theme-white {
+            --bg-app: #F8FAFC;
+            --bg-surface: #FFFFFF;
+            --bg-input: #F1F5F9;
+            --text-title: #0F172A;
+            --text-para: #475569;
+            --border-line: #E2E8F0;
+            --drawer-overlay: rgba(15, 23, 42, 0.4);
+            --m-logo: #0F172A;
+        }
+
+        * { box-sizing: border-box !important; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-app) !important;
+            color: var(--text-title) !important;
+            font-family: system-ui, -apple-system, sans-serif;
+            width: 100vw; height: 100vh;
+            overflow: hidden;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        /* FIXED LAYER PROJECTION */
+        .dashboard-header {
+            position: fixed; top: 0; left: 0; right: 0; height: 60px;
+            background-color: var(--bg-surface) !important;
+            border-bottom: 2px solid var(--border-line);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 16px; z-index: 999;
+        }
+
+        .dashboard-viewport {
+            position: absolute; top: 60px; bottom: 68px; left: 0; right: 0;
+            padding: 16px; overflow-y: auto; overflow-x: hidden;
+        }
+
+        .dashboard-footer {
+            position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
+            background-color: var(--bg-surface) !important;
+            border-top: 2px solid var(--border-line);
+            display: flex; justify-content: space-around; align-items: center; z-index: 999;
+        }
+
+        /* PURE INDEPENDENT SIDE DRAWER */
+        #profile-drawer {
+            position: fixed; top: 0; bottom: 0; right: 0; width: 85%; max-width: 320px;
+            background-color: var(--bg-surface) !important; z-index: 100000 !important;
+            border-left: 2px solid var(--border-line); padding: 24px 20px;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; flex-direction: column;
+        }
+        .drawer-closed { transform: translateX(100%); }
+        .drawer-open { transform: translateX(0); }
+        #drawer-overlay {
+            position: fixed; inset: 0; background: var(--drawer-overlay); z-index: 99999 !important;
+        }
+
+        /* PREMIUM DYNAMIC WIRES */
+        .premium-name-card {
+            background: linear-gradient(135deg, var(--bg-surface) 0%, rgba(37, 99, 235, 0.05) 100%);
+            border: 2px solid var(--neon-blue); border-radius: 22px; padding: 18px; margin-bottom: 16px;
+        }
+        .card-mneet {
+            background-color: var(--bg-surface) !important;
+            border-radius: 20px; padding: 16px; margin-bottom: 16px;
+            border: 2px solid var(--border-line);
+        }
+        .border-gold { border-color: var(--gold) !important; }
+        .border-blue { border-color: var(--neon-blue) !important; }
+        .border-purple { border-color: var(--neon-purple) !important; }
+        .border-red { border-color: var(--neon-red) !important; }
+        .border-green { border-color: var(--neon-green) !important; }
+
+        .input-field {
+            width: 100%; background-color: var(--bg-input) !important;
+            border: 2px solid var(--border-line) !important;
+            color: var(--text-title) !important;
+            padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 600; outline: none;
+        }
+        .btn-mneet {
+            width: 100%; background-color: var(--gold) !important; color: #000000 !important;
+            font-weight: 800; padding: 14px; border: none; border-radius: 14px; cursor: pointer; text-transform: uppercase;
+        }
+        .footer-tab {
+            background: none; border: none; color: var(--text-para);
+            display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 20%;
+        }
+        .active-tab { color: var(--gold) !important; }
+        .link-btn { background: none; border: none; cursor: pointer; }
+        .hidden-widget { display: none !important; }
+
+        /* TOGGLE ENGINE */
+        .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+        .switch input { display: none; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #475569; border-radius: 34px; transition: .3s; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .3s; }
+        input:checked + .slider { background-color: var(--gold); }
+        input:checked + .slider:before { transform: translateX(18px); }
+        
+        .node-row { display: flex; justify-content: space-between; align-items: center; padding: 16px; cursor: pointer; border-radius: 20px; }
+    </style>
 </head>
 <body class="theme-dark">
 
-    <!-- STATIC FIXED HEADER BAR -->
     <header class="dashboard-header">
-        <div class="header-left" id="header-left-zone">
+        <div class="header-left">
             <button id="dashboard-back-btn" class="hidden-widget link-btn" style="font-size: 18px; color: var(--text-title);"><i class="fas fa-arrow-left"></i></button>
             <div id="home-top-widgets" style="display: flex; align-items: center; gap: 14px;">
-                <!-- হোয়াটসঅ্যাপ লোগোতে তোমার রিকোয়েস্ট অনুযায়ী ফিক্সড গ্রিন কালার ম্যাপ করা হলো -->
                 <button id="wp-community-btn" class="link-btn" style="color: var(--wp-green) !important; font-size: 22px;"><i class="fab fa-whatsapp"></i></button>
                 <button id="noti-btn" class="link-btn" style="color: var(--gold); font-size: 18px; position: relative;">
                     <i class="fas fa-bell"></i>
@@ -23,41 +146,38 @@
             </div>
         </div>
 
-        <div class="header-center" style="font-weight: 900; font-size: 20px;">
-            <span style="color: var(--text-title);">m</span><span style="color: var(--gold);">NEET</span>
+        <div style="font-weight: 900; font-size: 20px;">
+            <span style="color: var(--m-logo);">m</span><span style="color: var(--gold);">NEET</span>
         </div>
 
-        <div class="header-right" style="display: flex; align-items: center; gap: 12px;">
-            <div style="font-size: 11px; font-weight: 800; color: var(--gold); background: rgba(243,185,23,0.1); border: 1px solid rgba(243,185,23,0.3); padding: 5px 10px; border-radius: 20px; white-space: nowrap;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 11px; font-weight: 800; color: var(--gold); background: rgba(243,185,23,0.1); border: 1px solid rgba(243,185,23,0.3); padding: 5px 10px; border-radius: 20px;">
                 <i class="fas fa-coins" style="margin-right: 5px;"></i><span id="top-bp-count">0 BP</span>
             </div>
             <button id="drawer-open-btn" class="link-btn" style="color: var(--text-title); font-size: 18px;"><i class="fas fa-bars"></i></button>
         </div>
     </header>
 
-    <!-- 🔒 INDEPENDENT MAIN INNER VIEWPORT LAYER -->
     <main class="dashboard-viewport" id="dashboard-main-render-area">
-        <!-- Views Content Load Area -->
-    </main>
+        </main>
 
-    <!-- 🔒 OUTSIDE INDEPENDENT DRAWER BOX (Saves from overwrite) -->
     <div id="profile-drawer" class="drawer-closed">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-line); padding-bottom: 10px;">
-            <h3 style="margin:0; font-size:16px; color:var(--gold);">Student Station</h3>
+            <h3 style="margin: 0; font-size: 16px; color: var(--gold);">Student Station</h3>
             <button id="drawer-close-btn" class="link-btn" style="color: var(--text-title); font-size: 18px;"><i class="fas fa-times"></i></button>
         </div>
         
-        <div class="drawer-profile-card" style="display: flex; align-items: center; gap: 12px; background-color: var(--bg-app); padding: 12px; border-radius: 16px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 12px; background-color: var(--bg-input); padding: 12px; border-radius: 16px; margin-bottom: 20px;">
             <div id="user-avatar" style="width: 36px; height: 36px; background-color: var(--gold); border-radius: 50%; color: #000; font-weight: 900; display: flex; align-items: center; justify-content: center;">M</div>
             <div>
-                <h4 id="profile-name-display" style="margin:0; font-size:14px; font-weight:700; color: var(--text-title);">Student</h4>
-                <p id="profile-phone-display" style="margin:4px 0 0 0; font-size:11px; color: var(--text-para);">Phone</p>
+                <h4 id="profile-name-display" style="margin: 0; font-size: 14px; font-weight: 700;">Student</h4>
+                <p id="profile-phone-display" style="margin: 4px 0 0 0; font-size: 11px; color: var(--text-para);">Phone</p>
             </div>
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; font-size: 13px; font-weight:600;">
-                <span><i class="fas fa-adjust" style="margin-right:10px;"></i> Dark Mode Theme</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 4px; font-size: 13px; font-weight: 600;">
+                <span><i class="fas fa-adjust" style="margin-right: 8px;"></i> Dark Mode Theme</span>
                 <label class="switch">
                     <input type="checkbox" id="dashboard-theme-toggle" checked>
                     <span class="slider"></span>
@@ -65,33 +185,33 @@
             </div>
         </div>
 
-        <!-- Custom Target Forms Inside Main Root Drawer Container -->
-        <div style="margin-top: auto; padding: 12px; border: 1px dashed var(--border-line); border-radius: 14px; margin-bottom: 15px;">
-            <h5 style="margin: 0 0 8px 0; font-size: 11px; color: var(--gold); text-transform: uppercase;">Set Custom Target</h5>
+        <div style="margin-top: 15px; padding: 12px; border: 1px dashed var(--border-line); border-radius: 14px; margin-bottom: 15px;">
+            <h5 style="margin: 0 0 8px 0; font-size: 11px; color: var(--gold); text-transform: uppercase;">Set My Custom Targets</h5>
             <div style="margin-bottom: 8px;">
-                <input type="text" id="target-college-input" class="input-field" placeholder="Target Medical College">
+                <label style="font-size: 10px; color: var(--text-para); display:block; margin-bottom:4px;">Target Medical College</label>
+                <input type="text" id="target-college-input" class="input-field" placeholder="e.g. AIIMS Delhi">
             </div>
             <div style="margin-bottom: 12px;">
+                <label style="font-size: 10px; color: var(--text-para); display:block; margin-bottom:4px;">Target Exam Date</label>
                 <input type="date" id="target-date-input" class="input-field">
             </div>
             <button id="save-goals-btn" class="btn-mneet" style="padding: 8px; font-size: 12px;">Update My Targets</button>
         </div>
 
-        <button id="logout-submit-btn" style="width:100%; background-color:#EF4444; color:white; border:none; padding:12px; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer;"><i class="fas fa-power-off"></i> Secure Log Out</button>
+        <button id="logout-submit-btn" style="width:100%; background-color:#EF4444; color:white; border:none; padding:12px; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer; margin-top: auto;"><i class="fas fa-power-off"></i> Secure Log Out</button>
     </div>
     <div id="drawer-overlay" class="hidden-widget"></div>
 
-    <!-- STATIC FIXED FOOTER NAVIGATION -->
     <footer class="dashboard-footer">
-        <button class="footer-tab active-tab" data-target="home"><i class="fas fa-home"></i><span style="font-size:10px; font-weight:700;">Home</span></button>
-        <button class="footer-tab" data-target="batches"><i class="fas fa-layer-group"></i><span style="font-size:10px; font-weight:700;">Batches</span></button>
-        <button class="footer-tab" data-target="study"><i class="fas fa-graduation-cap"></i><span style="font-size:10px; font-weight:700;">Study</span></button>
-        <button class="footer-tab" data-target="test"><i class="fas fa-file-invoice"></i><span style="font-size:10px; font-weight:700;">Test</span></button>
-        <button class="footer-tab" data-target="mstore"><i class="fas fa-shopping-bag"></i><span style="font-size:10px; font-weight:700;">mStore</span></button>
+        <button class="footer-tab active-tab" data-target="home"><i class="fas fa-home"></i><span style="font-size:9px; font-weight:700;">Home</span></button>
+        <button class="footer-tab" data-target="batches"><i class="fas fa-layer-group"></i><span style="font-size:9px; font-weight:700;">Batches</span></button>
+        <button class="footer-tab" data-target="study"><i class="fas fa-graduation-cap"></i><span style="font-size:9px; font-weight:700;">Study</span></button>
+        <button class="footer-tab" data-target="test"><i class="fas fa-file-invoice"></i><span style="font-size:9px; font-weight:700;">Test</span></button>
+        <button class="footer-tab" data-target="mstore"><i class="fas fa-shopping-bag"></i><span style="font-size:9px; font-weight:700;">mStore</span></button>
     </footer>
 
     <script type="module" src="dashboard_view.js"></script>
     <script type="module" src="dashboard_logic.js"></script>
 </body>
-            </html>
-            
+    </html>
+    
