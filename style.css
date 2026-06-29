@@ -1,118 +1,93 @@
-/* ================= PREMIUM mNEET CORE THEME ================= */
-:root {
-    --neon-gold: #F3B917;
-    --neon-blue: #2563EB;
-}
-
-/* 🌙 DARK MODE (তোমার স্ক্রিনশটের আসল কালার কম্বিনেশন) */
-.theme-dark {
-    --bg-app: #090D16;
-    --bg-container: #131A26;
-    --bg-input: #0D131F;
-    --text-main: #FFFFFF;
-    --text-muted: #94A3B8;
-    --border-input: #1E293B;
-    --logo-m: #FFFFFF;
-}
-
-/* ☀️ WHITE MODE (ইনপুট এবং টেক্সটের কালার ব্যালেন্সড) */
-.theme-white {
-    --bg-app: #F1F5F9;
-    --bg-container: #FFFFFF;
-    --bg-input: #F8FAFC;
-    --text-main: #0F172A;
-    --text-muted: #64748B;
-    --border-input: #CBD5E1;
-    --logo-m: #0F172A;
-}
-
-/* ================= GLOBAL STYLES ================= */
+/* পিওর ডার্ক থিম - স্ট্রাকচারাল ফিক্সড */
 body {
-    background-color: var(--bg-app) !important;
-    color: var(--text-main) !important;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #090D16 !important;
+    color: #FFFFFF !important;
+    font-family: system-ui, -apple-system, sans-serif;
     margin: 0;
-    padding: 0;
+    padding: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-/* রাউন্ডেড অথন্টিক কনটেইনার */
-.auth-box {
-    background-color: var(--bg-container) !important;
-    border-radius: 28px;
-    padding: 35px 25px;
-    width: 90%;
-    max-width: 380px;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
     box-sizing: border-box;
 }
 
-/* লোগো টেক্সট */
-.m-logo { color: var(--logo-m); }
-.neet-logo { color: var(--neon-gold); }
-.text-muted { color: var(--text-muted); }
+/* মূল ফ্রেম - যা স্ক্রিনশটে গায়েব ছিল */
+.auth-box {
+    background-color: #131A26 !important;
+    border: 2px solid #1E293B !important;
+    border-radius: 24px !important;
+    padding: 30px 20px !important;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    box-sizing: border-box;
+    display: block; /* ফিক্সড ব্লক */
+}
 
-/* তোমার স্ক্রিনশটের মতো নিখুঁত ইনপুট বক্স */
+/* ইনপুট গ্রুপ ফিক্স */
 .input-group {
-    margin-bottom: 18px;
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 16px !important;
+    box-sizing: border-box;
+}
+
+.input-group label {
+    display: block !important; /* লেবেল সবসময় উপরে থাকবে */
+    font-size: 13px;
+    color: #94A3B8;
+    margin-bottom: 6px;
     text-align: left;
 }
-.input-group label {
-    display: block;
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-    font-weight: 500;
-}
+
 input {
-    width: 100%;
-    background-color: var(--bg-input) !important;
-    border: 2px solid var(--border-input) !important;
-    color: var(--text-main) !important;
-    padding: 14px 16px;
-    border-radius: 16px;
-    font-size: 14px;
-    box-sizing: border-box;
-    transition: border-color 0.2s;
+    display: block !important; /* ইনপুট সবসময় নিচে পুরো জায়গা জুড়ে থাকবে */
+    width: 100% !important;
+    background-color: #0D131F !important;
+    border: 2px solid #1E293B !important;
+    color: #FFFFFF !important;
+    padding: 12px 14px !important;
+    border-radius: 12px !important;
+    font-size: 14px !important;
+    box-sizing: border-box !important;
 }
+
 input:focus {
-    border-color: var(--neon-blue) !important;
+    border-color: #2563EB !important;
     outline: none;
 }
 
-/* সলিড রাউন্ডেড গোল্ডেন বাটন */
+/* বাটন স্টাইল */
 .btn-mneet {
-    width: 100%;
-    background-color: var(--neon-gold) !important;
+    display: block !important;
+    width: 100% !important;
+    background-color: #F3B917 !important;
     color: #000000 !important;
     font-weight: 800;
     font-size: 15px;
-    padding: 15px;
+    padding: 14px !important;
     border: none !important;
-    border-radius: 16px;
+    border-radius: 12px !important;
     cursor: pointer;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-top: 10px;
-}
-.btn-mneet:hover {
-    background-color: #D9A312 !important;
+    box-sizing: border-box;
+    margin-top: 15px;
 }
 
 .link-btn {
-    background: none;
-    border: none;
-    color: var(--neon-gold);
+    background: none !important;
+    border: none !important;
+    color: #F3B917 !important;
     font-weight: 700;
     cursor: pointer;
     font-size: 13px;
-    padding: 0;
+    padding: 0 !important;
 }
-.link-btn:hover { text-decoration: underline; }
-.hidden { display: none !important; }
+
+/* এই ক্লাসটি অন্য ফর্মগুলোকে লুকিয়ে রাখবে */
+.hidden { 
+    display: none !important; 
+}
+
 .text-center { text-align: center; }
-    
