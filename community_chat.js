@@ -1,8 +1,7 @@
 import { db } from "./firebase-config.js";
-import { ref, push, onChildAdded, set, update, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { renderBattleLobbyView } from "./dashboard_view.js";
+import { ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-// ================= চ্যাট লজিক কন্টেইনার =================
+// এই ফাংশনটি dashboard_logic.js থেকে কল হয়ে চ্যাট সচল করে
 export function initializeCommunityChat(cacheUserData) {
     const chatMessagesBox = document.getElementById("chat-messages-box");
     const chatTextInput = document.getElementById("chat-text-input");
@@ -10,123 +9,100 @@ export function initializeCommunityChat(cacheUserData) {
     const chatPhotoFile = document.getElementById("chat-photo-file");
 
     if (!chatMessagesBox || !chatSendBtn) return;
+
+    // একটিভ ব্যাচ অনুযায়ী আলাদা চ্যাট রুমের পাথ সিঙ্ক হবে
     const selectedBatch = document.getElementById("batch-view-filter")?.value || "default_batch";
     const chatRef = ref(db, `chats/${selectedBatch}`);
 
+    // ================= ১. রিয়েল-টাইমে মেসেজ ও ফটো ডাটাবেজ থেকে লোড করা =================
     onChildAdded(chatRef, (snapshot) => {
         if (snapshot.exists()) {
             const msgData = snapshot.val();
             renderSingleMessage(msgData, cacheUserData.uid);
+            // নতুন মেসেজ এলে অটো-স্ক্রোল ডাউন
             chatMessagesBox.scrollTop = chatMessagesBox.scrollHeight;
         }
     });
 
+    // ================= ২. টেক্সট মেসেজ পাঠানো =================
     chatSendBtn.onclick = async () => {
         const text = chatTextInput.value.trim();
         if (!text) return;
-        await push(chatRef, { senderId: cacheUserData.uid, senderName: cacheUserData.name || "Student", messageType: "text", content: text, timestamp: Date.now() });
-        chatTextInput.value = "";
+
+        try {
+            await push(chatRef, {
+                senderId: cacheUserData.uid,
+                senderName: cacheUserData.name || "mNEET Student",
+                messageType: "text",
+                content: text,
+                timestamp: Date.now()
+            });
+            chatTextInput.value = ""; // ইনপুট বক্স ক্লিয়ার
+        } catch (err) {
+            alert("Chat Error: " + err.message);
+        }
     };
 
+    // এন্টার প্রেস করলে মেসেজ সেন্ড হবে
+    chatTextInput.onkeypress = (e) => {
+        if (e.key === 'Enter') chatSendBtn.click();
+    };
+
+    // ================= ৩. ফটো সিলেক্ট ও Base64 কনভার্ট করে ফ্রীতে পাঠানো =================
     chatPhotoFile.onchange = (e) => {
         const file = e.target.files[0];
-        if (!file || file.size > 2 * 1024 * 1024) return;
+        if (!file) return;
+
+        // ২ এমবির বেশি বড় ছবি আটকানোর ফিল্টার
+        if (file.size > 2 * 1024 * 1024) {
+            alert("Image size too big! Please select an image under 2MB.");
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = async (event) => {
-            await push(chatRef, { senderId: cacheUserData.uid, senderName: cacheUserData.name || "Student", messageType: "image", content: event.target.result, timestamp: Date.now() });
+            const base64Image = event.target.result; // ইমেজ টু টেক্সট স্ট্রিং রূপান্তর
+
+            try {
+                await push(chatRef, {
+                    senderId: cacheUserData.uid,
+                    senderName: cacheUserData.name || "mNEET Student",
+                    messageType: "image",
+                    content: base64Image,
+                    timestamp: Date.now()
+                });
+            } catch (err) {
+                alert("Photo Upload Error: " + err.message);
+            }
         };
         reader.readAsDataURL(file);
     };
 }
 
-function renderSingleMessage(msg, currentUserId) { /* ওল্ড চ্যাট রেন্ডারার */ }
+// ================= ৪. মেসেজ রেন্ডারিং ও ইউআই অ্যালাইনমেন্ট লজিক =================
+function renderSingleMessage(msg, currentUserId) {
+    const chatMessagesBox = document.getElementById("chat-messages-box");
+    const isMe = msg.senderId === currentUserId;
 
-// ================= ⚔️ আল্ট্রা-অ্যাডভান্সড ১০-প্লেয়ার লাইভ ব্যাটল ইঞ্জিন =================
-export function createOrJoinMultiplayerBattle(chapterName, cacheUserData, renderArea) {
-    // ৬ ডিজিটের ইউনিক কোড জেনারেশন মেকানিজম
-    const roomCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const roomRef = ref(db, `battles/${roomCode}`);
+    // নিজের মেসেজ ডানদিকে, বন্ধুদের মেসেজ বামদিকে উইথ গ্লোবাল কালার ব্যালেন্স
+    const msgBg = isMe ? "background-color: #2563EB; align-self: flex-end;" : "background-color: var(--bg-input); align-self: flex-start;";
+    const textColor = isMe ? "color: #FFFFFF;" : "color: var(--text-title);";
+    const nameColor = isMe ? "color: #F3B917;" : "color: #10B981;";
 
-    // ডেটাবেজে ১০ জন ম্যাক্স স্লটের ফ্রেম লক করা হলো
-    const initialRoomSetup = {
-        roomCode: roomCode,
-        chapter: chapterName,
-        creatorId: cacheUserData.uid,
-        status: "waiting",
-        participantsCount: 1,
-        maxSlots: 10
-    };
+    let mediaContent = "";
+    if (msg.messageType === "image") {
+        mediaContent = `<img src="${msg.content}" style="width: 100%; max-width: 200px; border-radius: 12px; margin-top: 6px; display: block; object-fit: contain;">`;
+    } else {
+        mediaContent = `<span style="font-size: 13px; ${textColor}">${msg.content}</span>`;
+    }
 
-    set(roomRef, initialRoomSetup).then(() => {
-        // ক্রিয়েটরকে অটোমেটিক স্লট ১ এ যুক্ত করা
-        set(ref(db, `battles/${roomCode}/players/${cacheUserData.uid}`), {
-            uid: cacheUserData.uid,
-            name: cacheUserData.name || "Surgeon Team",
-            score: 0,
-            slotNo: 1
-        });
+    const msgHtml = `
+        <div style="${msgBg} padding: 10px 14px; border-radius: 16px; max-width: 80%; display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+            <span style="font-size: 10px; ${nameColor} font-weight: 800; margin-bottom: 2px;">${isMe ? "You" : msg.senderName}</span>
+            ${mediaContent}
+        </div>
+    `;
 
-        // লাইভ ১০ জন প্লেয়ার ট্র্যাকিং লিসেনার অ্যাক্টিভেশন
-        listenBattleRoomParticipants(roomCode, cacheUserData, renderArea);
-    });
-}
-
-export function joinExistingBattleRoom(roomCode, cacheUserData, renderArea) {
-    const roomRef = ref(db, `battles/${roomCode}`);
-    
-    get(roomRef).then((snapshot) => {
-        if(!snapshot.exists()) {
-            alert("Battle Room Code not found! Please check again.");
-            return;
-        }
-        
-        const data = snapshot.val();
-        if(data.participantsCount >= 10) {
-            alert("Room is Full! Maximum 10 Surgeons allowed per Battle.");
-            return;
-        }
-
-        const nextSlot = data.participantsCount + 1;
-        
-        // প্লেয়ার এন্ট্রি পুশ
-        update(ref(db, `battles/${roomCode}/players/${cacheUserData.uid}`), {
-            uid: cacheUserData.uid,
-            name: cacheUserData.name || "Surgeon Ally",
-            score: 0,
-            slotNo: nextSlot
-        });
-
-        // কাউন্টার আপডেট
-        update(roomRef, { participantsCount: nextSlot });
-        listenBattleRoomParticipants(roomCode, cacheUserData, renderArea);
-    });
-}
-
-function listenBattleRoomParticipants(roomCode, cacheUserData, renderArea) {
-    const playersRef = ref(db, `battles/${roomCode}/players`);
-    
-    onValue(playersRef, (snapshot) => {
-        if(!snapshot.exists()) return;
-        
-        const playersData = snapshot.val();
-        const playersArray = Object.values(playersData);
-        
-        // ভিউ রেন্ডার পরিবর্তন
-        renderArea.innerHTML = renderBattleLobbyView(roomCode, playersArray.length);
-        
-        const listContainer = document.getElementById("battle-participants-list");
-        if(listContainer) {
-            listContainer.innerHTML = "";
-            playersArray.forEach((player, index) => {
-                const badge = `
-                    <div class="battle-user-badge" style="border: 1px solid ${player.uid === cacheUserData.uid ? 'var(--gold)' : 'var(--border-line)'};">
-                        <span>⚔️ Slot ${index + 1}: ${player.name}</span>
-                        <span style="color:var(--neon-green);">CONNECTED</span>
-                    </div>
-                `;
-                listContainer.insertAdjacentHTML('beforeend', badge);
-            });
-        }
-    });
-            }
-                                       
+    chatMessagesBox.insertAdjacentHTML('beforeend', msgHtml);
+                        }
+                                                                                                
