@@ -21,19 +21,23 @@ const overlay = document.getElementById("drawer-overlay");
 
 let cacheAdminData = null;
 
-// ================= ১. অ্যাডমিন অথেন্টিকেশন ও অ্যাক্সেস কন্ট্রোল =================
+// ================= ১. অ্যাডমিন অথেন্টিকেশন ও অ্যাক্সেস কন্ট্রোল (স্টুডেন্ট ফিল্টার) =================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        // সিকিউরিটি চেক: ইউজার অ্যাডমিন কি না তা ভেরিফাই করা
         const snap = await get(ref(db, 'users/' + user.uid));
-        if (snap.exists() && snap.val().role === "admin") {
+        if (snap.exists()) {
             cacheAdminData = snap.val();
             
-            // টপ বার ও সাইড ড্রয়ার অ্যাকশন বাইন্ডিং
+            // 🚨 সাধারণ স্টুডেন্ট যদি ভুল করে এই লিঙ্কে আসে, তাকে স্টুডেন্ট ড্যাশবোর্ডে পাঠাবে
+            if (cacheAdminData.role !== "admin") {
+                alert("Access Denied! Redirecting to Student Arena.");
+                window.location.href = "student_dashboard.html";
+                return;
+            }
+            
             bindGlobalAdminActions();
             loadAdminTab("home");
         } else {
-            alert("Unauthorized Access! Redirecting to student area.");
             window.location.href = "student_dashboard.html";
         }
     } else {
@@ -42,13 +46,11 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 function bindGlobalAdminActions() {
-    // হেডার উইজেট অ্যাকশন
     document.getElementById("admin-broadcast-btn").onclick = () => {
         const msg = prompt("Enter global system broadcast notice:");
         if (msg) alert("Notice Broadcasted (Logic integration pending)");
     };
 
-    // সাইড ড্রয়ার টগলস
     document.getElementById("admin-drawer-open-btn").onclick = () => { 
         drawer.className = "drawer-open"; 
         overlay.classList.remove("hidden-widget"); 
@@ -244,4 +246,3 @@ backBtn.addEventListener("click", () => {
     document.querySelector('[data-target="home"]')?.classList.add("active-tab");
     loadAdminTab("home");
 });
-            
