@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mNEET - Dashboard</title>
+    <title>mNEET - Ultimate Learning Arena</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -16,7 +16,6 @@
             --neon-green: #10B981;
         }
 
-        /* 🌙 OLED OBSIDIAN DARK CODE */
         .theme-dark {
             --bg-app: #090D16;
             --bg-surface: #131A26;
@@ -27,14 +26,14 @@
             --m-logo: #FFFFFF;
         }
 
-        /* ☀️ LUXURY DEEP COMBINATION WHITE MODE (খয়েরী ও ডিপ রেড অ্যাকসেন্ট) */
+        /* LUXURY DEEP COMBINATION WHITE MODE */
         .theme-white {
             --bg-app: #F8FAFC;
             --bg-surface: #FFFFFF;
             --bg-input: #F1F5F9;
-            --text-title: #451A03;   /* ডিপ খয়েরী টাইটেল */
-            --text-para: #7F1D1D;    /* ডিপ বারগান্ডি রেড কন্টেন্ট */
-            --border-line: #451A03;  /* কার্ডের বর্ডার হবে ডিপ লাক্সারি খয়েরী */
+            --text-title: #451A03;   
+            --text-para: #7F1D1D;    
+            --border-line: #451A03;  
             --m-logo: #7F1D1D;
         }
 
@@ -119,16 +118,15 @@
         input:checked + .slider { background-color: var(--gold); }
         input:checked + .slider:before { transform: translateX(18px); }
         
-        .node-row { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-radius: 20px; }
+        .node-row { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-radius: 20px; margin-bottom: 10px; }
+        .battle-user-badge { display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-input); padding: 8px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; }
     </style>
 </head>
 <body class="theme-dark">
 
     <header class="dashboard-header">
         <div class="header-left">
-            <!-- ডাইনামিক ব্যাক বাটন যা হোম ছাড়া অন্য স্ক্রিনে অটো দেখাবে -->
             <button id="dashboard-back-btn" class="hidden-widget link-btn" style="font-size: 18px; color: var(--text-title);"><i class="fas fa-arrow-left"></i></button>
-            
             <div id="home-top-widgets" style="display: flex; align-items: center; gap: 14px;">
                 <button id="wp-community-btn" class="link-btn" style="color: var(--wp-green) !important; font-size: 22px;"><i class="fab fa-whatsapp"></i></button>
                 <button id="noti-btn" class="link-btn" style="color: var(--gold); font-size: 18px; position: relative;">
@@ -143,7 +141,6 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 12px;">
-            <!-- বিপি কয়েন আইকন ক্লিক করলে সরাসরি গেমিং স্ক্রিন খোলার জন্য কাস্টম আইডি ট্যাগ দেওয়া হলো -->
             <div id="top-bp-trigger-btn" style="font-size: 11px; font-weight: 800; color: var(--gold); background: rgba(243,185,23,0.1); border: 1px solid rgba(243,185,23,0.3); padding: 5px 10px; border-radius: 20px; cursor: pointer;">
                 <i class="fas fa-coins" style="margin-right: 5px;"></i><span id="top-bp-count">0 BP</span>
             </div>
@@ -152,10 +149,8 @@
     </header>
 
     <main class="dashboard-viewport" id="dashboard-main-render-area">
-        <!-- Dashboard views inject here -->
-    </main>
+        </main>
 
-    <!-- SIDE DRAWER PANEL LAYER -->
     <div id="profile-drawer" class="drawer-closed">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-line); padding-bottom: 10px;">
             <h3 style="margin: 0; font-size: 16px; color: var(--gold);">Student Station</h3>
@@ -208,5 +203,4 @@
     <script type="module" src="dashboard_view.js"></script>
     <script type="module" src="dashboard_logic.js"></script>
 </body>
-                                                                                                                                                           </html>
-                                                                                                                                                           
+</html>
