@@ -1,5 +1,5 @@
 import { auth, db } from "./firebase-config.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { ref, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 import { 
     renderHomeSection, renderStudySection, renderBatchesSection, renderTestSection, renderMStoreSection,
@@ -7,7 +7,7 @@ import {
 } from "./dashboard_view.js";
 import { initializeCommunityChat } from "./community_chat.js";
 
-// ৫টি স্পেশাল মডিউলের ফাইল ইম্পোর্টস (আপাতত ফাংশন লোডার)
+// ৫টি স্পেশাল মডিউলের ফাইল ইম্পোর্টস
 import { loadNcertModule } from "./study_ncert.js";
 import { loadLecturesModule } from "./study_lectures.js";
 import { loadQuizModule } from "./study_quiz.js";
@@ -23,11 +23,14 @@ const overlay = document.getElementById("drawer-overlay");
 let cacheUserData = null;
 let timerMechanismInterval = null;
 
+// ================= ১. ইউজার অথেন্টিকেশন এবং ডাটা লোডার =================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const snap = await get(ref(db, 'users/' + user.uid));
         if (snap.exists()) {
             cacheUserData = snap.val();
+            
+            // সাইড ড্রয়ার সেটিংস ও ড্যাশবোর্ড ডেটা ইনিশিয়ালাইজেশন
             document.getElementById("profile-name-display").innerText = cacheUserData.name || "Student";
             document.getElementById("profile-phone-display").innerText = cacheUserData.phone || "";
             document.getElementById("target-college-input").value = cacheUserData.customTargetCollege || "AIIMS Delhi";
@@ -41,12 +44,14 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
+// টপ বার আইকন অ্যাকশন
 function bindTopBarClickActions() {
     document.getElementById("noti-btn").onclick = () => loadViewTab("notification_screen");
     document.getElementById("wp-community-btn").onclick = () => loadViewTab("wp_screen");
     document.getElementById("top-bp-trigger-btn").onclick = () => loadViewTab("bp_gaming_screen");
 }
 
+// কয়েন ও টার্গেট কলেজ সিঙ্ক
 function syncBPCoinCountDisplay() {
     const selectedBatch = document.getElementById("batch-view-filter")?.value || "default";
     const coins = cacheUserData?.bpCoinsCourseWise?.[selectedBatch] || cacheUserData?.bpCoins || 0;
@@ -56,6 +61,7 @@ function syncBPCoinCountDisplay() {
     }
 }
 
+// ================= ২. বটম ট্যাব কন্ট্রোল মেকানিজম =================
 const footerTabs = document.querySelectorAll(".footer-tab");
 footerTabs.forEach(tab => {
     tab.addEventListener("click", () => {
@@ -65,13 +71,15 @@ footerTabs.forEach(tab => {
     });
 });
 
+// গ্লোবাল ভিউ রাউটার
 function loadViewTab(viewName) {
+    // হেডার ও ব্যাক বাটন টগল ফিক্সড লজিক
     if (viewName === "home") {
         backBtn.classList.add("hidden-widget");
         homeWidgets.classList.remove("hidden-widget");
     } else {
         backBtn.classList.remove("hidden-widget");
-        homeWidgets.add("hidden-widget"); // Safety Toggle
+        homeWidgets.classList.add("hidden-widget"); // টাইপো ফিক্সড: classList.add করা হয়েছে
     }
 
     clearInterval(timerMechanismInterval);
@@ -84,7 +92,7 @@ function loadViewTab(viewName) {
         document.getElementById("batch-view-filter").addEventListener("change", syncBPCoinCountDisplay);
     } else if (viewName === "study") {
         renderArea.innerHTML = renderStudySection();
-        bindStudyCardsRouting();
+        bindStudyCardsRouting(); // প্রতিবার স্ক্রিন লোড হলে নতুন করে ইভেন্ট বাইন্ড হবে
     } else if (viewName === "batches") {
         renderArea.innerHTML = renderBatchesSection();
     } else if (viewName === "test") {
@@ -102,7 +110,7 @@ function loadViewTab(viewName) {
     }
 }
 
-// ৫টি কার্ডের লিনিয়ার সাবজেক্ট গেট রাউটিং
+// ================= ৩. ৫টি কার্ডের লিনিয়ার সাবজেক্ট ও চ্যাপ্টার রাউটিং ফিক্স =================
 function bindStudyCardsRouting() {
     document.getElementById("card-ncert-reading")?.addEventListener("click", () => {
         renderArea.innerHTML = renderSubjectGate("ncert");
@@ -121,7 +129,6 @@ function bindStudyCardsRouting() {
         bindSubjectGateClicks();
     });
     document.getElementById("card-doubts-box")?.addEventListener("click", () => {
-        // ডাউট বক্সের জন্য সাবজেক্ট গেট ছাড়াই ডিরেক্ট ফাইল লোড হবে
         loadDoubtsModule(cacheUserData, renderArea);
     });
 }
@@ -144,7 +151,6 @@ function bindChapterClicks() {
             const subject = item.getAttribute("data-subject");
             const chapter = item.getAttribute("data-chapter");
 
-            // ৫টি আলাদা ডেডিকেটেড ফাইলে ডাইরেক্ট রাউট ফরোয়ার্ড
             if (origin === "ncert") {
                 loadNcertModule(subject, chapter, cacheUserData, renderArea);
             } else if (origin === "lectures") {
@@ -158,6 +164,7 @@ function bindChapterClicks() {
     });
 }
 
+// ================= ৪. গ্লোবাল ব্যাক বাটন ও সাইড ড্রয়ার হ্যান্ডলার =================
 backBtn.addEventListener("click", () => {
     footerTabs.forEach(t => t.classList.remove("active-tab"));
     document.querySelector('[data-target="home"]')?.classList.add("active-tab");
@@ -168,7 +175,10 @@ document.getElementById("drawer-open-btn").onclick = () => { drawer.className = 
 const closeDrawerContainer = () => { drawer.className = "drawer-closed"; overlay.classList.add("hidden-widget"); };
 document.getElementById("drawer-close-btn").onclick = closeDrawerContainer;
 overlay.onclick = closeDrawerContainer;
-document.getElementById("dashboard-theme-toggle").onchange = (e) => { document.body.className = e.target.checked ? "theme-dark" : "theme-white"; };
+
+document.getElementById("dashboard-theme-toggle").onchange = (e) => { 
+    document.body.className = e.target.checked ? "theme-dark" : "theme-white"; 
+};
 
 document.getElementById("save-goals-btn").onclick = async () => {
     const tCollege = document.getElementById("target-college-input").value.trim();
@@ -179,6 +189,7 @@ document.getElementById("save-goals-btn").onclick = async () => {
     closeDrawerContainer(); loadViewTab("home");
 };
 
+// কাউন্টডাউন টাইমার ইঞ্জিন
 function startPersonalizedTimer() {
     let targetString = cacheUserData && cacheUserData.customTargetDate ? cacheUserData.customTargetDate + "T10:00:00" : "2027-05-02T10:00:00";
     const targetTime = new Date(targetString).getTime();
@@ -191,5 +202,10 @@ function startPersonalizedTimer() {
         document.getElementById("timer-mins").innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         document.getElementById("timer-secs").innerText = Math.floor((diff % (1000 * 60)) / 1000);
     }, 1000);
-            }
-    
+}
+
+// লগআউট প্রসেস
+document.getElementById("logout-submit-btn").onclick = () => {
+    signOut(auth).then(() => { window.location.href = "index.html"; });
+};
+        
