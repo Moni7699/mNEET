@@ -21,26 +21,29 @@
         </div>
 
         <!-- ================= SIGN IN FORM ================= -->
-        <div id="signin-box">
-            <h2 class="text-xl font-bold mb-6 text-center">Sign In to Your Account</h2>
-            <form id="signin-form" class="space-y-4">
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Gmail or Phone No</label>
-                    <input type="text" id="login-identifier" required class="w-full px-4 py-3 rounded-lg text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-1">Password</label>
-                    <input type="password" id="login-password" required class="w-full px-4 py-3 rounded-lg text-sm">
-                </div>
-                <div class="text-right">
-                    <button type="button" id="goto-forgot" class="text-xs text-golden hover:underline bg-transparent border-none cursor-pointer">Forgot Password?</button>
-                </div>
-                <button type="submit" class="w-full py-3 bg-golden font-bold rounded-lg transition duration-200 cursor-pointer">Sign In</button>
-            </form>
-            <p class="text-sm text-center text-gray-400 mt-6">
-                Don't have an account? <button id="goto-signup" class="text-golden hover:underline bg-transparent border-none cursor-pointer">Sign Up</button>
-            </p>
+<div id="signin-box">
+    <!-- এখানে text-white যুক্ত করা হয়েছে যাতে লেখাটি স্পষ্ট সাদা দেখায় -->
+    <h2 class="text-xl font-bold mb-6 text-center text-white">Sign In to Your Account</h2>
+    <form id="signin-form" class="space-y-4">
+        <div>
+            <label class="block text-sm text-gray-400 mb-1">Gmail or Phone No</label>
+            <!-- ইনপুট ফিল্ডে প্যাডিং ও বর্ডার ক্লাস নিশ্চিত করা হলো -->
+            <input type="text" id="login-identifier" required class="w-full px-4 py-3 rounded-lg text-sm bg-[#252525] border border-[#3D3D3D] text-white">
         </div>
+        <div>
+            <label class="block text-sm text-gray-400 mb-1">Password</label>
+            <input type="password" id="login-password" required class="w-full px-4 py-3 rounded-lg text-sm bg-[#252525] border border-[#3D3D3D] text-white">
+        </div>
+        <div class="text-right">
+            <button type="button" id="goto-forgot" class="text-xs text-golden hover:underline bg-transparent border-none cursor-pointer">Forgot Password?</button>
+        </div>
+        <button type="submit" class="w-full py-3 bg-golden font-bold rounded-lg transition duration-200 cursor-pointer text-black">Sign In</button>
+    </form>
+    <p class="text-sm text-center text-gray-400 mt-6">
+        Don't have an account? <button id="goto-signup" class="text-golden hover:underline bg-transparent border-none cursor-pointer">Sign Up</button>
+    </p>
+</div>
+
 
         <!-- ================= SIGN UP FORM ================= -->
         <div id="signup-box" class="hidden">
