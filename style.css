@@ -1,216 +1,120 @@
-/* ================= ORIGINAL MOBILE-FIRST FIXED THEME ================= */
+/* ================= PREMIUM mNEET INTERFACE SYSTEM ================= */
 :root {
-    --neon-gold: #F3B917;
     --neon-blue: #2563EB;
+    --neon-gold: #F3B917;
+    --neon-purple: #8B5CF6;
+    --neon-red: #EF4444;
+    --neon-green: #10B981;
+}
+
+/* 🌙 OLED OBSIDIAN DARK MODE */
+.theme-dark {
+    --bg-app: #080C14;
+    --bg-surface: #111827;
+    --bg-input: #030712;
+    --text-main: #FFFFFF;
+    --text-muted: #94A3B8;
+    --border-color: #1F2937;
+    --drawer-mask: rgba(0, 0, 0, 0.75);
+}
+
+/* ☀️ ELEGANT LIGHT MODE */
+.theme-white {
+    --bg-app: #F8FAFC;
+    --bg-surface: #FFFFFF;
+    --bg-input: #F1F5F9;
+    --text-main: #0F172A;
+    --text-muted: #64748B;
+    --border-color: #E2E8F0;
+    --drawer-mask: rgba(15, 23, 42, 0.4);
+}
+
+* {
+    box-sizing: border-box !important;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
-    background-color: #090D16 !important;
-    color: #FFFFFF !important;
+    background-color: var(--bg-app) !important;
+    color: var(--text-main) !important;
     font-family: system-ui, -apple-system, sans-serif;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-/* গ্লোবাল বক্স ফিক্সিং যাতে মোবাইল স্ক্রিন না ভাঙে */
-*, *:before, *:after {
-    box-sizing: border-box !important;
-}
-
-/* মূল লগইন/সাইনআপ বক্স - রেসপনসিভ মোবাইল ফিট */
-.auth-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 16px;
-    width: 100%;
-}
-
-.auth-box {
-    background-color: #131A26 !important;
-    border: 2px solid #1E293B !important;
-    border-radius: 24px !important;
-    padding: 24px 20px !important;
-    width: 100%;
-    max-width: 360px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-    text-align: center;
-}
-
-/* ইনপুট ফিল্ড ও লেবেল */
-.input-group {
-    display: block !important;
-    width: 100% !important;
-    margin-bottom: 14px !important;
-}
-.input-group label {
-    display: block !important;
-    font-size: 13px;
-    color: #94A3B8;
-    margin-bottom: 6px;
-    text-align: left;
-}
-input {
-    display: block !important;
-    width: 100% !important;
-    background-color: #0D131F !important;
-    border: 2px solid #1E293B !important;
-    color: #FFFFFF !important;
-    padding: 12px 14px !important;
-    border-radius: 12px !important;
-    font-size: 14px !important;
-}
-input:focus {
-    border-color: #2563EB !important;
-    outline: none;
-}
-
-/* সলিড গোল্ডেন বাটন */
-.btn-mneet {
-    display: block !important;
-    width: 100% !important;
-    background-color: var(--neon-gold) !important;
-    color: #000000 !important;
-    font-weight: 800;
-    font-size: 15px;
-    padding: 14px !important;
-    border: none !important;
-    border-radius: 12px !important;
-    cursor: pointer;
-    text-transform: uppercase;
-    margin-top: 15px;
-}
-.link-btn {
-    background: none !important;
-    border: none !important;
-    color: var(--neon-gold) !important;
-    font-weight: 700;
-    cursor: pointer;
-    font-size: 13px;
-}
-
-/* ================= STUDENT DASHBOARD MOBILE FIXES ================= */
-header {
-    background-color: #131A26 !important;
-    border-b: 1px solid #1E293B;
-    width: 100% !important;
-    max-width: 100vw;
+    margin: 0; padding: 0;
+    width: 100vw; height: 100vh;
     overflow: hidden;
+    transition: background-color 0.25s, color 0.25s;
 }
 
-/* হেডার ফ্লেক্স কন্টেইনার মোবাইল ফিট */
-.header-container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    width: 100%;
-}
-
-/* বিপি কয়েন ব্যাজ মোবাইল কমপ্যাক্ট সাইজ */
-.bp-badge {
-    display: flex;
-    align-items: center;
-    background-color: rgba(243, 185, 23, 0.1);
-    border: 1px solid rgba(243, 185, 23, 0.3);
-    padding: 4px 8px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--neon-gold);
-    white-space: nowrap;
-}
-
-/* বটম নেভিগেশন বার ফিক্স */
-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background-color: #131A26 !important;
-    border-top: 1px solid #1E293B;
-    display: flex;
-    justify-content: space-around;
-    padding: 10px 0;
-    z-index: 100;
-}
-
-/* জাভাস্ক্রিপ্ট ক্লাস */
-.hidden { display: none !important; }
-    
-/* ================= DASHBOARD CORE LAYOUTS ================= */
+/* 🔒 FIXED HEADER & FOOTER SYSTEM (NO OVERLAPPING) */
 .dashboard-header {
-    position: fixed; top: 0; left: 0; right: 0; height: 56px;
-    background-color: var(--bg-container) !important;
-    border-bottom: 2px solid var(--border-input);
+    position: fixed; top: 0; left: 0; right: 0; height: 60px;
+    background-color: var(--bg-surface) !important;
+    border-bottom: 2px solid var(--border-color);
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0 16px; z-index: 90;
+    padding: 0 16px; z-index: 999;
 }
+
 .dashboard-viewport {
-    margin-top: 56px; margin-bottom: 66px;
-    padding: 16px; overflow-y: auto; box-sizing: border-box;
+    position: absolute; top: 60px; bottom: 68px; left: 0; right: 0;
+    padding: 16px;
+    overflow-y: auto; /* শুধু মাঝের অংশ স্ক্রোল হবে */
+    overflow-x: hidden;
 }
+
 .dashboard-footer {
-    position: fixed; bottom: 0; left: 0; right: 0; height: 64px;
-    background-color: var(--bg-container) !important;
-    border-top: 2px solid var(--border-input);
-    display: flex; justify-content: space-around; align-items: center; z-index: 90;
+    position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
+    background-color: var(--bg-surface) !important;
+    border-top: 2px solid var(--border-color);
+    display: flex; justify-content: space-around; align-items: center; z-index: 999;
+}
+
+/* 📊 MNEET HOVER TILES WITH NEON BORDERS */
+.card-blue { background-color: var(--bg-surface); border: 2px solid var(--neon-blue); border-radius: 20px; }
+.card-gold { background-color: var(--bg-surface); border: 2px solid var(--neon-gold); border-radius: 20px; }
+.card-purple { background-color: var(--bg-surface); border: 2px solid var(--neon-purple); border-radius: 20px; }
+.card-red { background-color: var(--bg-surface); border: 2px solid var(--neon-red); border-radius: 20px; }
+.card-green { background-color: var(--bg-surface); border: 2px solid var(--neon-green); border-radius: 20px; }
+
+/* 🚨 FIXED SLIDE-IN DRAWER (SCREEN FIT) */
+#profile-drawer {
+    position: fixed; top: 0; bottom: 0; right: 0; width: 85%; max-width: 320px;
+    background-color: var(--bg-surface) !important; z-index: 10000;
+    border-left: 2px solid var(--border-color); padding: 24px 20px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex; flex-direction: column;
+}
+.drawer-closed { transform: translateX(100%); }
+.drawer-open { transform: translateX(0); }
+#drawer-overlay {
+    position: fixed; inset: 0; background: var(--drawer-mask); z-index: 9999;
+}
+
+/* UI ELEMENTS */
+.input-field {
+    width: 100%; background-color: var(--bg-input) !important;
+    border: 2px solid var(--border-color) !important;
+    color: var(--text-main) !important;
+    padding: 10px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;
 }
 .footer-tab {
     background: none; border: none; color: var(--text-muted);
     display: flex; flex-direction: column; align-items: center; gap: 4px;
-    cursor: pointer; font-size: 14px; width: 20%; padding: 4px 0;
+    cursor: pointer; width: 20%; padding: 6px 0; font-size: 14px;
 }
-.footer-tab span { font-size: 10px; font-weight: 700; }
+.footer-tab span { font-size: 10px; font-weight: 700; text-transform: uppercase; }
 .active-tab { color: var(--neon-gold) !important; }
 
-/* নিওন বর্ডার গ্লোয়িং কার্ডস সিস্টেম */
-.mneet-card-blue { background-color: var(--bg-container); border: 2px solid var(--neon-blue); border-radius: 20px; }
-.mneet-card-gold { background-color: var(--bg-container); border: 2px solid var(--neon-gold); border-radius: 20px; }
-.mneet-card-purple { background-color: var(--bg-container); border: 2px solid var(--neon-purple); border-radius: 20px; }
-.mneet-card-red { background-color: var(--bg-container); border: 2px solid var(--neon-red); border-radius: 20px; }
-.mneet-card-green { background-color: var(--bg-container); border: 2px solid var(--neon-green); border-radius: 20px; }
-
-/* স্টাডি জোন রো স্টাইলিং */
-.node-action-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 16px; border-radius: 20px; cursor: pointer;
+.btn-mneet {
+    width: 100%; background-color: var(--neon-gold) !important; color: #000000 !important;
+    font-weight: 800; padding: 12px; border: none; border-radius: 12px; cursor: pointer;
 }
-.node-left-part { display: flex; align-items: center; gap: 14px; font-size: 13px; font-weight: 700; }
-.node-arrow { font-size: 11px; color: var(--text-muted); }
-
-/* হ্যামবার্গার সাইড প্যানেল অ্যানিমেশন */
-[id="profile-drawer"] {
-    position: fixed; top: 0; bottom: 0; right: 0; width: 280px;
-    background-color: var(--bg-container) !important; z-index: 100;
-    border-left: 2px solid var(--border-input); padding: 20px;
-    transition: transform 0.3s ease-in-out; display: block !important;
-}
-.profile-drawer-closed { transform: translateX(100%); }
-.profile-drawer-open { transform: translateX(0); }
-[id="drawer-overlay"] {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 95;
-}
-.drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-input); padding-bottom: 10px; }
-.drawer-header h3 { margin: 0; font-size: 16px; color: var(--neon-gold); }
-.drawer-profile-card { display: flex; align-items: center; gap: 12px; background-color: var(--bg-input); padding: 12px; border-radius: 16px; margin-bottom: 20px; }
-.avatar-circle { width: 36px; height: 36px; background-color: var(--neon-gold); border-radius: 50%; color: #000000; font-weight: 900; display: flex; align-items: center; justify-content: center; }
-.drawer-menu-list { display: flex; flex-direction: column; gap: 8px; }
-.drawer-item { width: 100%; text-align: left; background: none; border: none; padding: 12px; color: var(--text-main); font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 12px; border-radius: 10px; }
-.drawer-item:not(div):hover { background-color: var(--bg-input); }
-.drawer-logout-btn { width: 100%; background-color: #EF4444; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 700; font-size: 13px; cursor: pointer; margin-top: auto; }
-
-/* কাস্টম সুইচ টগল বোতাম */
-.switch-toggle { position: relative; display: inline-block; width: 36px; height: 20px; }
-.switch-toggle input { display: none; }
-.slider-round { position: absolute; cursor: pointer; inset: 0; background-color: #475569; border-radius: 34px; transition: .3s; }
-.slider-round:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .3s; }
-input:checked + .slider-round { background-color: var(--neon-gold); }
-input:checked + .slider-round:before { transform: translateX(16px); }
-
-.student-hero-title { font-size: 24px; font-weight: 900; margin: 0; letter-spacing: -0.5px; }
-.bp-badge { font-size: 11px; font-weight: 800; color: var(--neon-gold); background: rgba(243,185,23,0.1); border: 1px solid rgba(243,185,23,0.3); padding: 5px 10px; border-radius: 20px; }
+.node-row { display: flex; justify-content: space-between; align-items: center; padding: 16px; cursor: pointer; }
 .hidden-widget { display: none !important; }
+
+/* TOGGLE SLIDER */
+.switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+.switch input { display: none; }
+.slider { position: absolute; cursor: pointer; inset: 0; background-color: #475569; border-radius: 34px; transition: .3s; }
+.slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .3s; }
+input:checked + .slider { background-color: var(--neon-gold); }
+input:checked + .slider:before { transform: translateX(18px); }
     
