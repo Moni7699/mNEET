@@ -1,4 +1,6 @@
 // admin_logic.js এর ওপরে এই ইম্পোর্ট লাইনটি বসাও:
+import { loadAdminSpecialManager } from "./admin_special.js";
+// admin_logic.js এর ওপরে এই ইম্পোর্ট লাইনটি বসাও:
 import { loadAdminQuizManager } from "./admin_quiz.js";
 // admin_logic.js এর ওপরে এই ইম্পোর্ট লাইনটি বসাও:
 import { loadAdminLecturesManager } from "./admin_lectures.js";
