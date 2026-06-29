@@ -23,12 +23,18 @@ const overlay = document.getElementById("drawer-overlay");
 let cacheUserData = null;
 let timerMechanismInterval = null;
 
-// ================= ১. ইউজার অথেন্টিকেশন এবং ডাটা লোডার =================
+// ================= ১. ইউজার অথেন্টিকেশন এবং ডাটা লোডার (অ্যাডমিন গেট লকড) =================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const snap = await get(ref(db, 'users/' + user.uid));
         if (snap.exists()) {
             cacheUserData = snap.val();
+            
+            // 🚨 যদি ভুল করে অ্যাডমিন এই পেজে আসে, তাকে অ্যাডমিন ড্যাশবোর্ডে রিডাইরেক্ট করবে
+            if (cacheUserData.role === "admin") {
+                window.location.href = "admin_dashboard.html";
+                return;
+            }
             
             // সাইড ড্রয়ার সেটিংস ও ড্যাশবোর্ড ডেটা ইনিশিয়ালাইজেশন
             document.getElementById("profile-name-display").innerText = cacheUserData.name || "Student";
@@ -73,25 +79,16 @@ footerTabs.forEach(tab => {
 
 // গ্লোবাল ভিউ রাউটার
 function loadViewTab(viewName) {
-    // পুরনো টাইমার ইন্টারভাল থাকলে ক্লিয়ার করা
-    if (timerMechanismInterval) {
-        clearInterval(timerMechanismInterval);
-        timerMechanismInterval = null;
-    }
-
-    // হেডার ও ব্যাক বাটন টগল
     if (viewName === "home") {
-        if (backBtn) backBtn.classList.add("hidden-widget");
-        if (homeWidgets) homeWidgets.classList.remove("hidden-widget");
+        backBtn.classList.add("hidden-widget");
+        homeWidgets.classList.remove("hidden-widget");
     } else {
-        if (backBtn) backBtn.classList.remove("hidden-widget");
-        if (homeWidgets) homeWidgets.classList.add("hidden-widget");
+        backBtn.classList.remove("hidden-widget");
+        homeWidgets.classList.add("hidden-widget");
     }
 
+    clearInterval(timerMechanismInterval);
     const sName = cacheUserData ? cacheUserData.name : "Student";
-
-    // ভিউ চেঞ্জ করার আগে রেন্ডার এরিয়া সম্পূর্ণ ফ্লাশ/ক্লিন করা
-    renderArea.innerHTML = "";
 
     if (viewName === "home") {
         renderArea.innerHTML = renderHomeSection(sName);
@@ -118,7 +115,7 @@ function loadViewTab(viewName) {
     }
 }
 
-// ================= ৩. ৫টি কার্ডের লিনিয়ার সাবজেক্ট ও চ্যাপ্টার রাউটিং ফিক্স =================
+// ================= ৩. ৫টি কার্ডের লিনিয়ার সাবজেক্ট ও চ্যাপ্টার রাউটিং =================
 function bindStudyCardsRouting() {
     document.getElementById("card-ncert-reading")?.addEventListener("click", () => {
         renderArea.innerHTML = renderSubjectGate("ncert");
@@ -197,34 +194,18 @@ document.getElementById("save-goals-btn").onclick = async () => {
     closeDrawerContainer(); loadViewTab("home");
 };
 
-// কাউন্টডাউন টাইমার ইঞ্জিন (এরর প্রোটেকশন সহ)
+// কাউন্টডাউন টাইমার ইঞ্জিন
 function startPersonalizedTimer() {
     let targetString = cacheUserData && cacheUserData.customTargetDate ? cacheUserData.customTargetDate + "T10:00:00" : "2027-05-02T10:00:00";
     const targetTime = new Date(targetString).getTime();
-    
     timerMechanismInterval = setInterval(() => {
-        const dBox = document.getElementById("timer-days");
-        const hBox = document.getElementById("timer-hours");
-        const mBox = document.getElementById("timer-mins");
-        const sBox = document.getElementById("timer-secs");
-
-        // যদি স্ক্রিনে টাইমারের এলিমেন্ট না থাকে (অন্য ট্যাবে থাকলে), ইন্টারভাল অফ করে দাও
-        if (!dBox || !hBox || !mBox || !sBox) {
-            clearInterval(timerMechanismInterval);
-            return;
-        }
-
         const diff = targetTime - new Date().getTime();
-        if (diff < 0) { 
-            clearInterval(timerMechanismInterval); 
-            dBox.innerText = "00"; hBox.innerText = "00"; mBox.innerText = "00"; sBox.innerText = "00";
-            return; 
-        }
-
+        const dBox = document.getElementById("timer-days");
+        if (diff < 0 || !dBox) { clearInterval(timerMechanismInterval); return; }
         dBox.innerText = Math.floor(diff / (1000 * 60 * 60 * 24));
-        hBox.innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        mBox.innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        sBox.innerText = Math.floor((diff % (1000 * 60)) / 1000);
+        document.getElementById("timer-hours").innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        document.getElementById("timer-mins").innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        document.getElementById("timer-secs").innerText = Math.floor((diff % (1000 * 60)) / 1000);
     }, 1000);
 }
 
@@ -232,4 +213,4 @@ function startPersonalizedTimer() {
 document.getElementById("logout-submit-btn").onclick = () => {
     signOut(auth).then(() => { window.location.href = "index.html"; });
 };
-    
+        
