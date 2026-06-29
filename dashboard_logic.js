@@ -1,122 +1,141 @@
 import { auth, db } from "./firebase-config.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { ref, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { getHomeView, getBatchesView, getStudyView, getTestView, getMStoreView } from "./dashboard_view.js";
+import { 
+    renderHomeSection, renderStudySection, renderBatchesSection, renderTestSection, renderMStoreSection 
+} from "./dashboard_view.js";
 
-const mainContent = document.getElementById("main-content");
-const backBtn = document.getElementById("back-btn");
-const homeLeftOptions = document.getElementById("home-left-options");
-const profileDrawer = document.getElementById("profile-drawer");
-const drawerOverlay = document.getElementById("drawer-overlay");
+const renderArea = document.getElementById("dashboard-main-render-area");
+const backBtn = document.getElementById("dashboard-back-btn");
+const homeWidgets = document.getElementById("home-top-widgets");
+const drawer = document.getElementById("profile-drawer");
+const overlay = document.getElementById("drawer-overlay");
 
-let currentActiveTab = "home";
-let userDataCache = null;
+let cacheUserData = null;
+let countdownMechanismInterval = null;
 
-// ================= ১. ইউজার ডাটা এবং কোর্স ভিত্তিক BP কয়েন লোড =================
+// ================= ১. ইউজার ডাটা অথেন্টিকেশন ও ক্যাশিং =================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        const snapshot = await get(ref(db, 'users/' + user.uid));
-        if (snapshot.exists()) {
-            userDataCache = snapshot.val();
-            document.getElementById("drawer-name").innerText = userDataCache.name || "Student";
-            document.getElementById("drawer-phone").innerText = userDataCache.phone || "";
+        const snap = await get(ref(db, 'users/' + user.uid));
+        if (snap.exists()) {
+            cacheUserData = snap.val();
+            document.getElementById("profile-name-display").innerText = cacheUserData.name || "mNEET Student";
+            document.getElementById("profile-phone-display").innerText = cacheUserData.phone || "";
+            document.getElementById("user-avatar").innerText = cacheUserData.name ? cacheUserData.name[0].toUpperCase() : "M";
             
-            // কোর্স সিলেক্টের উপর ডিপেন্ড করে BP কয়েন ডাইনামিক আপডেট
-            updateDynamicBPCoin();
-            loadTab("home");
+            // কোর্স অনুযায়ী ডাইনামিক বিপি কয়েন হ্যান্ডলিং
+            triggerDynamicBPCoinSync();
+            loadWorkspaceTab("home");
         }
     } else {
         window.location.href = "index.html";
     }
 });
 
-function updateDynamicBPCoin() {
-    const selectedBatch = document.getElementById("home-batch-select")?.value || "default";
-    // যদি ডাটাবেজে কোর্স অনুযায়ী স্পেসিফিক কয়েন থাকে তা দেখাবে, নাহলে ডিফল্ট দেখাবে
-    const coins = userDataCache?.bpCoinsCourseWise?.[selectedBatch] || userDataCache?.bpCoins || 0;
-    document.getElementById("top-bp-coin").innerText = `${coins} BP`;
+function triggerDynamicBPCoinSync() {
+    const selectedBatch = document.getElementById("batch-view-filter")?.value || "default_course";
+    const coins = cacheUserData?.bpCoinsCourseWise?.[selectedBatch] || cacheUserData?.bpCoins || 0;
+    document.getElementById("top-bp-count").innerText = `${coins} BP`;
 }
 
-// ================= ২. নিখুঁত ডার্ক ও হোয়াইট মোড সুইচার =================
-document.getElementById("theme-switch").addEventListener("change", (e) => {
-    if (e.target.checked) {
-        document.body.classList.remove("theme-white");
-        document.body.classList.add("theme-dark");
-    } else {
-        document.body.classList.remove("theme-dark");
-        document.body.classList.add("theme-white");
-    }
-});
-
-// ================= ৩. স্ক্রিন ট্র্যাকিং এবং ব্যাক বাটন টগল লজিক =================
-backBtn.addEventListener("click", () => {
-    loadTab("home"); // ব্যাক বাটনে ক্লিক করলে সবসময় হোম স্ক্রিনে নিয়ে আসবে
-});
-
-function toggleTopBarButtons(tabName) {
-    if (tabName === "home") {
-        backBtn.classList.add("hidden");
-        homeLeftOptions.classList.remove("hidden");
-    } else {
-        backBtn.classList.remove("hidden"); // অন্য সব স্ক্রিনে ব্যাক বাটন অন হবে
-        homeLeftOptions.classList.add("hidden");
-    }
-}
-
-// ================= ৪. ট্যাব নেভিগেশন প্রসেস =================
-const tabs = document.querySelectorAll(".nav-tab");
-tabs.forEach(tab => {
+// ================= ২. ট্যাব চেঞ্জিং নেভিগেশন কন্ট্রোল =================
+const footerTabs = document.querySelectorAll(".footer-tab");
+footerTabs.forEach(tab => {
     tab.addEventListener("click", () => {
-        const target = tab.closest('.nav-tab').getAttribute("data-target");
+        footerTabs.forEach(t => t.classList.remove("active-tab"));
+        tab.classList.add("active-tab");
         
-        tabs.forEach(t => t.classList.replace("text-golden", "text-gray-400"));
-        tab.closest('.nav-tab').classList.replace("text-gray-400", "text-golden");
-        
-        loadTab(target);
+        const targetView = tab.getAttribute("data-target");
+        loadWorkspaceTab(targetView);
     });
 });
 
-function loadTab(target) {
-    currentActiveTab = target;
-    toggleTopBarButtons(target);
-    const name = userDataCache ? userDataCache.name : "Student";
+function loadWorkspaceTab(viewName) {
+    // টপ বার উইজেটস ফিল্টারিং (প্রত্যেক স্ক্রিন আলাদা হলে হোম ছাড়া বাকিগুলোতে ব্যাক বাটন ও কয়েন থাকবে)
+    if (viewName === "home") {
+        backBtn.classList.add("hidden-widget");
+        homeWidgets.classList.remove("hidden-widget");
+    } else {
+        backBtn.classList.remove("hidden-widget");
+        homeWidgets.classList.add("hidden-widget");
+    }
 
-    if (target === "home") {
-        mainContent.innerHTML = getHomeView(name);
-        startCountdown();
-        // ব্যাচ ড্রপডাউন চেঞ্জ করলে কয়েনও ডাইনামিক চেঞ্জ হবে
-        document.getElementById("home-batch-select").addEventListener("change", updateDynamicBPCoin);
-    } else if (target === "batches") {
-        mainContent.innerHTML = getBatchesView();
-    } else if (target === "study") {
-        mainContent.innerHTML = getStudyView();
-    } else if (target === "test") {
-        mainContent.innerHTML = getTestView();
-    } else if (target === "mstore") {
-        mainContent.innerHTML = getMStoreView();
+    clearInterval(countdownMechanismInterval);
+    const studentName = cacheUserData ? cacheUserData.name : "Student";
+
+    if (viewName === "home") {
+        renderArea.innerHTML = renderHomeSection(studentName);
+        triggerDynamicBPCoinSync();
+        startTargetCountdown();
+        // ডাইনামিক ফিল্টার ইভেন্ট বাইন্ডিং
+        document.getElementById("batch-view-filter").addEventListener("change", triggerDynamicBPCoinSync);
+    } else if (viewName === "study") {
+        renderArea.innerHTML = renderStudySection();
+    } else if (viewName === "batches") {
+        renderArea.innerHTML = renderBatchesSection();
+    } else if (viewName === "test") {
+        renderArea.innerHTML = renderTestSection();
+    } else if (viewName === "mstore") {
+        renderArea.innerHTML = renderMStoreSection();
     }
 }
 
-// ================= ৫. টাইমার টিক লজিক =================
-function startCountdown() {
-    const examDate = new Date("May 2, 2027 10:00:00").getTime();
-    const interval = setInterval(() => {
-        const now = new Date().getTime();
-        const diff = examDate - now;
-        if (diff < 0 || currentActiveTab !== "home" || !document.getElementById("days")) {
-            clearInterval(interval);
+// ব্যাক বাটন ক্লিক অ্যাকশন ফিক্স (ক্লিক করলে হোমে ব্যাক করাবে)
+backBtn.addEventListener("click", () => {
+    footerTabs.forEach(t => t.classList.remove("active-tab"));
+    document.querySelector('[data-target="home"]').classList.add("active-tab");
+    loadWorkspaceTab("home");
+});
+
+// ================= ৩. রিয়েল-টাইম লাইভ কন্টিনিউয়াস টাইমার =================
+function startTargetCountdown() {
+    const neetExamTargetDate = new Date("May 2, 2027 10:00:00").getTime();
+    
+    countdownMechanismInterval = setInterval(() => {
+        const timeNow = new Date().getTime();
+        const gapDistance = neetExamTargetDate - timeNow;
+        
+        if (gapDistance < 0 || !document.getElementById("timer-days")) {
+            clearInterval(countdownMechanismInterval);
             return;
         }
-        document.getElementById("days").innerText = Math.floor(diff / (1000 * 60 * 60 * 24));
-        document.getElementById("hours").innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        document.getElementById("minutes").innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        document.getElementById("seconds").innerText = Math.floor((diff % (1000 * 60)) / 1000);
+
+        const d = Math.floor(gapDistance / (1000 * 60 * 60 * 24));
+        const h = Math.floor((gapDistance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((gapDistance % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((gapDistance % (1000 * 60)) / 1000);
+
+        document.getElementById("timer-days").innerText = d < 10 ? "0" + d : d;
+        document.getElementById("timer-hours").innerText = h < 10 ? "0" + h : h;
+        document.getElementById("timer-mins").innerText = m < 10 ? "0" + m : m;
+        document.getElementById("timer-secs").innerText = s < 10 ? "0" + s : s;
     }, 1000);
 }
 
-// ড্রয়ার ওপেন/ক্লোজ
-document.getElementById("menu-toggle").addEventListener("click", () => { profileDrawer.classList.remove("translate-x-full"); drawerOverlay.classList.remove("hidden"); });
-const closeDrawer = () => { profileDrawer.classList.add("translate-x-full"); drawerOverlay.classList.add("hidden"); };
-document.getElementById("menu-close").addEventListener("click", closeDrawer);
-drawerOverlay.addEventListener("click", closeDrawer);
-                                    
+// ================= ৪. থিম চেঞ্জার এবং হ্যামবার্গার ড্রয়ার লজিক =================
+document.getElementById("drawer-open-btn").addEventListener("click", () => {
+    drawer.className = "profile-drawer-open";
+    overlay.classList.remove("hidden-widget");
+});
+
+const closeDrawerContainer = () => {
+    drawer.className = "profile-drawer-closed";
+    overlay.classList.add("hidden-widget");
+};
+document.getElementById("drawer-close-btn").addEventListener("click", closeDrawerContainer);
+overlay.addEventListener("click", closeDrawerContainer);
+
+document.getElementById("dashboard-theme-toggle").addEventListener("change", (e) => {
+    if (e.target.checked) {
+        document.body.className = "theme-dark";
+    } else {
+        document.body.className = "theme-white";
+    }
+});
+
+// লগআউট প্রসেস
+document.getElementById("logout-submit-btn").addEventListener("click", () => {
+    signOut(auth).then(() => { window.location.href = "index.html"; });
+});
+        
