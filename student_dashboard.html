@@ -4,110 +4,96 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>mNEET - Student Dashboard</title>
-    <!-- Tailwind CSS Dynamic -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="style.css">
-    <!-- FontAwesome for professional icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-black text-white flex flex-col h-screen overflow-hidden theme-dark">
+<body class="theme-dark flex flex-col h-screen overflow-hidden">
 
-    <!-- ================= FIXED TOP ROW ================= -->
-    <header class="bg-[#1A1A1A] border-b border-[#2A2A2A] px-4 py-3 flex items-center justify-between z-50">
-        <!-- Left Side: WP Community, Notification, BP Coin -->
-        <div class="flex items-center space-x-4">
-            <button id="wp-community-btn" class="text-green-500 text-xl cursor-pointer relative">
-                <i class="fab fa-whatsapp"></i>
-                <span class="absolute -top-1 -right-1 bg-red-500 w-2 h-2 rounded-full"></span>
-            </button>
-            <button id="notification-btn" class="text-golden text-xl cursor-pointer relative">
-                <i class="fas fa-bell"></i>
-                <span id="noti-badge" class="absolute -top-1 -right-1 bg-red-500 text-[10px] text-white px-1 rounded-full">0</span>
-            </button>
-            <div class="flex items-center bg-[#252525] px-2 py-1 rounded-full border border-yellow-600/30">
-                <i class="fas fa-coins text-yellow-500 text-sm mr-1"></i>
-                <span id="top-bp-coin" class="text-xs font-bold text-golden">0 BP</span>
+    <!-- ================= CONSTANT TOP ROW ================= -->
+    <header id="main-header" class="px-4 py-3 flex items-center justify-between z-50">
+        <!-- Dynamic Left: Shows Back Button on inner screens, or Communities on Home -->
+        <div class="flex items-center space-x-3" id="top-left-zone">
+            <button id="back-btn" class="hidden text-xl cursor-pointer"><i class="fas fa-arrow-left"></i></button>
+            <div id="home-left-options" class="flex items-center space-x-4">
+                <button id="wp-community-btn" class="text-green-500 text-xl cursor-pointer"><i class="fab fa-whatsapp"></i></button>
+                <button id="notification-btn" class="text-golden text-xl cursor-pointer"><i class="fas fa-bell"></i></button>
             </div>
         </div>
 
-        <!-- App Name Center (If needed, can keep blank or add text) -->
-        <div class="text-sm font-bold tracking-wider"><span class="text-white">m</span><span class="text-golden">NEET</span></div>
+        <!-- App Name with Strict Color Spec: m (white/black) NEET (golden) -->
+        <div class="text-lg font-extrabold tracking-wider">
+            <span id="logo-m">m</span><span class="text-golden">NEET</span>
+        </div>
 
-        <!-- Right Side: 3 Dashes (Profile Hamburger Menu) -->
-        <button id="menu-toggle" class="text-white text-xl cursor-pointer p-1">
-            <i class="fas fa-bars"></i>
-        </button>
+        <!-- Right Side: Course-Wise BP Coin & Hamburger Profile Dashboard -->
+        <div class="flex items-center space-x-3">
+            <div class="flex items-center px-2 py-1 rounded-full border border-yellow-600/30 bg-opacity-20" style="background-color: rgba(212,175,55,0.1);">
+                <i class="fas fa-coins text-yellow-500 text-xs mr-1"></i>
+                <span id="top-bp-coin" class="text-xs font-bold text-golden">0 BP</span>
+            </div>
+            <button id="menu-toggle" class="text-xl cursor-pointer p-1"><i class="fas fa-bars"></i></button>
+        </div>
     </header>
 
-    <!-- ================= SIDE NAVIGATION DRAWER (Right Side) ================= -->
-    <div id="profile-drawer" class="fixed top-0 right-0 h-full w-72 bg-[#141414] shadow-2xl z-50 transform translate-x-full transition-transform duration-300 border-l border-[#2A2A2A]">
+    <!-- ================= SIDE PROFILE DRAWER (Right Side) ================= -->
+    <div id="profile-drawer" class="fixed top-0 right-0 h-full w-72 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 border-l">
         <div class="p-5 flex flex-col h-full">
-            <div class="flex justify-between items-center border-b border-[#2A2A2A] pb-4 mb-6">
+            <div class="flex justify-between items-center border-b pb-4 mb-6" style="border-color: rgba(212,175,55,0.2);">
                 <h3 class="font-bold text-lg text-golden">My Profile</h3>
-                <button id="menu-close" class="text-gray-400 text-xl cursor-pointer"><i class="fas fa-times"></i></button>
+                <button id="menu-close" class="text-xl cursor-pointer"><i class="fas fa-times"></i></button>
             </div>
             
-            <!-- User Profile Card -->
-            <div class="flex items-center space-x-3 mb-6 p-3 bg-[#1A1A1A] rounded-xl">
-                <div class="w-12 h-12 rounded-full bg-golden flex items-center justify-center text-black font-bold text-lg" id="avatar-fallback">U</div>
+            <div class="flex items-center space-x-3 mb-6 p-3 rounded-xl card-bg">
+                <div class="w-12 h-12 rounded-full bg-golden flex items-center justify-center text-black font-bold text-lg" id="avatar-fallback">M</div>
                 <div>
-                    <h4 id="drawer-name" class="font-semibold text-sm">Loading...</h4>
+                    <h4 id="drawer-name" class="font-semibold text-sm">Loading Student...</h4>
                     <p id="drawer-phone" class="text-xs text-gray-400">Loading...</p>
                 </div>
             </div>
 
-            <!-- Drawer Options -->
             <nav class="flex-1 space-y-2">
-                <button id="btn-my-courses" class="w-full text-left py-3 px-4 rounded-lg bg-[#1A1A1A] hover:bg-[#252525] text-sm flex items-center"><i class="fas fa-book-open mr-3 text-golden"></i> Purchased Courses</button>
-                <div class="w-full py-3 px-4 rounded-lg bg-[#1A1A1A] flex items-center justify-between text-sm">
-                    <span><i class="fas fa-moon mr-3 text-purple-400"></i> Dark Mode</span>
+                <button id="btn-my-courses" class="w-full text-left py-3 px-4 rounded-lg card-bg text-sm flex items-center"><i class="fas fa-book-open mr-3 text-golden"></i> Purchased Courses</button>
+                <div class="w-full py-3 px-4 rounded-lg card-bg flex items-center justify-between text-sm">
+                    <span><i class="fas fa-adjust mr-3 text-amber-500"></i> App Theme (Dark Mode)</span>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="theme-switch" checked class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                        <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
                     </label>
                 </div>
-                <button id="btn-about-app" class="w-full text-left py-3 px-4 rounded-lg bg-[#1A1A1A] hover:bg-[#252525] text-sm flex items-center"><i class="fas fa-info-circle mr-3 text-blue-400"></i> About mNEET</button>
+                <button id="btn-about-app" class="w-full text-left py-3 px-4 rounded-lg card-bg text-sm flex items-center"><i class="fas fa-info-circle mr-3 text-blue-400"></i> About mNEET</button>
             </nav>
 
-            <!-- Logout Button -->
             <button id="btn-logout" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg mt-auto flex items-center justify-center"><i class="fas fa-sign-out-alt mr-2"></i> Log Out</button>
         </div>
     </div>
-    <!-- Overlay background when menu is open -->
     <div id="drawer-overlay" class="fixed inset-0 bg-black/60 hidden z-40"></div>
 
-    <!-- ================= MAIN SCROLLABLE CONTENT AREA ================= -->
+    <!-- ================= SCROLLABLE CENTER ZONE ================= -->
     <main id="main-content" class="flex-1 overflow-y-auto px-4 py-5 pb-24">
-        <!-- ডাইনামিক কন্টেন্ট এখানে লোড হবে স্ক্রিপ্ট ফাইলের মাধ্যমে -->
+        <!-- Content injects here via dashboard_view.js -->
     </main>
 
-    <!-- ================= FIXED BOTTOM ROW ================= -->
-    <footer class="fixed bottom-0 left-0 right-0 bg-[#1A1A1A] border-t border-[#2A2A2A] px-2 py-2 flex justify-around z-50">
+    <!-- ================= CONSTANT BOTTOM ROW ================= -->
+    <footer id="main-footer" class="fixed bottom-0 left-0 right-0 py-2 flex justify-around z-50 border-t">
         <button class="nav-tab text-golden flex flex-col items-center space-y-1 cursor-pointer" data-target="home">
-            <i class="fas fa-home text-lg"></i>
-            <span class="text-[10px] font-medium">Home</span>
+            <i class="fas fa-home text-lg"></i><span class="text-[10px] font-medium">Home</span>
         </button>
         <button class="nav-tab text-gray-400 flex flex-col items-center space-y-1 cursor-pointer" data-target="batches">
-            <i class="fas fa-layer-group text-lg"></i>
-            <span class="text-[10px] font-medium">Batches</span>
+            <i class="fas fa-layer-group text-lg"></i><span class="text-[10px] font-medium">Batches</span>
         </button>
         <button class="nav-tab text-gray-400 flex flex-col items-center space-y-1 cursor-pointer" data-target="study">
-            <i class="fas fa-graduation-cap text-lg"></i>
-            <span class="text-[10px] font-medium">Study</span>
+            <i class="fas fa-graduation-cap text-lg"></i><span class="text-[10px] font-medium">Study</span>
         </button>
         <button class="nav-tab text-gray-400 flex flex-col items-center space-y-1 cursor-pointer" data-target="test">
-            <i class="fas fa-file-alt text-lg"></i>
-            <span class="text-[10px] font-medium">Test</span>
+            <i class="fas fa-file-alt text-lg"></i><span class="text-[10px] font-medium">Test</span>
         </button>
         <button class="nav-tab text-gray-400 flex flex-col items-center space-y-1 cursor-pointer" data-target="mstore">
-            <i class="fas fa-shopping-bag text-lg"></i>
-            <span class="text-[10px] font-medium">mStore</span>
+            <i class="fas fa-shopping-bag text-lg"></i><span class="text-[10px] font-medium">mStore</span>
         </button>
     </footer>
 
-    <!-- Firebase এবং কাস্টম ড্যাশবোর্ড লজিক মডিউল ইম্পোর্ট -->
     <script type="module" src="dashboard_view.js"></script>
     <script type="module" src="dashboard_logic.js"></script>
 </body>
-              </html>
-  
+</html>
