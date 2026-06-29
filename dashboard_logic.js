@@ -138,4 +138,3 @@ document.getElementById("dashboard-theme-toggle").addEventListener("change", (e)
 document.getElementById("logout-submit-btn").addEventListener("click", () => {
     signOut(auth).then(() => { window.location.href = "index.html"; });
 });
-        
