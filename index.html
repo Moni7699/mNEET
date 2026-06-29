@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET - Authentication</title>
+    <title>mNEET - Gateway</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="theme-dark"> <!-- বাই ডিফল্ট তোমার ডার্ক থিমটি লোড হবে -->
+<body>
 
     <div class="auth-box">
         
-        <!-- App Identity Logo -->
-        <div class="text-center" style="margin-bottom: 32px;">
-            <h1 style="font-size: 34px; margin: 0; font-weight: 900; letter-spacing: 0.5px;">
-                <span class="m-logo">m</span><span class="neet-logo">NEET</span>
+        <!-- App Logo Screen -->
+        <div class="text-center" style="margin-bottom: 25px;">
+            <h1 style="font-size: 34px; margin: 0; font-weight: 900; color: #FFFFFF;">
+                <span>m</span><span style="color: #F3B917;">NEET</span>
             </h1>
-            <p class="text-muted" style="font-size: 12px; margin-top: 4px;">Your Ultimate Medical Prep Companion</p>
+            <p style="color: #94A3B8; font-size: 12px; margin: 4px 0 0 0;">Your Ultimate Medical Prep Companion</p>
         </div>
 
         <!-- ================= SIGN IN MODULE ================= -->
-        <div id="signin-box">
-            <h2 class="text-center" style="font-size: 22px; margin-bottom: 24px; font-weight: 800;">Sign In to Your Account</h2>
+        <div id="signin-box" style="display: block;">
+            <h2 class="text-center" style="font-size: 20px; margin-bottom: 20px; font-weight: 800; color: #FFFFFF;">Sign In to Your Account</h2>
             <form id="signin-form">
                 <div class="input-group">
                     <label>Gmail or Phone No</label>
@@ -30,19 +30,19 @@
                     <label>Password</label>
                     <input type="password" id="login-password" required>
                 </div>
-                <div style="text-align: right; margin-bottom: 20px;">
+                <div style="text-align: right; margin-bottom: 15px;">
                     <button type="button" id="goto-forgot" class="link-btn" style="font-size: 12px;">Forgot Password?</button>
                 </div>
                 <button type="submit" class="btn-mneet">Sign In</button>
             </form>
-            <p class="text-muted text-center" style="font-size: 13px; margin-top: 24px;">
+            <p style="color: #94A3B8; font-size: 13px; text-align: center; margin-top: 20px;">
                 Don't have an account? <button id="goto-signup" class="link-btn">Sign Up</button>
             </p>
         </div>
 
-        <!-- ================= SIGN UP MODULE ================= -->
-        <div id="signup-box" class="hidden">
-            <h2 class="text-center" style="font-size: 22px; margin-bottom: 24px; font-weight: 800;">Create New Account</h2>
+        <!-- ================= SIGN UP MODULE (Initially Hidden Inline) ================= -->
+        <div id="signup-box" class="hidden" style="display: none;">
+            <h2 class="text-center" style="font-size: 20px; margin-bottom: 20px; font-weight: 800; color: #FFFFFF;">Create New Account</h2>
             <form id="signup-form">
                 <div class="input-group">
                     <label>Full Name</label>
@@ -66,15 +66,15 @@
                 </div>
                 <button type="submit" class="btn-mneet">Send OTP & Register</button>
             </form>
-            <p class="text-muted text-center" style="font-size: 13px; margin-top: 24px;">
+            <p style="color: #94A3B8; font-size: 13px; text-align: center; margin-top: 20px;">
                 Already have an account? <button id="goto-signin" class="link-btn">Sign In</button>
             </p>
         </div>
 
-        <!-- ================= FORGOT PASSWORD MODULE ================= -->
-        <div id="forgot-box" class="hidden">
-            <h2 class="text-center" style="font-size: 22px; margin-bottom: 12px; font-weight: 800;">Reset Password</h2>
-            <p class="text-muted text-center" style="font-size: 12px; margin-bottom: 24px;">Enter your registered Gmail to get a reset link.</p>
+        <!-- ================= FORGOT MODULE (Initially Hidden Inline) ================= -->
+        <div id="forgot-box" class="hidden" style="display: none;">
+            <h2 class="text-center" style="font-size: 20px; margin-bottom: 10px; font-weight: 800; color: #FFFFFF;">Reset Password</h2>
+            <p style="color: #94A3B8; font-size: 12px; text-align: center; margin-bottom: 20px;">Enter your registered Gmail to get a reset link.</p>
             <form id="forgot-form">
                 <div class="input-group">
                     <label>Gmail Address</label>
@@ -92,4 +92,4 @@
     <script type="module" src="auth.js"></script>
 </body>
     </html>
-                
+    
