@@ -22,8 +22,13 @@ document.getElementById("goto-forgot").addEventListener("click", () => switchBox
 document.getElementById("back-to-login").addEventListener("click", () => switchBox(signinBox));
 
 function switchBox(target) {
-    [signinBox, signupBox, forgotBox].forEach(b => b.classList.add("hidden"));
-    target.classList.remove("hidden");
+    // সব বক্সকে পুরোপুরি হাইড করা
+    signinBox.style.display = "none";
+    signupBox.style.display = "none";
+    forgotBox.style.display = "none";
+    
+    // টার্গেট বক্সটিকে শো করা
+    target.style.display = "block";
 }
 
 // ১. সাইন আপ লজিক
