@@ -2,94 +2,104 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET - Gateway</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>mNEET - Authentication Platform</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="theme-dark">
 
-    <div class="auth-box">
+    <!-- গ্লোবাল মোবাইল ফ্লেক্স র‍্যাপার -->
+    <div class="auth-wrapper">
         
-        <!-- App Logo Screen -->
-        <div class="text-center" style="margin-bottom: 25px;">
-            <h1 style="font-size: 34px; margin: 0; font-weight: 900; color: #FFFFFF;">
-                <span>m</span><span style="color: #F3B917;">NEET</span>
-            </h1>
-            <p style="color: #94A3B8; font-size: 12px; margin: 4px 0 0 0;">Your Ultimate Medical Prep Companion</p>
-        </div>
-
-        <!-- ================= SIGN IN MODULE ================= -->
-        <div id="signin-box" style="display: block;">
-            <h2 class="text-center" style="font-size: 20px; margin-bottom: 20px; font-weight: 800; color: #FFFFFF;">Sign In to Your Account</h2>
-            <form id="signin-form">
-                <div class="input-group">
-                    <label>Gmail or Phone No</label>
-                    <input type="text" id="login-identifier" required>
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="login-password" required>
-                </div>
-                <div style="text-align: right; margin-bottom: 15px;">
-                    <button type="button" id="goto-forgot" class="link-btn" style="font-size: 12px;">Forgot Password?</button>
-                </div>
-                <button type="submit" class="btn-mneet">Sign In</button>
-            </form>
-            <p style="color: #94A3B8; font-size: 13px; text-align: center; margin-top: 20px;">
-                Don't have an account? <button id="goto-signup" class="link-btn">Sign Up</button>
-            </p>
-        </div>
-
-        <!-- ================= SIGN UP MODULE (Initially Hidden Inline) ================= -->
-        <div id="signup-box" class="hidden" style="display: none;">
-            <h2 class="text-center" style="font-size: 20px; margin-bottom: 20px; font-weight: 800; color: #FFFFFF;">Create New Account</h2>
-            <form id="signup-form">
-                <div class="input-group">
-                    <label>Full Name</label>
-                    <input type="text" id="reg-name" required>
-                </div>
-                <div class="input-group">
-                    <label>Gmail</label>
-                    <input type="email" id="reg-email" required>
-                </div>
-                <div class="input-group">
-                    <label>Phone Number</label>
-                    <input type="tel" id="reg-phone" required>
-                </div>
-                <div class="input-group">
-                    <label>City</label>
-                    <input type="text" id="reg-city" required>
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="reg-password" required>
-                </div>
-                <button type="submit" class="btn-mneet">Send OTP & Register</button>
-            </form>
-            <p style="color: #94A3B8; font-size: 13px; text-align: center; margin-top: 20px;">
-                Already have an account? <button id="goto-signin" class="link-btn">Sign In</button>
-            </p>
-        </div>
-
-        <!-- ================= FORGOT MODULE (Initially Hidden Inline) ================= -->
-        <div id="forgot-box" class="hidden" style="display: none;">
-            <h2 class="text-center" style="font-size: 20px; margin-bottom: 10px; font-weight: 800; color: #FFFFFF;">Reset Password</h2>
-            <p style="color: #94A3B8; font-size: 12px; text-align: center; margin-bottom: 20px;">Enter your registered Gmail to get a reset link.</p>
-            <form id="forgot-form">
-                <div class="input-group">
-                    <label>Gmail Address</label>
-                    <input type="email" id="forgot-email" required>
-                </div>
-                <button type="submit" class="btn-mneet">Send Reset Link</button>
-            </form>
-            <div class="text-center" style="margin-top: 20px;">
-                <button id="back-to-login" class="link-btn">Back to Sign In</button>
+        <!-- মূল প্রিমিয়াম ডার্ক কন্টেইনার বক্স -->
+        <div class="auth-box">
+            
+            <!-- App Identity Header -->
+            <div class="text-center" style="margin-bottom: 28px;">
+                <h1 style="font-size: 34px; margin: 0; font-weight: 900; letter-spacing: 0.5px;">
+                    <span class="m-logo">m</span><span class="neet-logo">NEET</span>
+                </h1>
+                <p class="text-muted" style="font-size: 11px; margin: 4px 0 0 0; font-weight: 500; tracking-spacing: 0.3px;">
+                    Your Ultimate Medical Prep Companion
+                </p>
             </div>
-        </div>
 
+            <!-- ================= ১. SIGN IN MODULE ================= -->
+            <div id="signin-box" style="display: block;">
+                <h2 class="text-center" style="font-size: 20px; margin-bottom: 22px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.3px;">Sign In to Your Account</h2>
+                <form id="signin-form">
+                    <div class="input-group">
+                        <label>Gmail or Phone No</label>
+                        <input type="text" id="login-identifier" placeholder="Enter your registered mail/phone" required autocomplete="username">
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+                    </div>
+                    <div style="text-align: right; margin-bottom: 20px; margin-top: -4px;">
+                        <button type="button" id="goto-forgot" class="link-btn" style="font-size: 12px;">Forgot Password?</button>
+                    </div>
+                    <button type="submit" class="btn-mneet">Sign In</button>
+                </form>
+                <p class="text-muted text-center" style="font-size: 13px; margin-top: 24px; font-weight: 500;">
+                    Don't have an account? <button id="goto-signup" class="link-btn">Sign Up</button>
+                </p>
+            </div>
+
+            <!-- ================= ২. SIGN UP MODULE (Strictly Inline Hidden) ================= -->
+            <div id="signup-box" class="hidden" style="display: none;">
+                <h2 class="text-center" style="font-size: 20px; margin-bottom: 22px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.3px;">Create New Account</h2>
+                <form id="signup-form">
+                    <div class="input-group">
+                        <label>Full Name</label>
+                        <input type="text" id="reg-name" placeholder="Dr. Your Name" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Gmail</label>
+                        <input type="email" id="reg-email" placeholder="example@gmail.com" required autocomplete="email">
+                    </div>
+                    <div class="input-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="reg-phone" placeholder="Enter 10-digit number" required>
+                    </div>
+                    <div class="input-group">
+                        <label>City</label>
+                        <input type="text" id="reg-city" placeholder="Your City Name" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" id="reg-password" placeholder="Create strong password" required autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="btn-mneet">Send OTP & Register</button>
+                </form>
+                <p class="text-muted text-center" style="font-size: 13px; margin-top: 24px; font-weight: 500;">
+                    Already have an account? <button id="goto-signin" class="link-btn">Sign In</button>
+                </p>
+            </div>
+
+            <!-- ================= ৩. FORGOT PASSWORD MODULE (Strictly Inline Hidden) ================= -->
+            <div id="forgot-box" class="hidden" style="display: none;">
+                <h2 class="text-center" style="font-size: 20px; margin-bottom: 8px; font-weight: 800; color: #FFFFFF;">Reset Password</h2>
+                <p class="text-muted text-center" style="font-size: 12px; margin-bottom: 22px; font-weight: 500; line-height: 1.4;">
+                    Enter your registered Gmail address below. We will send you an official secure link to reset your password.
+                </p>
+                <form id="forgot-form">
+                    <div class="input-group">
+                        <label>Gmail Address</label>
+                        <input type="email" id="forgot-email" placeholder="name@example.com" required>
+                    </div>
+                    <button type="submit" class="btn-mneet">Send Reset Link</button>
+                </form>
+                <div class="text-center" style="margin-top: 22px;">
+                    <button id="back-to-login" class="link-btn" style="font-size: 13px;">Back to Sign In</button>
+                </div>
+            </div>
+
+        </div>
     </div>
 
+    <!-- Firebase Connection and Main Logic Module Injection -->
     <script type="module" src="auth.js"></script>
 </body>
-    </html>
-    
+                            </html>
+                            
