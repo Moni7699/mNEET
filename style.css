@@ -1,120 +1,113 @@
-/* ================= PREMIUM mNEET INTERFACE SYSTEM ================= */
+/* ================= GLOBAL RESET & FIXED POSITIONING ================= */
+* {
+    box-sizing: border-box !important;
+    margin: 0; padding: 0;
+}
+
 :root {
+    --gold: #F3B917;
+    --gold-hover: #D9A312;
+    --wp-green: #25D366; /* পিওর হোয়াটসঅ্যাপ গ্রিন */
     --neon-blue: #2563EB;
-    --neon-gold: #F3B917;
-    --neon-purple: #8B5CF6;
-    --neon-red: #EF4444;
-    --neon-green: #10B981;
 }
 
-/* 🌙 OLED OBSIDIAN DARK MODE */
+/* 🌙 DARK THEME BASED ON YOUR IMAGE */
 .theme-dark {
-    --bg-app: #080C14;
-    --bg-surface: #111827;
-    --bg-input: #030712;
-    --text-main: #FFFFFF;
-    --text-muted: #94A3B8;
-    --border-color: #1F2937;
-    --drawer-mask: rgba(0, 0, 0, 0.75);
+    --bg-app: #090D16;
+    --bg-surface: #131A26;
+    --text-title: #FFFFFF;
+    --text-para: #94A3B8;
+    --border-line: #1E293B;
 }
 
-/* ☀️ ELEGANT LIGHT MODE */
+/* ☀️ WHITE THEME WITH CRISP CONTRAST */
 .theme-white {
     --bg-app: #F8FAFC;
     --bg-surface: #FFFFFF;
-    --bg-input: #F1F5F9;
-    --text-main: #0F172A;
-    --text-muted: #64748B;
-    --border-color: #E2E8F0;
-    --drawer-mask: rgba(15, 23, 42, 0.4);
-}
-
-* {
-    box-sizing: border-box !important;
-    -webkit-tap-highlight-color: transparent;
+    --text-title: #0F172A;
+    --text-para: #475569;
+    --border-line: #E2E8F0;
 }
 
 body {
     background-color: var(--bg-app) !important;
-    color: var(--text-main) !important;
+    color: var(--text-title) !important;
     font-family: system-ui, -apple-system, sans-serif;
-    margin: 0; padding: 0;
     width: 100vw; height: 100vh;
     overflow: hidden;
     transition: background-color 0.25s, color 0.25s;
 }
 
-/* 🔒 FIXED HEADER & FOOTER SYSTEM (NO OVERLAPPING) */
+/* 🔒 FIXED HEADER & FOOTER */
 .dashboard-header {
     position: fixed; top: 0; left: 0; right: 0; height: 60px;
     background-color: var(--bg-surface) !important;
-    border-bottom: 2px solid var(--border-color);
+    border-bottom: 2px solid var(--border-line);
     display: flex; align-items: center; justify-content: space-between;
     padding: 0 16px; z-index: 999;
 }
 
 .dashboard-viewport {
     position: absolute; top: 60px; bottom: 68px; left: 0; right: 0;
-    padding: 16px;
-    overflow-y: auto; /* শুধু মাঝের অংশ স্ক্রোল হবে */
-    overflow-x: hidden;
+    padding: 16px; overflow-y: auto; overflow-x: hidden;
 }
 
 .dashboard-footer {
     position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
     background-color: var(--bg-surface) !important;
-    border-top: 2px solid var(--border-color);
+    border-top: 2px solid var(--border-line);
     display: flex; justify-content: space-around; align-items: center; z-index: 999;
 }
 
-/* 📊 MNEET HOVER TILES WITH NEON BORDERS */
-.card-blue { background-color: var(--bg-surface); border: 2px solid var(--neon-blue); border-radius: 20px; }
-.card-gold { background-color: var(--bg-surface); border: 2px solid var(--neon-gold); border-radius: 20px; }
-.card-purple { background-color: var(--bg-surface); border: 2px solid var(--neon-purple); border-radius: 20px; }
-.card-red { background-color: var(--bg-surface); border: 2px solid var(--neon-red); border-radius: 20px; }
-.card-green { background-color: var(--bg-surface); border: 2px solid var(--neon-green); border-radius: 20px; }
-
-/* 🚨 FIXED SLIDE-IN DRAWER (SCREEN FIT) */
+/* 🚨 SEPARATE FIXED DRAWER LAYER (Saves from Overwriting) */
 #profile-drawer {
     position: fixed; top: 0; bottom: 0; right: 0; width: 85%; max-width: 320px;
-    background-color: var(--bg-surface) !important; z-index: 10000;
-    border-left: 2px solid var(--border-color); padding: 24px 20px;
+    background-color: var(--bg-surface) !important; z-index: 99999 !important; /* সর্বোচ্চ লেয়ার প্রটেকশন */
+    border-left: 2px solid var(--border-line); padding: 24px 20px;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex; flex-direction: column;
 }
 .drawer-closed { transform: translateX(100%); }
 .drawer-open { transform: translateX(0); }
+
 #drawer-overlay {
-    position: fixed; inset: 0; background: var(--drawer-mask); z-index: 9999;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 99998 !important;
 }
 
-/* UI ELEMENTS */
+/* 🌟 ATTRACTIVE STUDENT HERO PROFILE CARD */
+.premium-name-card {
+    background: linear-gradient(135deg, var(--bg-surface) 0%, rgba(37, 99, 235, 0.05) 100%);
+    border: 2px solid var(--neon-blue);
+    border-radius: 24px; padding: 20px; margin-bottom: 18px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+/* MNEET CARDS SYSTEM */
+.card-mneet {
+    background-color: var(--bg-surface) !important;
+    border-radius: 20px; padding: 16px; margin-bottom: 16px;
+    border: 2px solid var(--border-line);
+    transition: border-color 0.2s;
+}
+.border-gold { border-color: var(--gold) !important; }
+.border-blue { border-color: var(--neon-blue) !important; }
+.border-purple { border-color: var(--neon-purple) !important; }
+
+/* DYNAMIC FORM AND UI BUTTONS */
 .input-field {
-    width: 100%; background-color: var(--bg-input) !important;
-    border: 2px solid var(--border-color) !important;
-    color: var(--text-main) !important;
-    padding: 10px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;
+    width: 100%; background-color: var(--bg-app) !important;
+    border: 2px solid var(--border-line) !important;
+    color: var(--text-title) !important;
+    padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 600;
+}
+.btn-mneet {
+    width: 100%; background-color: var(--gold) !important; color: #000000 !important;
+    font-weight: 800; padding: 14px; border: none; border-radius: 14px; cursor: pointer; text-transform: uppercase;
 }
 .footer-tab {
-    background: none; border: none; color: var(--text-muted);
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    cursor: pointer; width: 20%; padding: 6px 0; font-size: 14px;
+    background: none; border: none; color: var(--text-para);
+    display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 20%;
 }
-.footer-tab span { font-size: 10px; font-weight: 700; text-transform: uppercase; }
-.active-tab { color: var(--neon-gold) !important; }
-
-.btn-mneet {
-    width: 100%; background-color: var(--neon-gold) !important; color: #000000 !important;
-    font-weight: 800; padding: 12px; border: none; border-radius: 12px; cursor: pointer;
-}
-.node-row { display: flex; justify-content: space-between; align-items: center; padding: 16px; cursor: pointer; }
+.active-tab { color: var(--gold) !important; }
 .hidden-widget { display: none !important; }
-
-/* TOGGLE SLIDER */
-.switch { position: relative; display: inline-block; width: 40px; height: 22px; }
-.switch input { display: none; }
-.slider { position: absolute; cursor: pointer; inset: 0; background-color: #475569; border-radius: 34px; transition: .3s; }
-.slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .3s; }
-input:checked + .slider { background-color: var(--neon-gold); }
-input:checked + .slider:before { transform: translateX(18px); }
     
