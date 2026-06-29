@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET - Student Dashboard</title>
+    <title>mNEET - Professional Student Dashboard</title>
+    <!-- Tailwind Engine -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,89 +12,100 @@
 <body class="theme-dark flex flex-col h-screen overflow-hidden">
 
     <!-- ================= CONSTANT TOP ROW ================= -->
-    <header id="main-header" class="px-4 py-3 flex items-center justify-between z-50">
-        <!-- Dynamic Left: Shows Back Button on inner screens, or Communities on Home -->
-        <div class="flex items-center space-x-3" id="top-left-zone">
-            <button id="back-btn" class="hidden text-xl cursor-pointer"><i class="fas fa-arrow-left"></i></button>
-            <div id="home-left-options" class="flex items-center space-x-4">
-                <button id="wp-community-btn" class="text-green-500 text-xl cursor-pointer"><i class="fab fa-whatsapp"></i></button>
-                <button id="notification-btn" class="text-golden text-xl cursor-pointer"><i class="fas fa-bell"></i></button>
+    <header class="px-4 py-3 flex items-center justify-between z-50 border-b shadow-sm">
+        <!-- Top Left Corner: WP, Noti, BP Coin (Home) OR Back Button + BP (Inner Screens) -->
+        <div class="flex items-center space-x-3" id="top-left-area">
+            <button id="back-btn" class="hidden text-xl cursor-pointer p-1"><i class="fas fa-arrow-left"></i></button>
+            
+            <div id="home-left-widgets" class="flex items-center space-x-3">
+                <button id="wp-btn" class="text-green-500 text-xl cursor-pointer hover:scale-105 transition"><i class="fab fa-whatsapp"></i></button>
+                <button id="noti-btn" class="text-amber-500 text-xl cursor-pointer hover:scale-105 transition relative">
+                    <i class="fas fa-bell"></i>
+                    <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
             </div>
         </div>
 
-        <!-- App Name with Strict Color Spec: m (white/black) NEET (golden) -->
-        <div class="text-lg font-extrabold tracking-wider">
-            <span id="logo-m">m</span><span class="text-golden">NEET</span>
+        <!-- Center: App Logo (m is dynamic, NEET is Golden) -->
+        <div class="text-xl font-black tracking-wider">
+            <span id="logo-m-text" class="logo-m-cls">m</span><span class="text-golden">NEET</span>
         </div>
 
-        <!-- Right Side: Course-Wise BP Coin & Hamburger Profile Dashboard -->
+        <!-- Top Right Corner: Course-wise BP Coin & Hamburger Dash Menu -->
         <div class="flex items-center space-x-3">
-            <div class="flex items-center px-2 py-1 rounded-full border border-yellow-600/30 bg-opacity-20" style="background-color: rgba(212,175,55,0.1);">
-                <i class="fas fa-coins text-yellow-500 text-xs mr-1"></i>
-                <span id="top-bp-coin" class="text-xs font-bold text-golden">0 BP</span>
+            <div class="flex items-center px-2 py-1 rounded-lg text-xs font-bold border border-amber-500/20 bg-amber-500/10">
+                <i class="fas fa-coins text-yellow-500 mr-1.5"></i>
+                <span id="top-bp-display" class="text-golden">0 BP</span>
             </div>
             <button id="menu-toggle" class="text-xl cursor-pointer p-1"><i class="fas fa-bars"></i></button>
         </div>
     </header>
 
-    <!-- ================= SIDE PROFILE DRAWER (Right Side) ================= -->
-    <div id="profile-drawer" class="fixed top-0 right-0 h-full w-72 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 border-l">
-        <div class="p-5 flex flex-col h-full">
-            <div class="flex justify-between items-center border-b pb-4 mb-6" style="border-color: rgba(212,175,55,0.2);">
-                <h3 class="font-bold text-lg text-golden">My Profile</h3>
+    <!-- ================= PROFILE HAMBURGER DRAWER ================= -->
+    <div id="profile-drawer" class="fixed top-0 right-0 h-full w-80 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 border-l">
+        <div class="p-6 flex flex-col h-full">
+            <div class="flex justify-between items-center border-b pb-4 mb-6" style="border-color: var(--border);">
+                <h3 class="font-bold text-lg text-golden"><i class="fas fa-user-circle mr-2"></i>Student Station</h3>
                 <button id="menu-close" class="text-xl cursor-pointer"><i class="fas fa-times"></i></button>
             </div>
             
-            <div class="flex items-center space-x-3 mb-6 p-3 rounded-xl card-bg">
-                <div class="w-12 h-12 rounded-full bg-golden flex items-center justify-center text-black font-bold text-lg" id="avatar-fallback">M</div>
-                <div>
-                    <h4 id="drawer-name" class="font-semibold text-sm">Loading Student...</h4>
-                    <p id="drawer-phone" class="text-xs text-gray-400">Loading...</p>
+            <!-- User Profile Snapshot -->
+            <div class="custom-card p-4 flex items-center space-x-3 mb-6">
+                <div class="w-12 h-12 rounded-full bg-golden-btn font-black flex items-center justify-center text-lg shadow-sm" id="avatar-circle">M</div>
+                <div class="overflow-hidden">
+                    <h4 id="drawer-user-name" class="font-bold text-sm truncate">Loading...</h4>
+                    <p id="drawer-user-phone" class="text-xs opacity-60 mt-0.5">Loading...</p>
                 </div>
             </div>
 
+            <!-- Drawer Links -->
             <nav class="flex-1 space-y-2">
-                <button id="btn-my-courses" class="w-full text-left py-3 px-4 rounded-lg card-bg text-sm flex items-center"><i class="fas fa-book-open mr-3 text-golden"></i> Purchased Courses</button>
-                <div class="w-full py-3 px-4 rounded-lg card-bg flex items-center justify-between text-sm">
-                    <span><i class="fas fa-adjust mr-3 text-amber-500"></i> App Theme (Dark Mode)</span>
+                <button class="w-full text-left py-3 px-4 rounded-xl custom-card text-xs font-semibold flex items-center justify-between"><span class="flex items-center"><i class="fas fa-bookmark text-golden mr-3"></i>My Purchased Courses</span><i class="fas fa-chevron-right text-[10px] opacity-40"></i></button>
+                
+                <!-- Toggle Theme Button Container -->
+                <div class="w-full py-3 px-4 rounded-xl custom-card text-xs font-semibold flex items-center justify-between">
+                    <span class="flex items-center"><i class="fas fa-circle-half-stroke text-blue-400 mr-3"></i>App Theme Mode</span>
                     <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="theme-switch" checked class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                        <input type="checkbox" id="theme-toggler-input" checked class="sr-only peer">
+                        <div class="w-10 h-5 bg-gray-500 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
                     </label>
                 </div>
-                <button id="btn-about-app" class="w-full text-left py-3 px-4 rounded-lg card-bg text-sm flex items-center"><i class="fas fa-info-circle mr-3 text-blue-400"></i> About mNEET</button>
+                
+                <button class="w-full text-left py-3 px-4 rounded-xl custom-card text-xs font-semibold flex items-center"><i class="fas fa-circle-info text-emerald-400 mr-3"></i>About mNEET App</button>
             </nav>
 
-            <button id="btn-logout" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg mt-auto flex items-center justify-center"><i class="fas fa-sign-out-alt mr-2"></i> Log Out</button>
+            <button id="logout-action-btn" class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl text-xs flex items-center justify-center transition shadow-md"><i class="fas fa-power-off mr-2"></i>Secure Log Out</button>
         </div>
     </div>
-    <div id="drawer-overlay" class="fixed inset-0 bg-black/60 hidden z-40"></div>
+    <div id="drawer-overlay" class="fixed inset-0 bg-black/60 hidden z-40 transition-opacity"></div>
 
-    <!-- ================= SCROLLABLE CENTER ZONE ================= -->
+    <!-- ================= MAIN MID SCROLLABLE CONTENT ================= -->
     <main id="main-content" class="flex-1 overflow-y-auto px-4 py-5 pb-24">
-        <!-- Content injects here via dashboard_view.js -->
+        <!-- Content injects dynamically -->
     </main>
 
-    <!-- ================= CONSTANT BOTTOM ROW ================= -->
-    <footer id="main-footer" class="fixed bottom-0 left-0 right-0 py-2 flex justify-around z-50 border-t">
-        <button class="nav-tab text-golden flex flex-col items-center space-y-1 cursor-pointer" data-target="home">
-            <i class="fas fa-home text-lg"></i><span class="text-[10px] font-medium">Home</span>
+    <!-- ================= CONSTANT BOTTOM NEVIGATION ================= -->
+    <footer class="fixed bottom-0 left-0 right-0 py-2.5 flex justify-around z-50 border-t shadow-lg">
+        <button class="tab-trigger text-golden flex flex-col items-center space-y-1 cursor-pointer transition-transform active:scale-95" data-view="home">
+            <i class="fas fa-house text-base"></i><span class="text-[9px] font-bold uppercase tracking-wider">Home</span>
         </button>
-        <button class="nav-tab text-gray-400 flex flex-col items-center space-y-1 cursor-pointer" data-target="batches">
-            <i class="fas fa-layer-group text-lg"></i><span class="text-[10px] font-medium">Batches</span>
+        <button class="tab-trigger opacity-50 flex flex-col items-center space-y-1 cursor-pointer transition-transform active:scale-95" data-view="batches">
+            <i class="fas fa-cubes text-base"></i><span class="text-[9px] font-bold uppercase tracking-wider">Batches</span>
         </button>
-        <button class="nav-tab text-gray-400 flex flex-col items-center space-y-1 cursor-pointer" data-target="study">
-            <i class="fas fa-graduation-cap text-lg"></i><span class="text-[10px] font-medium">Study</span>
+        <button class="tab-trigger opacity-50 flex flex-col items-center space-y-1 cursor-pointer transition-transform active:scale-95" data-view="study">
+            <i class="fas fa-book-bookmark text-base"></i><span class="text-[9px] font-bold uppercase tracking-wider">Study</span>
         </button>
-        <button class="nav-tab text-gray-400 flex flex-col items-center space-y-1 cursor-pointer" data-target="test">
-            <i class="fas fa-file-alt text-lg"></i><span class="text-[10px] font-medium">Test</span>
+        <button class="tab-trigger opacity-50 flex flex-col items-center space-y-1 cursor-pointer transition-transform active:scale-95" data-view="test">
+            <i class="fas fa-clipboard-check text-base"></i><span class="text-[9px] font-bold uppercase tracking-wider">Test</span>
         </button>
-        <button class="nav-tab text-gray-400 flex flex-col items-center space-y-1 cursor-pointer" data-target="mstore">
-            <i class="fas fa-shopping-bag text-lg"></i><span class="text-[10px] font-medium">mStore</span>
+        <button class="tab-trigger opacity-50 flex flex-col items-center space-y-1 cursor-pointer transition-transform active:scale-95" data-view="mstore">
+            <i class="fas fa-bag-shopping text-base"></i><span class="text-[9px] font-bold uppercase tracking-wider">mStore</span>
         </button>
     </footer>
 
+    <!-- Script Hooks -->
     <script type="module" src="dashboard_view.js"></script>
     <script type="module" src="dashboard_logic.js"></script>
 </body>
-</html>
+        </html>
+    
