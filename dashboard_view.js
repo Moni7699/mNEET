@@ -68,38 +68,89 @@ export function renderHomeSection(studentName) {
     `;
 }
 
-// 🔔 ২. নোটিফিকেশন ইন্টারফেস
-export function renderNotificationSection() {
-    return `
-        <h2 style="font-size: 20px; font-weight: 800; color: var(--neon-red); margin-bottom: 14px;"><i class="fas fa-bell mr-2"></i>Live Notification Updates</h2>
-        <div class="card-mneet border-red" style="padding: 14px;">
-            <span style="font-size: 10px; background-color: rgba(239,68,68,0.1); padding: 2px 6px; border-radius: 6px; color: var(--neon-red); font-weight:700;">UPDATE</span>
-            <h4 style="margin: 8px 0 4px 0; font-size: 13px;">New Quiz Engine Live!</h4>
-            <p style="margin: 0; font-size: 11px; color: var(--text-para);">Earn +10 BP Coins on every correct answer in the Topic wise Quiz zone now!</p>
-        </div>
-    `;
-}
-
-// 📚 ৩. স্টাডি জোন রুট উইন্ডো
+// 📚 ২. স্টাডি জোন রুট উইন্ডো (নতুন ৫টি ডেডিকেটেড কার্ড সহ)
 export function renderStudySection() {
     return `
-        <h2 style="font-size: 20px; font-weight: 800; color: var(--gold); margin-bottom: 14px;">STUDY ARCHIVE</h2>
-        <div class="card-mneet border-blue node-row" id="trigger-ncert-reading">
-            <div style="display:flex; align-items:center; gap:12px; font-size:13px; font-weight:700;"><i class="fas fa-book-open" style="color:var(--neon-blue);"></i><span>i) NCERT Reading and PYQ Tag</span></div>
-            <i class="fas fa-chevron-right"></i>
+        <h2 style="font-size: 20px; font-weight: 800; color: var(--gold); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Study Zone</h2>
+        
+        <div class="card-mneet border-blue node-row" id="card-ncert-reading" style="cursor: pointer;">
+            <div style="display:flex; align-items:center; gap:12px; font-size:13px; font-weight:700;">
+                <i class="fas fa-book-open" style="color:var(--neon-blue); font-size:16px;"></i>
+                <span>NCERT READING AND PYQ TAG</span>
+            </div>
+            <i class="fas fa-chevron-right" style="font-size:12px; color:var(--text-para);"></i>
         </div>
-        <div class="card-mneet border-gold node-row" id="trigger-lectures">
-            <div style="display:flex; align-items:center; gap:12px; font-size:13px; font-weight:700;"><i class="fas fa-file-signature" style="color:var(--gold);"></i><span>ii) Lectures Notes and DPP Hub</span></div>
-            <i class="fas fa-chevron-right"></i>
+        
+        <div class="card-mneet border-gold node-row" id="card-lecture-notes" style="cursor: pointer;">
+            <div style="display:flex; align-items:center; gap:12px; font-size:13px; font-weight:700;">
+                <i class="fas fa-file-signature" style="color:var(--gold); font-size:16px;"></i>
+                <span>LECTURE NOTES AND DPP</span>
+            </div>
+            <i class="fas fa-chevron-right" style="font-size:12px; color:var(--text-para);"></i>
         </div>
-        <div class="card-mneet border-purple node-row" id="trigger-quiz">
-            <div style="display:flex; align-items:center; gap:12px; font-size:13px; font-weight:700;"><i class="fas fa-trophy" style="color:var(--neon-purple);"></i><span>iii) Chapter and Topic wise Quiz</span></div>
-            <i class="fas fa-chevron-right"></i>
+        
+        <div class="card-mneet border-purple node-row" id="card-topic-quiz" style="cursor: pointer;">
+            <div style="display:flex; align-items:center; gap:12px; font-size:13px; font-weight:700;">
+                <i class="fas fa-trophy" style="color:var(--neon-purple); font-size:16px;"></i>
+                <span>CHAPTER WISE TOPIC WISE QUIZ</span>
+            </div>
+            <i class="fas fa-chevron-right" style="font-size:12px; color:var(--text-para);"></i>
+        </div>
+
+        <div class="card-mneet border-green node-row" id="card-special-material" style="cursor: pointer;">
+            <div style="display:flex; align-items:center; gap:12px; font-size:13px; font-weight:700;">
+                <i class="fas fa-star" style="color:var(--neon-green); font-size:16px;"></i>
+                <span>SPECIAL MATERIAL HUB</span>
+            </div>
+            <i class="fas fa-chevron-right" style="font-size:12px; color:var(--text-para);"></i>
+        </div>
+
+        <div class="card-mneet border-red node-row" id="card-doubts-box" style="cursor: pointer;">
+            <div style="display:flex; align-items:center; gap:12px; font-size:13px; font-weight:700;">
+                <i class="fas fa-headset" style="color:var(--neon-red); font-size:16px;"></i>
+                <span>DOUBTS AND COMPLAINTS BOX</span>
+            </div>
+            <i class="fas fa-chevron-right" style="font-size:12px; color:var(--text-para);"></i>
         </div>
     `;
 }
 
-// 📦 ৪. বাকি স্ট্যাটিক উইজেট ম্যাপস
+// ৩. গ্লোবাল সাবজেক্ট গেট (৩টি মূল সাবজেক্ট সহ)
+export function renderSubjectGate(originCard) {
+    return `
+        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 14px; text-transform: uppercase;">Select Subject</h2>
+        <div class="card-mneet border-green node-row subject-select-btn" data-subject="biology" data-origin="${originCard}" style="cursor: pointer;">
+            <div style="display:flex; align-items:center; gap:12px; font-size:14px; font-weight:800;">
+                <i class="fas fa-dna" style="color:var(--neon-green);"></i><span>🧬 BIOLOGY CORE</span>
+            </div>
+        </div>
+        <div class="card-mneet border-red node-row subject-select-btn" data-subject="chemistry" data-origin="${originCard}" style="cursor: pointer;">
+            <div style="display:flex; align-items:center; gap:12px; font-size:14px; font-weight:800;">
+                <i class="fas fa-flask" style="color:var(--neon-red);"></i><span>🧪 CHEMISTRY CORE</span>
+            </div>
+        </div>
+        <div class="card-mneet border-blue node-row subject-select-btn" data-subject="physics" data-origin="${originCard}" style="cursor: pointer;">
+            <div style="display:flex; align-items:center; gap:12px; font-size:14px; font-weight:800;">
+                <i class="fas fa-bolt" style="color:var(--neon-blue);"></i><span>⚡ PHYSICS CORE</span>
+            </div>
+        </div>
+    `;
+}
+
+// ৪. চ্যাপ্টার প্লেলিস্ট ভিউ
+export function renderChapterPlaylist(subject, originCard) {
+    return `
+        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 14px; text-transform: uppercase;">${subject} Chapters</h2>
+        <div class="card-mneet border-gold chapter-item-btn" data-chapter="cell_cycle" data-subject="${subject}" data-origin="${originCard}" style="padding:14px; cursor:pointer; margin-bottom: 10px;">
+            <h4 style="font-size:14px; margin:0;">Cell Cycle and Cell Division</h4>
+        </div>
+        <div class="card-mneet border-gold chapter-item-btn" data-chapter="biomolecules" data-subject="${subject}" data-origin="${originCard}" style="padding:14px; cursor:pointer; margin-bottom: 10px;">
+            <h4 style="font-size:14px; margin:0;">Biomolecules</h4>
+        </div>
+    `;
+}
+
+// ৫. বাকি স্ট্যাটিক উইজেট ম্যাপস
 export function renderBatchesSection() {
     return `<h2 style="font-size:20px; font-weight:800; color:var(--gold);">AVAILABLE BATCHES</h2><div class="card-mneet border-gold" style="padding:16px;"><h3 style="margin:0 0 6px 0; font-size:15px;">Target NEET Dropper Pro</h3><button class="btn-mneet" style="margin-top:14px;">Enroll & Purchase</button></div>`;
 }
@@ -109,16 +160,8 @@ export function renderTestSection() {
 export function renderMStoreSection() {
     return `<h2 style="font-size:20px; font-weight:800; color:var(--gold);">mSTORE MARKETPLACE</h2><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div class="card-mneet border-blue" style="padding:10px;"><h4 style="font-size:12px;">NCERT Punch Biology</h4><p style="color:var(--gold); font-weight:800; margin:4px 0;">₹380</p><button class="btn-mneet" style="padding:6px; font-size:11px;">Buy Now</button></div></div>`;
 }
-
-// ৪-স্তরের সাবজেক্ট ও ১০-প্লেয়ার এরিনা এক্সটেনশনগুলো নিচে লোড হচ্ছে
-export function renderSubjectGate(originRow) {
-    return `<h2 style="font-size:18px; font-weight:800; margin-bottom:14px;">SELECT SUBJECT</h2><div class="card-mneet border-green node-row subject-select-btn" data-subject="biology" data-origin="${originRow}"><div style="display:flex; align-items:center; gap:12px; font-size:14px; font-weight:800;"><i class="fas fa-dna" style="color:var(--neon-green);"></i><span>🧬 BIOLOGY CORE</span></div></div><div class="card-mneet border-red node-row subject-select-btn" data-subject="chemistry" data-origin="${originRow}"><div style="display:flex; align-items:center; gap:12px; font-size:14px; font-weight:800;"><i class="fas fa-flask" style="color:var(--neon-red);"></i><span>🧪 CHEMISTRY CORE</span></div></div>`;
-}
-export function renderChapterPlaylist(subject, originRow) {
-    return `<h2 style="font-size:18px; font-weight:800; margin-bottom:14px; text-transform:uppercase;">${subject} Chapters</h2><div class="card-mneet border-gold chapter-item-btn" data-chapter="cell_division" data-subject="${subject}" data-origin="${originRow}" style="padding:14px; cursor:pointer;"><h4 style="font-size:14px; margin:0;">Cell Cycle and Cell Division</h4></div>`;
-}
-export function renderBattleLobbyView(roomCode, currentParticipantsCount) {
-    return `<div class="card-mneet border-purple" style="text-align:center; padding:20px;"><span style="font-size:10px; color:var(--neon-purple); font-weight:800;">10-PLAYER LIVE ARENA</span><h3 style="font-size:22px; margin:12px 0 6px 0;">BATTLE CODE</h3><div style="font-size:26px; font-family:monospace; font-weight:900; color:var(--gold); background:var(--bg-input); padding:10px; border-radius:12px; letter-spacing:4px;">${roomCode}</div></div><div class="card-mneet border-blue"><h4>Slots Joined (${currentParticipantsCount}/10)</h4><div id="battle-participants-list" style="margin-top:10px;"></div></div>`;
+export function renderNotificationSection() {
+    return `<h2 style="font-size: 20px; font-weight: 800; color: var(--neon-red); margin-bottom: 14px;"><i class="fas fa-bell mr-2"></i>Live Notification Updates</h2><div class="card-mneet border-red" style="padding: 14px;"><span style="font-size: 10px; background-color: rgba(239,68,68,0.1); padding: 2px 6px; border-radius: 6px; color: var(--neon-red); font-weight:700;">UPDATE</span><h4 style="margin: 8px 0 4px 0; font-size: 13px;">Syllabus Modules Activated</h4><p style="margin: 0; font-size: 11px; color: var(--text-para);">Go to Study zone to explore brand new NCERT & Quiz archives!</p></div>`;
 }
 export function renderWPCommunitySection() {
     return `<h2 style="font-size: 20px; font-weight: 800; color: var(--neon-green); margin-bottom: 14px;"><i class="fab fa-whatsapp mr-2"></i>mNEET Elite Club</h2><div class="card-mneet border-green" style="height: calc(100vh - 260px); display: flex; flex-direction: column; padding: 10px;"><div id="chat-messages-box" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;"></div><div style="display:flex; gap:8px; border-top:1px solid var(--border-line); padding-top:10px;"><label for="chat-photo-file" style="color:var(--neon-green); font-size:18px; cursor:pointer;"><i class="fas fa-camera"></i></label><input type="file" id="chat-photo-file" accept="image/*" style="display:none;"><input type="text" id="chat-text-input" placeholder="Type message..." style="flex:1;"><button id="chat-send-btn" class="link-btn" style="color:var(--neon-green);"><i class="fas fa-paper-plane"></i></button></div></div>`;
