@@ -1,11 +1,18 @@
 import { auth, db } from "./firebase-config.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { ref, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 import { 
     renderHomeSection, renderStudySection, renderBatchesSection, renderTestSection, renderMStoreSection,
     renderNotificationSection, renderWPCommunitySection, renderBPCoinGamingSection, renderSubjectGate, renderChapterPlaylist
 } from "./dashboard_view.js";
-import { initializeCommunityChat, createOrJoinMultiplayerBattle } from "./community_chat.js";
+import { initializeCommunityChat } from "./community_chat.js";
+
+// ৫টি স্পেশাল মডিউলের ফাইল ইম্পোর্টস (আপাতত ফাংশন লোডার)
+import { loadNcertModule } from "./study_ncert.js";
+import { loadLecturesModule } from "./study_lectures.js";
+import { loadQuizModule } from "./study_quiz.js";
+import { loadSpecialModule } from "./study_special.js";
+import { loadDoubtsModule } from "./study_doubts.js";
 
 const renderArea = document.getElementById("dashboard-main-render-area");
 const backBtn = document.getElementById("dashboard-back-btn");
@@ -23,7 +30,6 @@ onAuthStateChanged(auth, async (user) => {
             cacheUserData = snap.val();
             document.getElementById("profile-name-display").innerText = cacheUserData.name || "Student";
             document.getElementById("profile-phone-display").innerText = cacheUserData.phone || "";
-            
             document.getElementById("target-college-input").value = cacheUserData.customTargetCollege || "AIIMS Delhi";
             document.getElementById("target-date-input").value = cacheUserData.customTargetDate || "2027-05-02";
             
@@ -65,7 +71,7 @@ function loadViewTab(viewName) {
         homeWidgets.classList.remove("hidden-widget");
     } else {
         backBtn.classList.remove("hidden-widget");
-        homeWidgets.classList.add("hidden-widget");
+        homeWidgets.add("hidden-widget"); // Safety Toggle
     }
 
     clearInterval(timerMechanismInterval);
@@ -78,7 +84,7 @@ function loadViewTab(viewName) {
         document.getElementById("batch-view-filter").addEventListener("change", syncBPCoinCountDisplay);
     } else if (viewName === "study") {
         renderArea.innerHTML = renderStudySection();
-        bindStudyRoutingEvents();
+        bindStudyCardsRouting();
     } else if (viewName === "batches") {
         renderArea.innerHTML = renderBatchesSection();
     } else if (viewName === "test") {
@@ -96,25 +102,36 @@ function loadViewTab(viewName) {
     }
 }
 
-function bindStudyRoutingEvents() {
-    document.getElementById("trigger-ncert-reading")?.addEventListener("click", () => {
-        renderArea.innerHTML = renderSubjectGate("ncert_reading");
+// ৫টি কার্ডের লিনিয়ার সাবজেক্ট গেট রাউটিং
+function bindStudyCardsRouting() {
+    document.getElementById("card-ncert-reading")?.addEventListener("click", () => {
+        renderArea.innerHTML = renderSubjectGate("ncert");
         bindSubjectGateClicks();
     });
-    document.getElementById("trigger-lectures")?.addEventListener("click", () => {
+    document.getElementById("card-lecture-notes")?.addEventListener("click", () => {
         renderArea.innerHTML = renderSubjectGate("lectures");
         bindSubjectGateClicks();
     });
-    document.getElementById("trigger-quiz")?.addEventListener("click", () => {
+    document.getElementById("card-topic-quiz")?.addEventListener("click", () => {
         renderArea.innerHTML = renderSubjectGate("quiz");
         bindSubjectGateClicks();
+    });
+    document.getElementById("card-special-material")?.addEventListener("click", () => {
+        renderArea.innerHTML = renderSubjectGate("special");
+        bindSubjectGateClicks();
+    });
+    document.getElementById("card-doubts-box")?.addEventListener("click", () => {
+        // ডাউট বক্সের জন্য সাবজেক্ট গেট ছাড়াই ডিরেক্ট ফাইল লোড হবে
+        loadDoubtsModule(cacheUserData, renderArea);
     });
 }
 
 function bindSubjectGateClicks() {
     document.querySelectorAll(".subject-select-btn").forEach(btn => {
         btn.onclick = () => {
-            renderArea.innerHTML = renderChapterPlaylist(btn.getAttribute("data-subject"), btn.getAttribute("data-origin"));
+            const origin = btn.getAttribute("data-origin");
+            const subject = btn.getAttribute("data-subject");
+            renderArea.innerHTML = renderChapterPlaylist(subject, origin);
             bindChapterClicks();
         };
     });
@@ -123,10 +140,19 @@ function bindSubjectGateClicks() {
 function bindChapterClicks() {
     document.querySelectorAll(".chapter-item-btn").forEach(item => {
         item.onclick = () => {
-            if(item.getAttribute("data-origin") === "quiz") {
-                createOrJoinMultiplayerBattle(item.getAttribute("data-chapter"), cacheUserData, renderArea);
-            } else {
-                renderArea.innerHTML = `<div class="card-mneet border-blue">📚 Opening Material Engine...</div>`;
+            const origin = item.getAttribute("data-origin");
+            const subject = item.getAttribute("data-subject");
+            const chapter = item.getAttribute("data-chapter");
+
+            // ৫টি আলাদা ডেডিকেটেড ফাইলে ডাইরেক্ট রাউট ফরোয়ার্ড
+            if (origin === "ncert") {
+                loadNcertModule(subject, chapter, cacheUserData, renderArea);
+            } else if (origin === "lectures") {
+                loadLecturesModule(subject, chapter, cacheUserData, renderArea);
+            } else if (origin === "quiz") {
+                loadQuizModule(subject, chapter, cacheUserData, renderArea);
+            } else if (origin === "special") {
+                loadSpecialModule(subject, chapter, cacheUserData, renderArea);
             }
         };
     });
@@ -165,5 +191,5 @@ function startPersonalizedTimer() {
         document.getElementById("timer-mins").innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         document.getElementById("timer-secs").innerText = Math.floor((diff % (1000 * 60)) / 1000);
     }, 1000);
-        }
-            
+            }
+    
