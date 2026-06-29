@@ -1,61 +1,77 @@
-/* ================= THEME DESIGN SYSTEM ================= */
-.theme-dark {
-    --bg-main: #0F0F0F;
-    --bg-header-footer: #1A1A1A;
-    --bg-card: #161616;
-    --bg-input: #222222;
-    --text-main: #FFFFFF;
-    --text-muted: #A0A0A0;
-    --border-color: #2A2A2A;
-    --m-color: #FFFFFF;
-}
-
-.theme-white {
-    --bg-main: #F4F6F9;
-    --bg-header-footer: #FFFFFF;
-    --bg-card: #FFFFFF;
-    --bg-input: #EBF0F5;
-    --text-main: #1A1A1A;
-    --text-muted: #666666;
-    --border-color: #E2E8F0;
-    --m-color: #000000; /* হোয়াইট মোডে 'm' কালো দেখাবে সুন্দর লাগবে */
-}
-
-/* কমন ভেরিয়েবল */
+/* ================= ADVANCED THEME ENGINE ================= */
 :root {
-    --golden: #D4AF37;
-    --golden-hover: #AA8C2C;
+    /* কমন ব্র্যান্ডিং কালার */
+    --golden: #F59E0B;       /* গ্লোয়িং নিওন গোল্ডেন */
+    --golden-hover: #D97706; /* ডার্ক গোল্ড */
+    --success: #10B981;      /* হোয়াটসঅ্যাপ গ্রিন */
 }
 
-/* গ্লোবাল ডার্ক ব্যাকগ্রাউন্ড ফিক্স */
+/* 🌙 PREMIUM DARK THEME */
+.theme-dark {
+    --bg-main: #0B0F19;           /* ডিপ অবসিডিয়ান ব্লু-ব্ল্যাক */
+    --bg-surface: #1E293B;        /* উজ্জ্বল চারকোল সারফেস */
+    --bg-input: #111827;          /* ইনপুট ব্যাকগ্রাউন্ড */
+    --text-main: #F8FAFC;         /* অফ-হোয়াইট মেইন টেক্সট */
+    --text-muted: #94A3B8;        /* সফট গ্রে টেক্সট */
+    --border: #334155;            /* নিখুঁত স্মুথ বর্ডার */
+    --logo-m: #FFFFFF;            /* ডার্ক মোডে m সাদা */
+}
+
+/* ☀️ ELEGANT LIGHT THEME */
+.theme-white {
+    --bg-main: #F8FAFC;           /* সফট লাইট গ্রে */
+    --bg-surface: #FFFFFF;        /* পিওর হোয়াইট কার্ড */
+    --bg-input: #F1F5F9;          /* হালকা ইনপুট ব্যাকগ্রাউন্ড */
+    --text-main: #0F172A;         /* ডিপ স্লেট মেইন টেক্সট */
+    --text-muted: #64748B;        /* মিড-গ্রে টেক্সট */
+    --border: #E2E8F0;            /* লাইট বর্ডার */
+    --logo-m: #0F172A;            /* লাইট মোডে m ডিপ স্লেট */
+}
+
+/* ================= GLOBAL CORE STYLES ================= */
 body {
-    background-color: #0F0F0F !important; /* পেছনের সাদা ব্যাকগ্রাউন্ড চিরতরে দূর করবে */
-    color: #FFFFFF;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-main) !important;
+    color: var(--text-main) !important;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     margin: 0;
     padding: 0;
 }
 
-:root {
-    --golden: #D4AF37;
-    --golden-hover: #AA8C2C;
+/* হেডার, ফুটার এবং কার্ডের ডাইনামিক স্টাইল */
+header, footer, #profile-drawer {
+    background-color: var(--bg-surface) !important;
+    border-color: var(--border) !important;
 }
 
-.text-golden { color: var(--golden); }
-.bg-golden { background-color: var(--golden); color: #0F0F0F; }
-.bg-golden:hover { background-color: var(--golden-hover); }
+.custom-card {
+    background-color: var(--bg-surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
 
-/* ইনপুট ফিল্ডের নিখুঁত ভিজিবিলিটি */
-input {
-    background-color: #252525 !important;
-    border: 1px solid #3D3D3D !important;
-    color: #FFFFFF !important;
+/* টেক্সট ও বাটন কালার ম্যাপিং */
+.text-golden { color: var(--golden) !important; }
+.logo-m-cls { color: var(--logo-m) !important; }
+.bg-golden-btn { background-color: var(--golden) !important; color: #0F172A !important; }
+.bg-golden-btn:hover { background-color: var(--golden-hover) !important; }
+
+/* ইনপুট ও ড্রপডাউন কন্ট্রোল */
+select, input {
+    background-color: var(--bg-input) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-main) !important;
     transition: all 0.2s ease;
 }
-input:focus {
+select:focus, input:focus {
     border-color: var(--golden) !important;
-    box-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
     outline: none;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
 }
+
+/* স্ক্রোলবার কাস্টমাইজেশন */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 
 .hidden { display: none !important; }
