@@ -27,32 +27,35 @@
     --golden-hover: #AA8C2C;
 }
 
-/* গ্লোবাল বডি থিম রেন্ডারিং */
+/* গ্লোবাল ডার্ক ব্যাকগ্রাউন্ড ফিক্স */
 body {
-    background-color: var(--bg-main);
-    color: var(--text-main);
-    transition: background-color 0.25s ease, color 0.25s ease;
+    background-color: #0F0F0F !important; /* পেছনের সাদা ব্যাকগ্রাউন্ড চিরতরে দূর করবে */
+    color: #FFFFFF;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
-#main-header, #main-footer, #profile-drawer {
-    background-color: var(--bg-header-footer);
-    border-color: var(--border-color);
+:root {
+    --golden: #D4AF37;
+    --golden-hover: #AA8C2C;
 }
 
-.card-bg {
-    background-color: var(--bg-card);
-    border: 1px solid var(--border-color);
-}
-
-#logo-m { color: var(--m-color); }
 .text-golden { color: var(--golden); }
-.bg-golden { background-color: var(--golden); }
+.bg-golden { background-color: var(--golden); color: #0F0F0F; }
+.bg-golden:hover { background-color: var(--golden-hover); }
 
-/* ইনপুট ও ড্রপডাউন */
-select, input {
-    background-color: var(--bg-input) !important;
-    border: 1px solid var(--border-color) !important;
-    color: var(--text-main) !important;
+/* ইনপুট ফিল্ডের নিখুঁত ভিজিবিলিটি */
+input {
+    background-color: #252525 !important;
+    border: 1px solid #3D3D3D !important;
+    color: #FFFFFF !important;
+    transition: all 0.2s ease;
+}
+input:focus {
+    border-color: var(--golden) !important;
+    box-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
+    outline: none;
 }
 
 .hidden { display: none !important; }
