@@ -1,3 +1,5 @@
+// admin_logic.js এর ওপরে এই লাইনটি বসাও:
+import { loadAdminNcertManager } from "./admin_ncert.js";
 import { auth, db } from "./firebase-config.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { ref, get, set, update, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
