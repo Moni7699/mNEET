@@ -1,0 +1,37 @@
+/* কাস্টম গোল্ডেন এবং ব্ল্যাক থিম ভেরিয়েবল */
+:root {
+    --bg-black: #0F0F0F;
+    --card-black: #1A1A1A;
+    --golden: #D4AF37;
+    --golden-hover: #AA8C2C;
+    --white: #FFFFFF;
+    --gray: #A0A0A0;
+}
+
+body {
+    background-color: var(--bg-black);
+    color: var(--white);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* গোল্ডেন টেক্সট এবং বাটন স্টাইল */
+.text-golden { color: var(--golden); }
+.bg-golden { background-color: var(--golden); color: var(--bg-black); }
+.bg-golden:hover { background-color: var(--golden-hover); }
+
+/* ইনপুট ফিল্ড স্টাইল */
+input {
+    background-color: #252525 !important;
+    border: 1px solid #3D3D3D !important;
+    color: white !important;
+}
+input:focus {
+    border-color: var(--golden) !important;
+    outline: none;
+}
+
+/* হাইড করার জন্য ক্লাস */
+.hidden { display: none !important; }
+
