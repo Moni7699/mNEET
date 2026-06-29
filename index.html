@@ -3,52 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mNEET - Authentication Platform</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body class="theme-dark">
+    <title>mNEET - Authentication Gate</title>
+    
+    <style>
+        body {
+            background-color: #090D16 !important;
+            color: #FFFFFF !important;
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0; padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        *, *:before, *:after { box-sizing: border-box !important; }
 
-    <!-- গ্লোবাল মোবাইল ফ্লেক্স র‍্যাপার -->
+        .auth-wrapper {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; padding: 16px;
+        }
+
+        .auth-box {
+            background-color: #131A26 !important;
+            border: 2px solid #1E293B !important;
+            border-radius: 24px !important;
+            padding: 28px 20px !important;
+            width: 100%; max-width: 360px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        .input-group {
+            display: block !important;
+            width: 100% !important;
+            margin-bottom: 15px !important;
+        }
+
+        .input-group label {
+            display: block !important;
+            font-size: 13px;
+            color: #94A3B8;
+            margin-bottom: 6px;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        input {
+            display: block !important;
+            width: 100% !important;
+            background-color: #0D131F !important;
+            border: 2px solid #1E293B !important;
+            color: #FFFFFF !important;
+            padding: 13px 14px !important;
+            border-radius: 14px !important;
+            font-size: 14px !important;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus { border-color: #2563EB !important; }
+
+        .btn-mneet {
+            display: block !important;
+            width: 100% !important;
+            background-color: #F3B917 !important;
+            color: #000000 !important;
+            font-weight: 800; font-size: 15px;
+            padding: 14px !important;
+            border: none !important;
+            border-radius: 14px !important;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 20px;
+        }
+
+        .link-btn {
+            background: none !important;
+            border: none !important;
+            color: #F3B917 !important;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 13px;
+            padding: 0 !important;
+        }
+        .link-btn:hover { text-decoration: underline; }
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .text-muted { color: #94A3B8; }
+    </style>
+</head>
+<body>
+
     <div class="auth-wrapper">
-        
-        <!-- মূল প্রিমিয়াম ডার্ক কন্টেইনার বক্স -->
         <div class="auth-box">
             
-            <!-- App Identity Header -->
-            <div class="text-center" style="margin-bottom: 28px;">
-                <h1 style="font-size: 34px; margin: 0; font-weight: 900; letter-spacing: 0.5px;">
-                    <span class="m-logo">m</span><span class="neet-logo">NEET</span>
+            <div class="text-center" style="margin-bottom: 26px;">
+                <h1 style="font-size: 34px; margin: 0; font-weight: 900; tracking-spacing: 0.5px;">
+                    <span style="color: #FFFFFF;">m</span><span style="color: #F3B917;">NEET</span>
                 </h1>
-                <p class="text-muted" style="font-size: 11px; margin: 4px 0 0 0; font-weight: 500; tracking-spacing: 0.3px;">
-                    Your Ultimate Medical Prep Companion
-                </p>
+                <p class="text-muted" style="font-size: 11px; margin: 4px 0 0 0;">Your Ultimate Medical Prep Companion</p>
             </div>
 
-            <!-- ================= ১. SIGN IN MODULE ================= -->
             <div id="signin-box" style="display: block;">
-                <h2 class="text-center" style="font-size: 20px; margin-bottom: 22px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.3px;">Sign In to Your Account</h2>
+                <h2 class="text-center" style="font-size: 20px; margin-bottom: 20px; font-weight: 800; color: #FFFFFF;">Sign In to Your Account</h2>
                 <form id="signin-form">
                     <div class="input-group">
                         <label>Gmail or Phone No</label>
-                        <input type="text" id="login-identifier" placeholder="Enter your registered mail/phone" required autocomplete="username">
+                        <input type="text" id="login-identifier" placeholder="mail@example.com or phone" required>
                     </div>
                     <div class="input-group">
                         <label>Password</label>
-                        <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+                        <input type="password" id="login-password" placeholder="••••••••" required>
                     </div>
-                    <div style="text-align: right; margin-bottom: 20px; margin-top: -4px;">
+                    <div style="text-align: right; margin-bottom: 15px;">
                         <button type="button" id="goto-forgot" class="link-btn" style="font-size: 12px;">Forgot Password?</button>
                     </div>
                     <button type="submit" class="btn-mneet">Sign In</button>
                 </form>
-                <p class="text-muted text-center" style="font-size: 13px; margin-top: 24px; font-weight: 500;">
+                <p class="text-muted text-center" style="font-size: 13px; margin-top: 20px;">
                     Don't have an account? <button id="goto-signup" class="link-btn">Sign Up</button>
                 </p>
             </div>
 
-            <!-- ================= ২. SIGN UP MODULE (Strictly Inline Hidden) ================= -->
             <div id="signup-box" class="hidden" style="display: none;">
-                <h2 class="text-center" style="font-size: 20px; margin-bottom: 22px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.3px;">Create New Account</h2>
+                <h2 class="text-center" style="font-size: 20px; margin-bottom: 20px; font-weight: 800; color: #FFFFFF;">Create New Account</h2>
                 <form id="signup-form">
                     <div class="input-group">
                         <label>Full Name</label>
@@ -56,7 +133,7 @@
                     </div>
                     <div class="input-group">
                         <label>Gmail</label>
-                        <input type="email" id="reg-email" placeholder="example@gmail.com" required autocomplete="email">
+                        <input type="email" id="reg-email" placeholder="name@gmail.com" required>
                     </div>
                     <div class="input-group">
                         <label>Phone Number</label>
@@ -64,25 +141,22 @@
                     </div>
                     <div class="input-group">
                         <label>City</label>
-                        <input type="text" id="reg-city" placeholder="Your City Name" required>
+                        <input type="text" id="reg-city" placeholder="Your City" required>
                     </div>
                     <div class="input-group">
                         <label>Password</label>
-                        <input type="password" id="reg-password" placeholder="Create strong password" required autocomplete="new-password">
+                        <input type="password" id="reg-password" placeholder="Create password" required>
                     </div>
                     <button type="submit" class="btn-mneet">Send OTP & Register</button>
                 </form>
-                <p class="text-muted text-center" style="font-size: 13px; margin-top: 24px; font-weight: 500;">
+                <p class="text-muted text-center" style="font-size: 13px; margin-top: 20px;">
                     Already have an account? <button id="goto-signin" class="link-btn">Sign In</button>
                 </p>
             </div>
 
-            <!-- ================= ৩. FORGOT PASSWORD MODULE (Strictly Inline Hidden) ================= -->
             <div id="forgot-box" class="hidden" style="display: none;">
-                <h2 class="text-center" style="font-size: 20px; margin-bottom: 8px; font-weight: 800; color: #FFFFFF;">Reset Password</h2>
-                <p class="text-muted text-center" style="font-size: 12px; margin-bottom: 22px; font-weight: 500; line-height: 1.4;">
-                    Enter your registered Gmail address below. We will send you an official secure link to reset your password.
-                </p>
+                <h2 class="text-center" style="font-size: 20px; margin-bottom: 10px; font-weight: 800; color: #FFFFFF;">Reset Password</h2>
+                <p class="text-muted text-center" style="font-size: 12px; margin-bottom: 20px;">Enter your Gmail to get a secure reset link.</p>
                 <form id="forgot-form">
                     <div class="input-group">
                         <label>Gmail Address</label>
@@ -90,16 +164,14 @@
                     </div>
                     <button type="submit" class="btn-mneet">Send Reset Link</button>
                 </form>
-                <div class="text-center" style="margin-top: 22px;">
-                    <button id="back-to-login" class="link-btn" style="font-size: 13px;">Back to Sign In</button>
+                <div class="text-center" style="margin-top: 20px;">
+                    <button id="back-to-login" class="link-btn">Back to Sign In</button>
                 </div>
             </div>
 
         </div>
     </div>
 
-    <!-- Firebase Connection and Main Logic Module Injection -->
     <script type="module" src="auth.js"></script>
 </body>
-                            </html>
-                            
+</html>
