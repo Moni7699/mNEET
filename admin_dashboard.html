@@ -14,12 +14,13 @@
             --neon-purple: #8B5CF6;
             --neon-red: #EF4444;
             --neon-green: #10B981;
+            --burgundy: #800020;
+            --black-stroke: 2px solid #000000;
         }
         .theme-dark {
             --bg-app: #090D16; --bg-surface: #131A26; --bg-input: #030712;
             --text-title: #FFFFFF; --text-para: #94A3B8; --border-line: #1E293B; --m-logo: #FFFFFF;
         }
-        /* LUXURY DEEP COMBINATION WHITE MODE MATCHING WITH STUDENT SYSTEM */
         .theme-white {
             --bg-app: #F8FAFC; --bg-surface: #FFFFFF; --bg-input: #F1F5F9;
             --text-title: #451A03; --text-para: #7F1D1D; --border-line: #451A03; --m-logo: #7F1D1D;
@@ -29,17 +30,14 @@
             background-color: var(--bg-app) !important; color: var(--text-title) !important;
             font-family: system-ui, -apple-system, sans-serif; width: 100vw; height: 100vh; overflow: hidden;
         }
-        /* Header Mirror */
         .dashboard-header {
             position: fixed; top: 0; left: 0; right: 0; height: 60px;
             background-color: var(--bg-surface) !important; border-bottom: 2px solid var(--border-line);
             display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 999;
         }
-        /* Viewport Mirror */
         .dashboard-viewport {
             position: absolute; top: 60px; bottom: 68px; left: 0; right: 0; padding: 16px; overflow-y: auto; overflow-x: hidden;
         }
-        /* Footer Mirror Tabs */
         .dashboard-footer {
             position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
             background-color: var(--bg-surface) !important; border-top: 2px solid var(--border-line);
@@ -54,23 +52,10 @@
         .drawer-open { transform: translateX(0); }
         #drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 99999 !important; }
         
-        /* Premium Card Wireframe Mirrors */
-        .premium-name-card { background: linear-gradient(135deg, var(--bg-surface) 0%, rgba(239, 68, 68, 0.05) 100%); border: 2px solid var(--border-line); border-radius: 22px; padding: 18px; margin-bottom: 16px; }
-        .card-mneet { background-color: var(--bg-surface) !important; border-radius: 20px; padding: 16px; margin-bottom: 16px; border: 2px solid var(--border-line); }
-        .border-gold { border-color: var(--gold) !important; }
-        .border-blue { border-color: var(--neon-blue) !important; }
-        .border-purple { border-color: var(--neon-purple) !important; }
-        .border-red { border-color: var(--neon-red) !important; }
-        .border-green { border-color: var(--neon-green) !important; }
-        
-        /* Forms and Buttons */
-        .input-field { width: 100%; background-color: var(--bg-input) !important; border: 2px solid var(--border-line) !important; color: var(--text-title) !important; padding: 12px; border-radius: 12px; font-size: 14px; outline: none; margin-bottom: 10px; }
-        .btn-mneet { width: 100%; background-color: var(--gold) !important; color: #000000 !important; font-weight: 800; padding: 14px; border: none; border-radius: 14px; cursor: pointer; text-transform: uppercase; }
-        .footer-tab { background: none; border: none; color: var(--text-para); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 20%; }
+        .footer-tab { background: none; border: none; color: var(--text-para); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 16.6%; }
         .active-tab { color: var(--gold) !important; }
         .link-btn { background: none; border: none; cursor: pointer; }
         .hidden-widget { display: none !important; }
-        .node-row { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-radius: 20px; margin-bottom: 10px; }
         
         .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
         .switch input { display: none; }
@@ -82,7 +67,6 @@
 </head>
 <body class="theme-dark">
 
-    <!-- HEADER MIRROR -->
     <header class="dashboard-header">
         <div class="header-left">
             <button id="admin-back-btn" class="hidden-widget link-btn" style="font-size: 18px; color: var(--text-title);"><i class="fas fa-arrow-left"></i></button>
@@ -99,12 +83,9 @@
         </div>
     </header>
 
-    <!-- MAIN VIEWPORT DISPLAY AREA -->
     <main class="dashboard-viewport" id="admin-main-render-area">
-        <!-- Content injects here in exact structural sync with student views -->
-    </main>
+        </main>
 
-    <!-- ADMIN DRAWER PANEL -->
     <div id="profile-drawer" class="drawer-closed">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-line); padding-bottom: 10px;">
             <h3 style="margin: 0; font-size: 16px; color: var(--gold);">Command Station</h3>
@@ -130,17 +111,15 @@
     </div>
     <div id="drawer-overlay" class="hidden-widget"></div>
 
-    <!-- REPLICATED MIRROR FOOTER TABS -->
     <footer class="dashboard-footer">
         <button class="footer-tab active-tab" data-target="home"><i class="fas fa-home"></i><span style="font-size:9px; font-weight:700;">Home Admin</span></button>
         <button class="footer-tab" data-target="batches"><i class="fas fa-layer-group"></i><span style="font-size:9px; font-weight:700;">Batches Mgr</span></button>
         <button class="footer-tab" data-target="study"><i class="fas fa-graduation-cap"></i><span style="font-size:9px; font-weight:700;">Study Engine</span></button>
         <button class="footer-tab" data-target="test"><i class="fas fa-file-invoice"></i><span style="font-size:9px; font-weight:700;">Test Series</span></button>
         <button class="footer-tab" data-target="mstore"><i class="fas fa-shopping-bag"></i><span style="font-size:9px; font-weight:700;">mStore Upload</span></button>
+        <button class="footer-tab" data-target="students"><i class="fas fa-user-graduate"></i><span style="font-size:9px; font-weight:700;">Student Ctrl</span></button>
     </footer>
 
     <script type="module" src="admin_view.js"></script>
-    <script type="module" src="admin_logic.js"></script>
 </body>
-  </html>
-      
+</html>
