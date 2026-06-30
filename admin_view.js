@@ -2,8 +2,25 @@ import { getBatchesLayout, initBatchesLogic } from './admin_batches_mod.js';
 
 const viewport = document.getElementById('admin-main-render-area');
 const tabs = document.querySelectorAll('.dashboard-footer .footer-tab');
+const body = document.body;
+const themeToggle = document.getElementById('admin-theme-toggle');
 
-// Main Router Hub mapping module layouts dynamically
+// Pure Theme Router Dynamic Switch Engine
+function applyTheme(isDark) {
+    if(isDark) {
+        body.className = 'theme-dark';
+        themeToggle.checked = true;
+    } else {
+        body.className = 'theme-white';
+        themeToggle.checked = false;
+    }
+}
+
+// Event trigger configuration for real-time toggle
+themeToggle.addEventListener('change', (e) => {
+    applyTheme(e.target.checked);
+});
+
 async function switchAdminView(target) {
     viewport.innerHTML = ''; 
     
@@ -13,11 +30,10 @@ async function switchAdminView(target) {
                 const mod = await import('./admin_home_mod.js');
                 viewport.innerHTML = mod.getHomeLayout();
                 if(mod.initHomeLogic) mod.initHomeLogic();
-            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>Home Admin Module Render Failed. File 'admin_home_mod.js' create korun.</div>`; }
+            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>Home Admin Module Render.</div>`; }
             break;
 
         case 'batches':
-            // Renders our deep burgundy with black stroke validated setup
             viewport.innerHTML = getBatchesLayout();
             initBatchesLogic();
             break;
@@ -27,7 +43,7 @@ async function switchAdminView(target) {
                 const mod = await import('./admin_study_mod.js');
                 viewport.innerHTML = mod.getStudyLayout();
                 if(mod.initStudyLogic) mod.initStudyLogic();
-            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>Study Engine Module Render Failed. File 'admin_study_mod.js' create korun.</div>`; }
+            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>Study Engine.</div>`; }
             break;
 
         case 'test':
@@ -35,7 +51,7 @@ async function switchAdminView(target) {
                 const mod = await import('./admin_test_mod.js');
                 viewport.innerHTML = mod.getTestLayout();
                 if(mod.initTestLogic) mod.initTestLogic();
-            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>Test Series Module Render Failed. File 'admin_test_mod.js' create korun.</div>`; }
+            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>Test Series.</div>`; }
             break;
 
         case 'mstore':
@@ -43,7 +59,7 @@ async function switchAdminView(target) {
                 const mod = await import('./admin_mstore_mod.js');
                 viewport.innerHTML = mod.getMStoreLayout();
                 if(mod.initMStoreLogic) mod.initMStoreLogic();
-            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>mStore Upload Module Render Failed. File 'admin_mstore_mod.js' create korun.</div>`; }
+            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>mStore Upload.</div>`; }
             break;
 
         case 'students':
@@ -51,15 +67,11 @@ async function switchAdminView(target) {
                 const mod = await import('./admin_students_mod.js');
                 viewport.innerHTML = mod.getStudentsLayout();
                 if(mod.initStudentsLogic) mod.initStudentsLogic();
-            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>Student Control Panel Module Ready State Pending. File 'admin_students_mod.js' create korun.</div>`; }
+            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>Student Panel.</div>`; }
             break;
-
-        default:
-            viewport.innerHTML = `<div style='padding:20px;'>Module not found.</div>`;
     }
 }
 
-// Event Listeners setup for Tabs active toggles
 tabs.forEach(tab => {
     tab.addEventListener('click', (e) => {
         tabs.forEach(t => t.classList.remove('active-tab'));
@@ -69,11 +81,11 @@ tabs.forEach(tab => {
     });
 });
 
-// Sidebar Drawer Control Triggers
 document.getElementById('admin-drawer-open-btn').addEventListener('click', () => {
     document.getElementById('profile-drawer').className = 'drawer-open';
     document.getElementById('drawer-overlay').classList.remove('hidden-widget');
 });
+
 const closeDrawer = () => {
     document.getElementById('profile-drawer').className = 'drawer-closed';
     document.getElementById('drawer-overlay').classList.add('hidden-widget');
@@ -81,5 +93,7 @@ const closeDrawer = () => {
 document.getElementById('admin-drawer-close-btn').addEventListener('click', closeDrawer);
 document.getElementById('drawer-overlay').addEventListener('click', closeDrawer);
 
-// Run Initial default load view state
+// Default Load Configurations
+applyTheme(true); 
 switchAdminView('home');
+                    
