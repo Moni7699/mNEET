@@ -3,34 +3,33 @@ import { getBatchesLayout, initBatchesLogic } from './admin_batches_mod.js';
 const viewport = document.getElementById('admin-main-render-area');
 const tabs = document.querySelectorAll('.dashboard-footer .footer-tab');
 const body = document.body;
-const themeToggle = document.getElementById('admin-theme-toggle');
 
-// Pure Theme Router Dynamic Switch Engine
-function applyTheme(isDark) {
-    if(isDark) {
+function setupThemeHandler() {
+    const themeToggle = document.getElementById('admin-theme-toggle');
+    if (!themeToggle) return;
+
+    // Direct active detection loop
+    if(themeToggle.checked) {
         body.className = 'theme-dark';
-        themeToggle.checked = true;
     } else {
         body.className = 'theme-white';
-        themeToggle.checked = false;
     }
-}
 
-// Event trigger configuration for real-time toggle
-themeToggle.addEventListener('change', (e) => {
-    applyTheme(e.target.checked);
-});
+    themeToggle.addEventListener('change', (e) => {
+        if(e.target.checked) {
+            body.className = 'theme-dark';
+        } else {
+            body.className = 'theme-white';
+        }
+    });
+}
 
 async function switchAdminView(target) {
     viewport.innerHTML = ''; 
     
     switch(target) {
         case 'home':
-            try {
-                const mod = await import('./admin_home_mod.js');
-                viewport.innerHTML = mod.getHomeLayout();
-                if(mod.initHomeLogic) mod.initHomeLogic();
-            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>Home Admin Module Render.</div>`; }
+            viewport.innerHTML = `<div style="padding:20px; font-weight:700;">Welcome to mNEET Home Control Station.</div>`;
             break;
 
         case 'batches':
@@ -39,35 +38,19 @@ async function switchAdminView(target) {
             break;
 
         case 'study':
-            try {
-                const mod = await import('./admin_study_mod.js');
-                viewport.innerHTML = mod.getStudyLayout();
-                if(mod.initStudyLogic) mod.initStudyLogic();
-            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>Study Engine.</div>`; }
+            viewport.innerHTML = `<div style="padding:20px; font-weight:700;">Study Engine Dashboard Module Loading...</div>`;
             break;
 
         case 'test':
-            try {
-                const mod = await import('./admin_test_mod.js');
-                viewport.innerHTML = mod.getTestLayout();
-                if(mod.initTestLogic) mod.initTestLogic();
-            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>Test Series.</div>`; }
+            viewport.innerHTML = `<div style="padding:20px; font-weight:700;">Test Series Question Bank Module Loading...</div>`;
             break;
 
         case 'mstore':
-            try {
-                const mod = await import('./admin_mstore_mod.js');
-                viewport.innerHTML = mod.getMStoreLayout();
-                if(mod.initMStoreLogic) mod.initMStoreLogic();
-            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>mStore Upload.</div>`; }
+            viewport.innerHTML = `<div style="padding:20px; font-weight:700;">mStore E-commerce Manager Module Loading...</div>`;
             break;
 
         case 'students':
-            try {
-                const mod = await import('./admin_students_mod.js');
-                viewport.innerHTML = mod.getStudentsLayout();
-                if(mod.initStudentsLogic) mod.initStudentsLogic();
-            } catch(e) { viewport.innerHTML = `<div style='padding:20px;'>Student Panel.</div>`; }
+            viewport.innerHTML = `<div style="padding:20px; font-weight:700;">Student Ranks & Access Control Panel Loading...</div>`;
             break;
     }
 }
@@ -93,7 +76,6 @@ const closeDrawer = () => {
 document.getElementById('admin-drawer-close-btn').addEventListener('click', closeDrawer);
 document.getElementById('drawer-overlay').addEventListener('click', closeDrawer);
 
-// Default Load Configurations
-applyTheme(true); 
+// Fire systems safely
+setupThemeHandler();
 switchAdminView('home');
-                    
