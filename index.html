@@ -3,175 +3,247 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mNEET - Authentication Gate</title>
+    <title>mNEET - Ultimate Medical Prep Companion</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        body {
-            background-color: #090D16 !important;
-            color: #FFFFFF !important;
-            font-family: system-ui, -apple-system, sans-serif;
-            margin: 0; padding: 0;
-            display: flex; align-items: center; justify-content: center;
-            min-height: 100vh;
+        :root {
+            --gold: #F3B917;
+            --bg-dark: #090D16;
+            --bg-surface: #131A26;
+            --bg-input: #030712;
+            --text-title: #FFFFFF;
+            --text-para: #94A3B8;
+            --border-line: #1E293B;
+        }
+
+        * {
             box-sizing: border-box;
-        }
-        *, *:before, *:after { box-sizing: border-box !important; }
-
-        .auth-wrapper {
-            display: flex; align-items: center; justify-content: center;
-            width: 100%; padding: 16px;
+            margin: 0;
+            padding: 0;
         }
 
-        .auth-box {
-            background-color: #131A26 !important;
-            border: 2px solid #1E293B !important;
-            border-radius: 24px !important;
-            padding: 28px 20px !important;
-            width: 100%; max-width: 360px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-title);
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            background-color: var(--bg-surface);
+            border: 2px solid var(--border-line);
+            border-radius: 24px;
+            padding: 32px 24px;
             text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
         }
 
-        .input-group {
-            display: block !important;
-            width: 100% !important;
-            margin-bottom: 15px !important;
+        .logo-area {
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
         }
 
-        .input-group label {
-            display: block !important;
+        .logo-m { color: var(--text-title); }
+        .logo-neet { color: var(--gold); }
+
+        .tagline {
             font-size: 13px;
-            color: #94A3B8;
-            margin-bottom: 6px;
-            text-align: left;
+            color: var(--text-para);
+            margin-bottom: 32px;
             font-weight: 500;
         }
 
-        input {
-            display: block !important;
-            width: 100% !important;
-            background-color: #0D131F !important;
-            border: 2px solid #1E293B !important;
-            color: #FFFFFF !important;
-            padding: 13px 14px !important;
-            border-radius: 14px !important;
-            font-size: 14px !important;
+        .form-title {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            text-align: left;
+            color: var(--text-title);
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-para);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 14px;
+            color: var(--text-para);
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            background-color: var(--bg-input);
+            border: 2px solid var(--border-line);
+            color: var(--text-title);
+            padding: 14px 14px 14px 42px;
+            border-radius: 14px;
+            font-size: 14px;
             outline: none;
             transition: border-color 0.2s;
         }
-        input:focus { border-color: #2563EB !important; }
 
-        .btn-mneet {
-            display: block !important;
-            width: 100% !important;
-            background-color: #F3B917 !important;
-            color: #000000 !important;
-            font-weight: 800; font-size: 15px;
-            padding: 14px !important;
-            border: none !important;
-            border-radius: 14px !important;
+        .form-input:focus {
+            border-color: var(--gold);
+        }
+
+        .btn-sign-in {
+            width: 100%;
+            background-color: var(--gold);
+            color: #000000;
+            font-weight: 800;
+            font-size: 14px;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
             cursor: pointer;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-top: 20px;
+            margin-top: 12px;
+            transition: opacity 0.2s;
         }
 
-        .link-btn {
-            background: none !important;
-            border: none !important;
-            color: #F3B917 !important;
-            font-weight: 700;
-            cursor: pointer;
-            font-size: 13px;
-            padding: 0 !important;
+        .btn-sign-in:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
-        .link-btn:hover { text-decoration: underline; }
-        .hidden { display: none !important; }
-        .text-center { text-align: center; }
-        .text-muted { color: #94A3B8; }
+
+        .footer-text {
+            margin-top: 24px;
+            font-size: 13px;
+            color: var(--text-para);
+        }
+
+        .footer-text a {
+            color: var(--gold);
+            text-decoration: none;
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
 
-    <div class="auth-wrapper">
-        <div class="auth-box">
-            
-            <div class="text-center" style="margin-bottom: 26px;">
-                <h1 style="font-size: 34px; margin: 0; font-weight: 900; tracking-spacing: 0.5px;">
-                    <span style="color: #FFFFFF;">m</span><span style="color: #F3B917;">NEET</span>
-                </h1>
-                <p class="text-muted" style="font-size: 11px; margin: 4px 0 0 0;">Your Ultimate Medical Prep Companion</p>
-            </div>
+    <div class="login-container">
+        <!-- APP LOGO -->
+        <div class="logo-area">
+            <span class="logo-m">m</span><span class="logo-neet">NEET</span>
+        </div>
+        <p class="tagline">Your Ultimate Medical Prep Companion</p>
 
-            <div id="signin-box" style="display: block;">
-                <h2 class="text-center" style="font-size: 20px; margin-bottom: 20px; font-weight: 800; color: #FFFFFF;">Sign In to Your Account</h2>
-                <form id="signin-form">
-                    <div class="input-group">
-                        <label>Gmail or Phone No</label>
-                        <input type="text" id="login-identifier" placeholder="mail@example.com or phone" required>
-                    </div>
-                    <div class="input-group">
-                        <label>Password</label>
-                        <input type="password" id="login-password" placeholder="••••••••" required>
-                    </div>
-                    <div style="text-align: right; margin-bottom: 15px;">
-                        <button type="button" id="goto-forgot" class="link-btn" style="font-size: 12px;">Forgot Password?</button>
-                    </div>
-                    <button type="submit" class="btn-mneet">Sign In</button>
-                </form>
-                <p class="text-muted text-center" style="font-size: 13px; margin-top: 20px;">
-                    Don't have an account? <button id="goto-signup" class="link-btn">Sign Up</button>
-                </p>
-            </div>
+        <!-- FORM TITLE -->
+        <h2 class="form-title">Sign In to Your Account</h2>
 
-            <div id="signup-box" class="hidden" style="display: none;">
-                <h2 class="text-center" style="font-size: 20px; margin-bottom: 20px; font-weight: 800; color: #FFFFFF;">Create New Account</h2>
-                <form id="signup-form">
-                    <div class="input-group">
-                        <label>Full Name</label>
-                        <input type="text" id="reg-name" placeholder="Dr. Your Name" required>
-                    </div>
-                    <div class="input-group">
-                        <label>Gmail</label>
-                        <input type="email" id="reg-email" placeholder="name@gmail.com" required>
-                    </div>
-                    <div class="input-group">
-                        <label>Phone Number</label>
-                        <input type="tel" id="reg-phone" placeholder="Enter 10-digit number" required>
-                    </div>
-                    <div class="input-group">
-                        <label>City</label>
-                        <input type="text" id="reg-city" placeholder="Your City" required>
-                    </div>
-                    <div class="input-group">
-                        <label>Password</label>
-                        <input type="password" id="reg-password" placeholder="Create password" required>
-                    </div>
-                    <button type="submit" class="btn-mneet">Send OTP & Register</button>
-                </form>
-                <p class="text-muted text-center" style="font-size: 13px; margin-top: 20px;">
-                    Already have an account? <button id="goto-signin" class="link-btn">Sign In</button>
-                </p>
-            </div>
-
-            <div id="forgot-box" class="hidden" style="display: none;">
-                <h2 class="text-center" style="font-size: 20px; margin-bottom: 10px; font-weight: 800; color: #FFFFFF;">Reset Password</h2>
-                <p class="text-muted text-center" style="font-size: 12px; margin-bottom: 20px;">Enter your Gmail to get a secure reset link.</p>
-                <form id="forgot-form">
-                    <div class="input-group">
-                        <label>Gmail Address</label>
-                        <input type="email" id="forgot-email" placeholder="name@example.com" required>
-                    </div>
-                    <button type="submit" class="btn-mneet">Send Reset Link</button>
-                </form>
-                <div class="text-center" style="margin-top: 20px;">
-                    <button id="back-to-login" class="link-btn">Back to Sign In</button>
+        <!-- LOGIN FORM -->
+        <form id="main-auth-form">
+            <div class="input-group">
+                <label class="input-label">Gmail Address</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="login-email" class="form-input" placeholder="Enter your registered email" required>
                 </div>
             </div>
 
-        </div>
+            <div class="input-group">
+                <label class="input-label">Password</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="login-password" class="form-input" placeholder="Enter your account password" required>
+                </div>
+            </div>
+
+            <button type="submit" id="login-submit-btn" class="btn-sign-in">Sign In</button>
+        </form>
+
+        <!-- REDIRECT LINK -->
+        <p class="footer-text">Don't have an account? <a href="#">Sign Up</a></p>
     </div>
 
-    <script type="module" src="auth.js"></script>
+    <!-- 🚀 CORE LOGIN AND AUTH CONTROL ENGINE -->
+    <script type="module">
+        import { auth, db } from "./firebase-config.js";
+        import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { ref, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        const authForm = document.getElementById("main-auth-form");
+        const emailInput = document.getElementById("login-email");
+        const passwordInput = document.getElementById("login-password");
+        const loginBtn = document.getElementById("login-submit-btn");
+
+        if (authForm) {
+            authForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                const email = emailInput.value.trim();
+                const password = passwordInput.value;
+
+                // ১. সাবমিট বাটন সাময়িকভাবে লক করা (অ্যান্টি-স্প্যাম এবং কোটা প্রোটেকশন)
+                loginBtn.disabled = true;
+                loginBtn.innerText = "VERIFYING ACCOUNT...";
+
+                try {
+                    // ২. ফায়ারবেস মেইন অথেন্টিকেশনে সাইন-ইন রিকোয়েস্ট পাঠানো
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    // ৩. রিয়েল-টাইম ডাটাবেজ থেকে ইউজারের রোল (Role) রিড করা
+                    const snap = await get(ref(db, 'users/' + user.uid));
+                    
+                    if (snap.exists()) {
+                        const userData = snap.val();
+                        
+                        // যদি ডাটাবেজে রোল 'admin' থাকে অথবা ইনপুট ইমেইলটি তোমার স্পেশাল জিমেইল হয়
+                        if (userData.role === "admin" || email === "mi4286803@gmail.com") {
+                            window.location.href = "admin_dashboard.html";
+                        } else {
+                            window.location.href = "student_dashboard.html";
+                        }
+                    } else {
+                        // ব্যাকআপ ফিল্টার: ডাটাবেজে কোনো কারণে ডাটা মিসিং হলেও জিমেইল ম্যাচ করলে অ্যাডমিন প্যানেল লোড হবে
+                        if (email === "mi4286803@gmail.com") {
+                            window.location.href = "admin_dashboard.html";
+                        } else {
+                            window.location.href = "student_dashboard.html";
+                        }
+                    }
+
+                } catch (error) {
+                    console.error("Auth Failure:", error);
+                    alert("Authentication Failed: " + error.message);
+                    
+                    // ভুল পাসওয়ার্ড বা এরর আসলে বাটন আবার আগের অবস্থায় নিয়ে যাওয়া
+                    loginBtn.disabled = false;
+                    loginBtn.innerText = "SIGN IN";
+                }
+            });
+        }
+    </script>
 </body>
 </html>
