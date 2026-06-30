@@ -17,42 +17,65 @@
             --burgundy: #800020;
             --black-stroke: 2px solid #000000;
         }
-        .theme-dark {
-            --bg-app: #090D16; --bg-surface: #131A26; --bg-input: #030712;
-            --text-title: #FFFFFF; --text-para: #94A3B8; --border-line: #1E293B; --m-logo: #FFFFFF;
+        
+        /* CLEAN THEME ROOT OVERLAY FIX */
+        body.theme-dark {
+            --bg-app: #090D16; 
+            --bg-surface: #131A26; 
+            --bg-input: #030712;
+            --text-title: #FFFFFF; 
+            --text-para: #94A3B8; 
+            --border-line: #1E293B; 
+            --m-logo: #FFFFFF;
         }
-        .theme-white {
-            --bg-app: #F8FAFC; --bg-surface: #FFFFFF; --bg-input: #F1F5F9;
-            --text-title: #451A03; --text-para: #7F1D1D; --border-line: #451A03; --m-logo: #7F1D1D;
+        body.theme-white {
+            --bg-app: #F8FAFC; 
+            --bg-surface: #FFFFFF; 
+            --bg-input: #F1F5F9;
+            --text-title: #451A03; 
+            --text-para: #7F1D1D; 
+            --border-line: #451A03; 
+            --m-logo: #7F1D1D;
         }
-        * { box-sizing: border-box !important; margin: 0; padding: 0; }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
         body {
-            background-color: var(--bg-app) !important; color: var(--text-title) !important;
-            font-family: system-ui, -apple-system, sans-serif; width: 100vw; height: 100vh; overflow: hidden;
+            background-color: var(--bg-app); 
+            color: var(--text-title);
+            font-family: system-ui, -apple-system, sans-serif; 
+            width: 100vw; 
+            height: 100vh; 
+            overflow: hidden;
+            transition: background-color 0.2s, color 0.2s;
         }
+        
         .dashboard-header {
             position: fixed; top: 0; left: 0; right: 0; height: 60px;
-            background-color: var(--bg-surface) !important; border-bottom: 2px solid var(--border-line);
+            background-color: var(--bg-surface); border-bottom: 2px solid var(--border-line);
             display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 999;
         }
+        
         .dashboard-viewport {
             position: absolute; top: 60px; bottom: 68px; left: 0; right: 0; padding: 16px; overflow-y: auto; overflow-x: hidden;
         }
+        
         .dashboard-footer {
             position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
-            background-color: var(--bg-surface) !important; border-top: 2px solid var(--border-line);
+            background-color: var(--bg-surface); border-top: 2px solid var(--border-line);
             display: flex; justify-content: space-around; align-items: center; z-index: 999;
         }
+        
         #profile-drawer {
             position: fixed; top: 0; bottom: 0; right: 0; width: 85%; max-width: 320px;
-            background-color: var(--bg-surface) !important; z-index: 100000 !important;
+            background-color: var(--bg-surface); z-index: 100000;
             border-left: 2px solid var(--border-line); padding: 24px 20px; transition: transform 0.3s ease; display: flex; flex-direction: column;
         }
         .drawer-closed { transform: translateX(100%); }
         .drawer-open { transform: translateX(0); }
-        #drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 99999 !important; }
+        #drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 99999; }
         
-        .footer-tab { background: none; border: none; color: var(--text-para); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 16.6%; }
+        .footer-tab { background: none; border: none; color: var(--text-para); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 16.6%; outline: none; }
         .active-tab { color: var(--gold) !important; }
         .link-btn { background: none; border: none; cursor: pointer; }
         .hidden-widget { display: none !important; }
@@ -71,7 +94,7 @@
         <div class="header-left">
             <button id="admin-back-btn" class="hidden-widget link-btn" style="font-size: 18px; color: var(--text-title);"><i class="fas fa-arrow-left"></i></button>
             <div id="admin-top-widgets" style="display: flex; align-items: center; gap: 14px;">
-                <button id="admin-broadcast-btn" class="link-btn" style="color: var(--neon-red) !important; font-size: 20px;"><i class="fas fa-bullhorn"></i></button>
+                <button id="admin-broadcast-btn" class="link-btn" style="color: var(--neon-red); font-size: 20px;"><i class="fas fa-bullhorn"></i></button>
                 <span style="font-size: 11px; font-weight: 800; color: var(--neon-red); background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); padding: 4px 10px; border-radius: 20px;">ADMIN CORE</span>
             </div>
         </div>
@@ -122,4 +145,5 @@
 
     <script type="module" src="admin_view.js"></script>
 </body>
-</html>
+    </html>
+    
