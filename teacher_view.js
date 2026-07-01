@@ -1,3 +1,5 @@
+import { getTeacherMaterialsLayout, initTeacherMaterialsLogic } from './teacher_materials_mod.js';
+
 const viewport = document.getElementById('teacher-main-render-area');
 const tabs = document.querySelectorAll('.dashboard-footer .footer-tab');
 const body = document.body;
@@ -5,7 +7,6 @@ const SESSION_KEY = 'mneet_teacher_logged_session';
 const STUDY_STORAGE_KEY = 'mneet_batch_study_materials';
 const BATCH_STORAGE_KEY = 'mneet_managed_batches';
 
-// Verification security gateway checklist check routine
 let sessionData = JSON.parse(localStorage.getItem(SESSION_KEY));
 if (!sessionData) {
     window.location.href = 'teacher_auth.html';
@@ -26,8 +27,7 @@ function renderLecturesModule() {
     let materials = JSON.parse(localStorage.getItem(STUDY_STORAGE_KEY)) || [];
     let batches = JSON.parse(localStorage.getItem(BATCH_STORAGE_KEY)) || [];
     
-    // Filtering items only belonging to this teacher's specialty subject cluster mapping
-    let activeFacultySubject = sessionData.subject.split(' ')[0]; // Extract Botany/Zoology/Physics
+    let activeFacultySubject = sessionData.subject.split(' ')[0]; 
     let filteredList = materials.filter(m => m.subject.toLowerCase() === activeFacultySubject.toLowerCase() || m.subject === "Full NEET Core");
 
     let itemsHTML = filteredList.map(item => {
@@ -61,12 +61,16 @@ function renderLecturesModule() {
 
 function switchTeacherView(target) {
     viewport.innerHTML = '';
+    let activeFacultySubject = sessionData.subject.split(' ')[0]; 
+
     switch(target) {
         case 'lectures':
             renderLecturesModule();
             break;
         case 'materials':
-            viewport.innerHTML = `<div style="padding:20px; font-weight:700;">Step 2.3: Study Materials Locker Module Loading UI...</div>`;
+            // Connects locker dashboard template module parameters safely
+            viewport.innerHTML = getTeacherMaterialsLayout(activeFacultySubject);
+            initTeacherMaterialsLogic(activeFacultySubject);
             break;
         case 'doubts':
             viewport.innerHTML = `<div style="padding:20px; font-weight:700;">Step 2.4: Faculty Student Doubt Desk Resolver Module Loading UI...</div>`;
@@ -83,7 +87,6 @@ tabs.forEach(tab => {
     });
 });
 
-// Sidebar drawer triggers
 document.getElementById('teacher-drawer-open-btn').addEventListener('click', () => {
     document.getElementById('profile-drawer').className = 'drawer-open';
     document.getElementById('drawer-overlay').classList.remove('hidden-widget');
@@ -100,7 +103,5 @@ document.getElementById('teacher-logout-btn').addEventListener('click', () => {
     window.location.href = 'teacher_auth.html';
 });
 
-// Default Load initialization
 setupThemeHandler();
 switchTeacherView('lectures');
-      
