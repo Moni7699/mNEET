@@ -1,15 +1,10 @@
-const BATCH_STORAGE_KEY = 'mneet_managed_batches';
-const STUDENT_DB_KEY = 'mneet_student_directory_db';
+// Importing dynamic Realtime Database configuration protocols directly from your config bridge
+import { db, ref, set, push, onValue, remove } from './firebase-config.js';
+
+const BATCH_NODE_PATH = 'mneet_managed_batches';
+const STUDENT_NODE_PATH = 'mneet_student_directory_db';
 
 export function getStudentsLayout() {
-    let savedBatches = localStorage.getItem(BATCH_STORAGE_KEY);
-    let batches = savedBatches ? JSON.parse(savedBatches) : [];
-
-    let optionsHTML = batches.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
-    if (batches.length === 0) {
-        optionsHTML = `<option value="">No Active Batches - Create Batch First</option>`;
-    }
-
     return `
     <style>
         .students-panel-box { max-width: 600px; margin: 0 auto; padding-bottom: 40px; font-family: system-ui, -apple-system, sans-serif; }
@@ -28,7 +23,6 @@ export function getStudentsLayout() {
         
         .section-divider { font-size: 18px; font-weight: 900; border-bottom: var(--black-stroke); padding-bottom: 6px; margin: 25px 0 20px 0; text-transform: uppercase; }
         
-        /* 👥 PREMIUM STUDENT ROW ROW SYSTEM LIST */
         .student-directory-card { 
             background: var(--bg-surface) !important; 
             color: var(--text-title) !important;
@@ -52,7 +46,6 @@ export function getStudentsLayout() {
         
         .admin-modifier-row { display: flex; gap: 6px; }
         .mod-btn { border: var(--black-stroke); background: var(--bg-surface); color: var(--text-title); padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 800; box-shadow: 2px 2px 0px #000000; }
-        .mod-btn:active { transform: translate(1px, 1px); box-shadow: 0px 0px 0px #000000; }
     </style>
 
     <div class="students-panel-box">
@@ -69,7 +62,7 @@ export function getStudentsLayout() {
 
                 <label class="input-label">Assign Course/Batch Package Access</label>
                 <select id="sAssignedBatch" class="custom-input" required>
-                    ${optionsHTML}
+                    <option value="">Loading live cloud batches...</option>
                 </select>
 
                 <div class="flex-row">
@@ -93,7 +86,7 @@ export function getStudentsLayout() {
             </form>
         </div>
 
-        <h3 class="section-divider">Student Enrollment Directory</h3>
+        <h3 class="section-divider">Student Enrollment Directory (Cloud)</h3>
         <div id="renderStudentsQueue"></div>
     </div>
     `;
@@ -102,61 +95,72 @@ export function getStudentsLayout() {
 export function initStudentsLogic() {
     const form = document.getElementById('modStudentsForm');
     const queueArea = document.getElementById('renderStudentsQueue');
+    const batchSelect = document.getElementById('sAssignedBatch');
 
-    function fetchBatches() { return JSON.parse(localStorage.getItem(BATCH_STORAGE_KEY)) || []; }
-    function fetchState() { return JSON.parse(localStorage.getItem(STUDY_STORAGE_KEY)) || []; } // using storage sync safely
-    function getStudentDirectory() { return JSON.parse(localStorage.getItem(STUDENT_DB_KEY)) || []; }
-    function saveStudentDirectory(arr) { localStorage.setItem(STUDENT_DB_KEY, JSON.stringify(arr)); renderQueue(); }
+    let cacheBatchesMap = {};
 
-    function renderQueue() {
-        let arr = getStudentDirectory();
-        let batches = fetchBatches();
-        queueArea.innerHTML = '';
+    // ☁️ 1. FETCH LIVE CLOUD COHORTS FOR ASSIGNMENT SELECTION
+    const batchesRef = ref(db, BATCH_NODE_PATH);
+    onValue(batchesRef, (snapshot) => {
+        const dataMap = snapshot.val() || {};
+        cacheBatchesMap = dataMap;
         
-        if(arr.length === 0) {
-            queueArea.innerHTML = `<p style="text-align:center; opacity:0.6; font-size:13px; font-weight:700; padding: 20px 0;">No student directories registered manually.</p>`;
+        let htmlOptions = '<option value="">-- Choose Access Batch --</option>';
+        for (let key in dataMap) {
+            htmlOptions += `<option value="${key}">${dataMap[key].name}</option>`;
+        }
+        batchSelect.innerHTML = htmlOptions;
+    }, { onlyOnce: true });
+
+    // ☁️ 2. LISTEN LIVE USER DIRECTORY REPOSITORY PIPELINE
+    const studentRef = ref(db, STUDENT_NODE_PATH);
+    onValue(studentRef, (snapshot) => {
+        queueArea.innerHTML = '';
+        const directoryMap = snapshot.val();
+
+        if (!directoryMap) {
+            queueArea.innerHTML = `<p style="text-align:center; opacity:0.6; font-size:13px; font-weight:700; padding: 20px 0;">No active student directories registered on cloud.</p>`;
             return;
         }
-        
-        arr.forEach(item => {
-            let matchedBatch = batches.find(b => b.id == item.batchId);
-            let batchName = matchedBatch ? matchedBatch.name : 'No Active Course Access';
+
+        for (let key in directoryMap) {
+            let item = directoryMap[key];
+            let batchObj = cacheBatchesMap[item.batchId];
+            let assignedCourseName = batchObj ? batchObj.name : 'Access Cohort Key Deleted';
             let initialLetter = item.name ? item.name.charAt(0).toUpperCase() : 'S';
             let isBlocked = item.status === 'Blocked';
-            
+
             let card = document.createElement('div');
             card.className = `student-directory-card ${isBlocked ? 'is-blocked-true' : ''}`;
-            
             card.innerHTML = `
                 <div class="stud-avatar" style="border-color: ${isBlocked ? 'var(--neon-red)' : 'initial'};">${initialLetter}</div>
                 <div class="stud-details">
                     <h3 class="stud-name">${item.name} ${isBlocked ? '<span style="color:var(--neon-red); font-size:11px;">[SUSPENDED]</span>' : ''}</h3>
-                    <div class="stud-sub"><i class="fas fa-phone-alt" style="font-size:10px;"></i> ${item.phone} | <i class="fas fa-layer-group" style="font-size:10px;"></i> ${batchName}</div>
+                    <div class="stud-sub"><i class="fas fa-phone-alt" style="font-size:10px;"></i> ${item.phone} | <i class="fas fa-layer-group" style="font-size:10px;"></i> ${assignedCourseName}</div>
                 </div>
                 <div class="admin-modifier-row">
-                    <button class="mod-btn act-toggle-block" data-id="${item.id}" style="color: ${isBlocked ? '#10B981' : '#EF4444'};">
-                        ${isBlocked ? '<i class="fas fa-check-circle"></i> Unblock' : '<i class="fas fa-ban"></i> Block'}
+                    <button class="mod-btn act-toggle-block" data-firebase-key="${key}" data-current-status="${item.status}">
+                        ${isBlocked ? '<i class="fas fa-check-circle" style="color:#10B981;"></i> Unblock' : '<i class="fas fa-ban" style="color:#EF4444;"></i> Block'}
                     </button>
-                    <button class="mod-btn act-del" data-id="${item.id}"><i class="fas fa-trash-alt" style="color:#222;"></i></button>
+                    <button class="mod-btn act-del" data-firebase-key="${key}"><i class="fas fa-trash-alt" style="color:#222;"></i></button>
                 </div>
             `;
             queueArea.appendChild(card);
-        });
-    }
+        }
+    });
 
+    // 📤 3. PUSH ENROLLMENT REGISTRATION RECORDS
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        let arr = getStudentDirectory();
-        let targetId = document.getElementById('formStudentId').value;
-        let selectedBatch = document.getElementById('sAssignedBatch').value;
+        let targetFirebaseKey = document.getElementById('formStudentId').value;
+        let selectedBatch = batchSelect.value;
 
-        if(!selectedBatch || selectedBatch === "") {
-            alert("Please configure an active cohort batch first!");
+        if (!selectedBatch) {
+            alert("Please apply a true relational cohort target node access boundary!");
             return;
         }
 
         let data = {
-            id: targetId ? parseInt(targetId) : Date.now(),
             phone: document.getElementById('sPhone').value,
             name: document.getElementById('sFullName').value,
             batchId: selectedBatch,
@@ -164,39 +168,40 @@ export function initStudentsLogic() {
             verification: document.getElementById('sVerification').value
         };
 
-        if(targetId) {
-            arr = arr.map(s => s.id == targetId ? data : s);
-            document.getElementById('studentsSubmitBtn').innerText = "Provision Access Token";
-            document.getElementById('formStudentId').value = "";
+        if (targetFirebaseKey) {
+            const userUpdateRef = ref(db, `${STUDENT_NODE_PATH}/${targetFirebaseKey}`);
+            set(userUpdateRef, data).then(() => {
+                document.getElementById('studentsSubmitBtn').innerText = "Provision Access Token";
+                document.getElementById('formStudentId').value = "";
+                form.reset();
+            });
         } else {
-            arr.push(data);
+            const userPushRef = push(ref(db, STUDENT_NODE_PATH));
+            set(userPushRef, data).then(() => {
+                form.reset();
+            });
         }
-        saveStudentDirectory(arr);
-        form.reset();
     });
 
+    // ⚙️ 4. ACCELERATE SUSPENSION & REMOVAL ROUTING LOGICS
     queueArea.addEventListener('click', function(e) {
         let btn = e.target.closest('.mod-btn');
-        if(!btn) return;
-        let id = parseInt(btn.dataset.id);
-        let arr = getStudentDirectory();
+        if (!btn) return;
+        let firebaseKey = btn.dataset.firebaseKey;
 
-        if(btn.classList.contains('act-toggle-block')) {
-            arr = arr.map(s => {
-                if(s.id === id) {
-                    let nextStatus = s.status === 'Blocked' ? 'Active' : 'Blocked';
-                    return { ...s, status: nextStatus };
-                }
-                return s;
-            });
-            saveStudentDirectory(arr);
-        } else if(btn.classList.contains('act-del')) {
-            if(confirm("Are you sure to remove this student account registration profile parameters?")) {
-                arr = arr.filter(s => s.id !== id);
-                saveStudentDirectory(arr);
+        if (btn.classList.contains('act-toggle-block')) {
+            let currentStatus = btn.dataset.currentStatus;
+            let nextStatus = currentStatus === 'Blocked' ? 'Active' : 'Blocked';
+            
+            const statusUpdateRef = ref(db, `${STUDENT_NODE_PATH}/${firebaseKey}/status`);
+            set(statusUpdateRef, nextStatus);
+
+        } else if (btn.classList.contains('act-del')) {
+            if (confirm("Evict this student account token registration index from production database nodes?")) {
+                const docEvictRef = ref(db, `${STUDENT_NODE_PATH}/${firebaseKey}`);
+                remove(docEvictRef);
             }
         }
     });
-
-    renderQueue();
-}
+            }
+            
