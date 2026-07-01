@@ -1,4 +1,7 @@
-const TEST_STORAGE_KEY = 'mneet_batch_test_series';
+// Importing dynamic Realtime Database configuration protocols directly from your config bridge
+import { db, ref, onValue } from './firebase-config.js';
+
+const TEST_NODE_PATH = 'mneet_batch_test_series';
 
 export function getStudentTestLayout() {
     return `
@@ -10,7 +13,6 @@ export function getStudentTestLayout() {
         
         .s-divider { font-size: 16px; font-weight: 900; border-bottom: var(--black-stroke); padding-bottom: 6px; margin: 20px 0 15px 0; text-transform: uppercase; color: var(--text-title); }
         
-        /* 📝 STUDENT LIVE EXAM SHEET COMPONENT */
         .live-exam-card { 
             background: var(--bg-surface) !important; 
             color: var(--text-title) !important;
@@ -37,7 +39,7 @@ export function getStudentTestLayout() {
     <div class="s-test-panel">
         <div class="s-test-hero">
             <h2>National Mock Test Arena</h2>
-            <p>Strict parameter exam simulation desk with configured negative markings rules protocols.</p>
+            <p>Strict parameter exam simulation desk with configured negative markings rules cloud validation.</p>
         </div>
 
         <h3 class="s-divider">Available Mock Papers</h3>
@@ -49,31 +51,32 @@ export function getStudentTestLayout() {
 export function initStudentTestLogic() {
     const container = document.getElementById('renderStudentLiveTestsArea');
 
-    function fetchState() { return JSON.parse(localStorage.getItem(TEST_STORAGE_KEY)) || []; }
-
-    function renderExamConsole() {
-        let arr = fetchState();
+    // ☁️ LISTEN LIVE FROM MOCK PAPERS DATABASE TREE NODE
+    const testRef = ref(db, TEST_NODE_PATH);
+    onValue(testRef, (snapshot) => {
         container.innerHTML = '';
+        const testsMap = snapshot.val();
 
-        if(arr.length === 0) {
-            // Default automated fallback seed display rules parameters if admin queue clear
+        if (!testsMap) {
+            // High fidelity beautiful automated standard fallback layout parameters logic matrix
             container.innerHTML = `
                 <div class="live-exam-card">
                     <div class="exam-left-accent"></div>
                     <span class="exam-syllabus-tag">Full NEET Core Syllabus</span>
-                    <h3 class="exam-title">All India mNEET Practice Test - 01</h3>
+                    <h3 class="exam-title">All India mNEET Practice Test - 01 (Cloud Sandbox)</h3>
                     <div class="exam-meta-flex">
                         <div class="exam-meta-node"><i class="fas fa-clock"></i> 180 Minutes</div>
                         <div class="exam-meta-node"><i class="fas fa-check-double"></i> 200 Questions</div>
                         <div class="exam-meta-node"><i class="fas fa-award"></i> Rules: +4 / -1 Scheme</div>
                     </div>
-                    <button class="btn-launch-exam" onclick="alert('OMR Simulation Engine loading configuration tokens...')"><i class="fas fa-stopwatch"></i> Start CBT Test</button>
+                    <button class="btn-launch-exam" onclick="alert('OMR Simulation Engine loading default core token sets...')"><i class="fas fa-stopwatch"></i> Start CBT Test</button>
                 </div>
             `;
             return;
         }
 
-        arr.forEach(test => {
+        for (let key in testsMap) {
+            let test = testsMap[key];
             let card = document.createElement('div');
             card.className = `live-exam-card`;
             card.innerHTML = `
@@ -88,9 +91,6 @@ export function initStudentTestLogic() {
                 <button class="btn-launch-exam" onclick="window.open('${test.examLink}', '_blank')"><i class="fas fa-stopwatch"></i> Initialize Exam</button>
             `;
             container.appendChild(card);
-        });
-    }
-
-    renderExamConsole();
-    }
-
+        }
+    });
+                }
