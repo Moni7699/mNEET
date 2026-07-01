@@ -1,4 +1,7 @@
-const MSTORE_STORAGE_KEY = 'mneet_store_products_db';
+// Importing dynamic Realtime Database configuration protocols directly from your config bridge
+import { db, ref, onValue } from './firebase-config.js';
+
+const MSTORE_NODE_PATH = 'mneet_store_products_db';
 
 export function getStudentShopLayout() {
     return `
@@ -10,13 +13,11 @@ export function getStudentShopLayout() {
         
         .s-divider { font-size: 16px; font-weight: 900; border-bottom: var(--black-stroke); padding-bottom: 6px; margin: 20px 0 15px 0; text-transform: uppercase; color: var(--text-title); }
         
-        /* 📦 PREMIUM GRID WRAPPER FOR PRODUCTS */
         .products-grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
         @media(max-width: 450px) {
             .products-grid-container { grid-template-columns: 1fr; }
         }
         
-        /* 📚 LUXURY BRAND SHOPPING ITEM CARD */
         .shop-item-grid-card { 
             background: var(--bg-surface) !important; 
             color: var(--text-title) !important;
@@ -46,7 +47,7 @@ export function getStudentShopLayout() {
     <div class="s-shop-panel">
         <div class="s-shop-hero">
             <h2>mStore Academic Bookshop</h2>
-            <p>Access physical study modules, high-focus mind-maps combo packets, and material toolkits.</p>
+            <p>Access physical study modules, high-focus mind-maps combo packets, and material cloud catalog item list.</p>
         </div>
 
         <h3 class="s-divider">Available Publications</h3>
@@ -58,47 +59,53 @@ export function getStudentShopLayout() {
 export function initStudentShopLogic() {
     const grid = document.getElementById('renderStudentShopGrid');
 
-    function fetchState() { return JSON.parse(localStorage.getItem(MSTORE_STORAGE_KEY)) || []; }
-
-    function renderStoreGrid() {
-        let arr = fetchState();
+    // ☁️ LISTEN REALTIME MARKETPLACE STREAMS DIRECTLY FROM FIREBASE INFRASTRUCTURE NODE
+    const mstoreRef = ref(db, MSTORE_NODE_PATH);
+    onValue(mstoreRef, (snapshot) => {
         grid.innerHTML = '';
+        const catalogMap = snapshot.val();
 
-        if(arr.length === 0) {
-            // Default elegant fallback catalogs initialization parameters if database layer clear
+        if (!catalogMap) {
+            // Elegant real-time mock seed validation parameters engine display if cloud clean
             let fallbackMockSeeds = [
-                { id: 201, name: "NEET Biology Target Punch Vol 1", image: "", finalPrice: "340", basePrice: "450", category: "Printed Books", stock: "In Stock" },
+                { id: 201, name: "NEET Biology Target Punch Vol 1 (Cloud Sandbox)", image: "", finalPrice: "340", basePrice: "450", category: "Printed Books", stock: "In Stock" },
                 { id: 202, name: "High-Focus 3D Zoology Visual Mindmaps Combo", image: "", finalPrice: "180", basePrice: "250", category: "Mindmaps Combo", stock: "In Stock" }
             ];
-            arr = fallbackMockSeeds;
+            
+            fallbackMockSeeds.forEach(product => {
+                appendProductCard(product);
+            });
+            return;
         }
 
-        arr.forEach(product => {
-            let itemCard = document.createElement('div');
-            itemCard.className = `shop-item-grid-card`;
+        for (let key in catalogMap) {
+            appendProductCard(catalogMap[key]);
+        }
+    });
+
+    function appendProductCard(product) {
+        let itemCard = document.createElement('div');
+        itemCard.className = `shop-item-grid-card`;
+        
+        let imgStyle = product.image ? `style="background-image: url('${product.image}');"` : '';
+        let fallbackIcon = product.image ? '' : '<i class="fas fa-book"></i>';
+        let outOfStock = product.stock === 'Out of Stock';
+
+        itemCard.innerHTML = `
+            <div class="shop-item-thumb-box" ${imgStyle}>${fallbackIcon}</div>
+            <span class="shop-cat-badge">${product.category}</span>
+            <h4 class="shop-item-title" title="${product.name}">${product.name}</h4>
             
-            let imgStyle = product.image ? `style="background-image: url('${product.image}');"` : '';
-            let fallbackIcon = product.image ? '' : '<i class="fas fa-book"></i>';
-            let outOfStock = product.stock === 'Out of Stock';
-
-            itemCard.innerHTML = `
-                <div class="shop-item-thumb-box" ${imgStyle}>${fallbackIcon}</div>
-                <span class="shop-cat-badge">${product.category}</span>
-                <h4 class="shop-item-title" title="${product.name}">${product.name}</h4>
-                
-                <div class="shop-price-row">
-                    <span class="shop-sell-price">₹${product.finalPrice}</span>
-                    <span class="shop-mrp-price">₹${product.basePrice}</span>
-                </div>
-                
-                <button class="btn-buy-product ${outOfStock ? 'is-out-of-stock' : ''}" ${outOfStock ? 'disabled' : ''} onclick="${outOfStock ? '' : "alert('Order placement processing token mapped successfully!')"}">
-                    <i class="fas ${outOfStock ? 'fa-lock' : 'fa-shopping-cart'}"></i> ${outOfStock ? 'Out Of Stock' : 'Order Now'}
-                </button>
-            `;
-            grid.appendChild(itemCard);
-        });
+            <div class="shop-price-row">
+                <span class="shop-sell-price">₹${product.finalPrice}</span>
+                <span class="shop-mrp-price">₹${product.basePrice}</span>
+            </div>
+            
+            <button class="btn-buy-product ${outOfStock ? 'is-out-of-stock' : ''}" ${outOfStock ? 'disabled' : ''} onclick="${outOfStock ? '' : "alert('Order allocation token processed securely on cloud nodes!')"}">
+                <i class="fas ${outOfStock ? 'fa-lock' : 'fa-shopping-cart'}"></i> ${outOfStock ? 'Out Of Stock' : 'Order Now'}
+            </button>
+        `;
+        grid.appendChild(itemCard);
     }
-
-    renderStoreGrid();
-                    }
-          
+                                      }
+            
