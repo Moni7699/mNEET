@@ -1,4 +1,5 @@
 import { getTeacherMaterialsLayout, initTeacherMaterialsLogic } from './teacher_materials_mod.js';
+import { getTeacherDoubtsLayout, initTeacherDoubtsLogic } from './teacher_doubts_mod.js';
 
 const viewport = document.getElementById('teacher-main-render-area');
 const tabs = document.querySelectorAll('.dashboard-footer .footer-tab');
@@ -68,12 +69,13 @@ function switchTeacherView(target) {
             renderLecturesModule();
             break;
         case 'materials':
-            // Connects locker dashboard template module parameters safely
             viewport.innerHTML = getTeacherMaterialsLayout(activeFacultySubject);
             initTeacherMaterialsLogic(activeFacultySubject);
             break;
         case 'doubts':
-            viewport.innerHTML = `<div style="padding:20px; font-weight:700;">Step 2.4: Faculty Student Doubt Desk Resolver Module Loading UI...</div>`;
+            // Connects Doubt module dynamic layout
+            viewport.innerHTML = getTeacherDoubtsLayout(activeFacultySubject);
+            initTeacherDoubtsLogic(activeFacultySubject);
             break;
     }
 }
@@ -105,3 +107,4 @@ document.getElementById('teacher-logout-btn').addEventListener('click', () => {
 
 setupThemeHandler();
 switchTeacherView('lectures');
+                                                            
