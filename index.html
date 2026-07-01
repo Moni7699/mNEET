@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET - Central Gateway Terminal</title>
+    <title>mNEET - Unified Student & Management Hub</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -14,6 +14,7 @@
             --bg-input: #030712;
             --text-title: #FFFFFF;
             --text-para: #94A3B8;
+            --neon-red: #EF4444;
             --black-stroke: 2px solid #000000;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,142 +22,270 @@
             background-color: var(--bg-app); color: var(--text-title);
             font-family: system-ui, -apple-system, sans-serif;
             display: flex; align-items: center; justify-content: center;
-            width: 100vw; height: 100vh; overflow: hidden;
+            width: 100vw; height: 100vh; overflow-y: auto; padding: 20px 0;
         }
-        .login-card {
-            width: 90%; max-width: 400px; background: var(--bg-surface);
+        .gateway-container {
+            width: 90%; max-width: 420px; background: var(--bg-surface);
             border: var(--black-stroke); border-radius: 20px; padding: 28px 24px;
             box-shadow: 6px 6px 0px #000000; text-align: center;
         }
-        .logo-box { font-weight: 900; font-size: 28px; margin-bottom: 6px; }
+        .logo-box { font-weight: 900; font-size: 30px; margin-bottom: 4px; letter-spacing: -0.5px; }
         .logo-box span.m { color: var(--text-title); }
         .logo-box span.neet { color: var(--gold); }
-        .tag-sub { font-size: 13px; color: var(--text-para); margin-bottom: 24px; }
+        .tag-sub { font-size: 13px; color: var(--text-para); margin-bottom: 24px; font-weight: 500; }
         
-        .role-selector-tabs { display: flex; background: var(--bg-input); padding: 4px; border-radius: 12px; border: 1px solid #1E293B; margin-bottom: 20px; }
-        .role-tab { flex: 1; background: none; border: none; padding: 10px; color: var(--text-para); font-weight: 700; font-size: 12px; border-radius: 8px; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
-        .role-tab.active-role { background: var(--gold); color: #000000; }
+        .action-toggle-bar { display: flex; background: var(--bg-input); padding: 4px; border-radius: 12px; border: 1px solid #1E293B; margin-bottom: 22px; }
+        .mode-btn { flex: 1; background: none; border: none; padding: 10px; color: var(--text-para); font-weight: 700; font-size: 12px; border-radius: 8px; cursor: pointer; text-transform: uppercase; }
+        .mode-btn.active-mode { background: var(--gold); color: #000000; }
         
-        .form-group { text-align: left; margin-bottom: 16px; }
-        .form-label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; color: var(--gold); text-transform: uppercase; }
+        .role-badge-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 18px; }
+        .role-chip { padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; border: 1px solid #1E293B; background: var(--bg-input); color: var(--text-para); cursor: pointer; text-transform: uppercase; }
+        .role-chip.active-chip { border-color: var(--gold); color: var(--gold); background: rgba(243, 185, 23, 0.05); }
+        
+        .form-group { text-align: left; margin-bottom: 14px; }
+        .form-label { display: block; font-size: 11px; font-weight: 800; margin-bottom: 6px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; }
         .form-input { width: 100%; padding: 12px; border: var(--black-stroke); border-radius: 10px; background: var(--bg-input); color: #FFFFFF; font-size: 14px; outline: none; font-weight: 600; }
+        .form-input:focus { border-color: var(--gold); }
         
-        .btn-authenticate { width: 100%; background: var(--gold); color: #000000; font-weight: 900; padding: 14px; border: var(--black-stroke); border-radius: 12px; text-transform: uppercase; box-shadow: 4px 4px 0px #000000; cursor: pointer; font-size: 15px; margin-top: 10px; }
-        .btn-authenticate:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0px #000000; }
+        .btn-submit-action { width: 100%; background: var(--gold); color: #000000; font-weight: 900; padding: 14px; border: var(--black-stroke); border-radius: 12px; text-transform: uppercase; box-shadow: 4px 4px 0px #000000; cursor: pointer; font-size: 14px; margin-top: 12px; letter-spacing: 0.5px; }
+        .btn-submit-action:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0px #000000; }
+        
+        .switch-prompt { font-size: 12px; color: var(--text-para); margin-top: 18px; font-weight: 600; }
+        .switch-prompt span { color: var(--gold); cursor: pointer; text-decoration: underline; }
     </style>
 </head>
 <body>
 
-    <div class="login-card">
+    <div class="gateway-container">
         <div class="logo-box"><span class="m">m</span><span class="neet">NEET</span></div>
-        <p class="tag-sub">Unified Multi-Terminal Identity Portal</p>
+        <p class="tag-sub" id="hubSubtitle text">Cloud Unified Authentication Core</p>
         
-        <div class="role-selector-tabs">
-            <button class="role-tab active-role" data-role="student">Student</button>
-            <button class="role-tab" data-role="teacher">Faculty</button>
-            <button class="role-tab" data-role="admin">Master</button>
+        <!-- Tab Mode Toggle Switcher -->
+        <div class="action-toggle-bar">
+            <button class="mode-btn active-mode" id="toggleSignInBtn">Sign In Portal</button>
+            <button class="mode-btn" id="toggleSignUpBtn">New Account</button>
         </div>
 
-        <form id="universalLoginForm">
-            <div class="form-group" id="credentialInputBlock">
-                <label class="form-label" id="fieldLabelText">Registered Mobile Number</label>
-                <input type="text" id="userInputKey" class="form-input" placeholder="e.g., 9876543210" required>
-            </div>
-            
-            <div class="form-group id-block-secret" style="display:none;" id="passwordInputWrapper">
-                <label class="form-label">Security Access Token Key</label>
-                <input type="password" id="userPasswordKey" class="form-input" placeholder="••••••••">
+        <!-- Role Badge Matrix Selection -->
+        <div class="role-badge-row" id="roleBadgeContainer">
+            <span class="role-chip active-chip" data-identity="student">Student</span>
+            <span class="role-chip" data-identity="teacher">Faculty</span>
+            <span class="role-chip" data-identity="admin">Management</span>
+        </div>
+
+        <form id="authCoreForm">
+            <!-- Dynamic Name Input Block (Hidden on standard default sign in views) -->
+            <div class="form-group" id="fullNameWrapper" style="display: none;">
+                <label class="form-label">Full Name Identity</label>
+                <input type="text" id="regNameInput" class="form-input" placeholder="e.g., Tanmoy Das">
             </div>
 
-            <button type="submit" class="btn-authenticate">Initialize Identity Access</button>
+            <!-- Identifier Input -->
+            <div class="form-group">
+                <label class="form-label" id="primaryFieldLabel">Registered Mobile Number</label>
+                <input type="text" id="primaryInputKey" class="form-input" placeholder="e.g., 9876543210" required>
+            </div>
+            
+            <!-- Security Access Target Block -->
+            <div class="form-group" id="securityPassWrapper" style="display: none;">
+                <label class="form-label" id="secondaryFieldLabel">Secret Access Code</label>
+                <input type="password" id="secondaryInputKey" class="form-input" placeholder="••••••••">
+            </div>
+
+            <button type="submit" class="btn-submit-action" id="coreSubmitActionBtn">Authorize Sign In</button>
         </form>
+
+        <p class="switch-prompt" id="bottomNavigationSwitchText">New to the platform? <span id="triggerSwitchModeSpan">Create Student Account</span></p>
     </div>
 
     <script type="module">
-        import { db, ref, onValue } from './firebase-config.js';
+        import { db, ref, set, push, onValue } from './firebase-config.js';
 
-        const tabs = document.querySelectorAll('.role-tab');
-        const form = document.getElementById('universalLoginForm');
-        const labelText = document.getElementById('fieldLabelText');
-        const inputKey = document.getElementById('userInputKey');
-        const passWrapper = document.getElementById('passwordInputWrapper');
+        // Interface control mappings definitions parameters
+        const toggleSignIn = document.getElementById('toggleSignInBtn');
+        const toggleSignUp = document.getElementById('toggleSignUpBtn');
+        const roleChips = document.querySelectorAll('.role-chip');
+        const roleContainer = document.getElementById('roleBadgeContainer');
+        const nameWrapper = document.getElementById('fullNameWrapper');
+        const passWrapper = document.getElementById('securityPassWrapper');
         
-        let currentSelectedRole = 'student';
+        const primaryLabel = document.getElementById('primaryFieldLabel');
+        const primaryInput = document.getElementById('primaryInputKey');
+        const secondaryLabel = document.getElementById('secondaryFieldLabel');
+        const secondaryInput = document.getElementById('secondaryInputKey');
+        
+        const submitBtn = document.getElementById('coreSubmitActionBtn');
+        const bottomSwitch = document.getElementById('triggerSwitchModeSpan');
+        const formEngine = document.getElementById('authCoreForm');
 
-        // 🔀 DYNAMIC INTERFACE SELECTOR SWITCH RULES LOGIC PARAMETERS
-        tabs.forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                tabs.forEach(t => t.classList.remove('active-role'));
-                tab.classList.add('active-role');
-                currentSelectedRole = tab.dataset.role;
+        let currentActiveMode = 'signin'; // Mode options: signin / signup
+        let selectedRoleIdentity = 'student'; // Identity target: student / teacher / admin
 
-                if(currentSelectedRole === 'student') {
-                    labelText.innerText = "Registered Mobile Number";
-                    inputKey.placeholder = "e.g., 9876543210";
-                    passWrapper.style.display = "none";
-                } else if(currentSelectedRole === 'teacher') {
-                    labelText.innerText = "Authorized Faculty UID Key";
-                    inputKey.placeholder = "e.g., MNEET-TCH-101";
-                    passWrapper.style.display = "none";
-                } else if(currentSelectedRole === 'admin') {
-                    labelText.innerText = "Master Corporate Email Identifier";
-                    inputKey.placeholder = "admin@mneet.com";
-                    passWrapper.style.display = "block";
-                }
+        const USER_NODE_PATH = 'mneet_student_directory_db';
+
+        // 🎛️ 1. MODE TOGGLE ENGINE ARCHITECTURE SWITCHER
+        function setAuthViewMode(mode) {
+            currentActiveMode = mode;
+            if(mode === 'signin') {
+                toggleSignIn.classList.add('active-mode');
+                toggleSignUp.classList.remove('active-mode');
+                submitBtn.innerText = "Authorize Sign In";
+                bottomSwitch.innerText = "Create Student Account";
+                document.getElementById('bottomNavigationSwitchText').firstChild.textContent = "New to the platform? ";
+                nameWrapper.style.display = "none";
+                roleContainer.style.opacity = "1";
+                roleContainer.style.pointerEvents = "auto";
+                updateRoleFieldConfigurations();
+            } else {
+                toggleSignUp.classList.add('active-mode');
+                toggleSignIn.classList.remove('active-mode');
+                submitBtn.innerText = "Register Live Account";
+                bottomSwitch.innerText = "Sign In instead";
+                document.getElementById('bottomNavigationSwitchText').firstChild.textContent = "Already registered? ";
+                
+                // Sign Up is explicitly dedicated to students. Management & Faculty profiles are created by root admin.
+                selectedRoleIdentity = 'student';
+                roleChips.forEach(c => {
+                    c.classList.remove('active-chip');
+                    if(c.dataset.identity === 'student') c.classList.add('active-chip');
+                });
+                roleContainer.style.opacity = "0.4";
+                roleContainer.style.pointerEvents = "none";
+                
+                nameWrapper.style.display = "block";
+                primaryLabel.innerText = "Mobile Number (Will serve as identity credential)";
+                primaryInput.placeholder = "Enter 10-digit number";
+                passWrapper.style.display = "none";
+            }
+        }
+
+        toggleSignIn.addEventListener('click', () => setAuthViewMode('signin'));
+        toggleSignUp.addEventListener('click', () => setAuthViewMode('signup'));
+        bottomSwitch.addEventListener('click', () => {
+            if(currentActiveMode === 'signin') setAuthViewMode('signup');
+            else setAuthViewMode('signin');
+        });
+
+        // 🔀 2. ROLE INTERFACE SWITCH MATRIX PARAMETERS LOCKS CONTROL
+        function updateRoleFieldConfigurations() {
+            if(currentActiveMode === 'signup') return;
+            
+            if(selectedRoleIdentity === 'student') {
+                primaryLabel.innerText = "Registered Mobile Number";
+                primaryInput.placeholder = "e.g., 9876543210";
+                passWrapper.style.display = "none";
+                secondaryInput.removeAttribute('required');
+            } else if(selectedRoleIdentity === 'teacher') {
+                primaryLabel.innerText = "Authorized Faculty UID Key";
+                primaryInput.placeholder = "e.g., MNEET-TCH-101";
+                passWrapper.style.display = "none";
+                secondaryInput.removeAttribute('required');
+            } else if(selectedRoleIdentity === 'admin') {
+                primaryLabel.innerText = "Management Root Email Identity";
+                primaryInput.placeholder = "admin@mneet.com";
+                passWrapper.style.display = "block";
+                secondaryLabel.innerText = "Master System Password Token";
+                secondaryInput.placeholder = "••••••••";
+                secondaryInput.setAttribute('required', 'true');
+            }
+        }
+
+        roleChips.forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                roleChips.forEach(c => c.classList.remove('active-chip'));
+                chip.classList.add('active-chip');
+                selectedRoleIdentity = chip.dataset.identity;
+                updateRoleFieldConfigurations();
             });
         });
 
-        // 📡 LIVE REALTIME AUTHENTICATION MATRIX HANDLER VALIDATOR ROUTER
-        form.addEventListener('submit', function(e) {
+        // 📡 3. CLOUD REALTIME SUBMISSION ROUTER INTEGRATION PIPELINE
+        formEngine.addEventListener('submit', function(e) {
             e.preventDefault();
-            const inputValue = inputKey.value.trim();
+            const primaryVal = primaryInput.value.trim();
 
-            if (currentSelectedRole === 'student') {
-                // Queries cloud network repository path searching dynamic matching credentials keys indexes
-                const studentDirectoryRef = ref(db, 'mneet_student_directory_db');
-                onValue(studentDirectoryRef, (snapshot) => {
-                    const dataMap = snapshot.val();
-                    let recordFound = null;
+            // ─── CASE A: DYNAMIC SIGN UP ENGINE (CREATES NEW LIVE INSTANT STUDENT REGISTRY) ───
+            if(currentActiveMode === 'signup') {
+                const fullNameVal = document.getElementById('regNameInput').value.trim();
+                if(!fullNameVal) { alert("Please provide your legal identity full name!"); return; }
 
-                    if (dataMap) {
-                        for(let id in dataMap) {
-                            if(dataMap[id].phone === inputValue) {
-                                recordFound = dataMap[id];
-                                break;
-                            }
+                const duplicateCheckRef = ref(db, USER_NODE_PATH);
+                onValue(duplicateCheckRef, (snapshot) => {
+                    const existingMap = snapshot.val();
+                    let phoneExists = false;
+                    
+                    if(existingMap) {
+                        for(let id in existingMap) {
+                            if(existingMap[id].phone === primaryVal) { phoneExists = true; break; }
                         }
                     }
 
-                    if(recordFound) {
-                        if(recordFound.status === 'Blocked') {
-                            alert("Access Denied! Account suspended under compliance protocols registry.");
-                        } else {
-                            localStorage.setItem('mneet_student_session_token', JSON.stringify(recordFound));
-                            window.location.href = 'student_dashboard.html';
-                        }
+                    if(phoneExists) {
+                        alert("This mobile number record is already active! Please shift to Sign In portal.");
                     } else {
-                        alert("Invalid student registry data record index credentials. Verification failed.");
+                        // Provision a completely fresh live network entry record data snapshot properties
+                        let newStudentPayload = {
+                            name: fullNameVal,
+                            phone: primaryVal,
+                            status: "Active", // Instantly active by default rule parameters mapping
+                            batchId: "-KGx_FallbackDefaultNodeKey", // Auto provision container link tag
+                            verification: "Self Portal Sign Up Registered"
+                        };
+
+                        const pushTargetRef = push(ref(db, USER_NODE_PATH));
+                        set(pushTargetRef, newStudentPayload).then(() => {
+                            alert("Account provision token created successfully! Automatically routing to database dashboards ecosystem.");
+                            localStorage.setItem('mneet_student_session_token', JSON.stringify(newStudentPayload));
+                            window.location.href = 'student_dashboard.html';
+                        });
                     }
                 }, { onlyOnce: true });
 
-            } else if (currentSelectedRole === 'teacher') {
-                // Router node targets teacher authorization nodes registry indices mapping values parameters
-                alert("Teacher authentication bypass successfully checking configurations registry.");
-                // Sets custom session and routes target endpoints parameter screen structure
-                let mockSession = { name: "Specialized Faculty", subject: "Botany Core", role: "Professor" };
-                localStorage.setItem('mneet_teacher_logged_session', JSON.stringify(mockSession));
-                window.location.href = 'teacher_dashboard.html';
+            // ─── CASE B: UNIFIED MULTI-TERMINAL SIGN IN PORTAL ROUTER ───
+            } else {
+                if(selectedRoleIdentity === 'student') {
+                    const checkStudentRef = ref(db, USER_NODE_PATH);
+                    onValue(checkStudentRef, (snapshot) => {
+                        const map = snapshot.val();
+                        let targetProfile = null;
 
-            } else if (currentSelectedRole === 'admin') {
-                const secretPass = document.getElementById('userPasswordKey').value;
-                if(inputValue === "admin@mneet.com" && secretPass === "master2026") {
-                    localStorage.setItem('mneet_admin_session', true);
-                    window.location.href = 'admin_dashboard.html';
-                } else {
-                    alert("Invalid corporate root credentials authority verification keys.");
+                        if(map) {
+                            for(let node in map) {
+                                if(map[node].phone === primaryVal) { targetProfile = map[node]; break; }
+                            }
+                        }
+
+                        if(targetProfile) {
+                            if(targetProfile.status === 'Blocked') {
+                                alert("Access Denied! Account suspended under system compliance matrix flags.");
+                            } else {
+                                localStorage.setItem('mneet_student_session_token', JSON.stringify(targetProfile));
+                                window.location.href = 'student_dashboard.html';
+                            }
+                        } else {
+                            alert("No student registration record track matched. Please create an account first!");
+                        }
+                    }, { onlyOnce: true });
+
+                } else if(selectedRoleIdentity === 'teacher') {
+                    // Faculty token gateway bypass router standard configurations matching controls
+                    alert("Faculty validation key approved. Booting secure dynamic workspace environment logs.");
+                    let mockTeacherData = { name: "Dr. Arindam Das (Botany)", subject: "Botany", role: "Senior Faculty" };
+                    localStorage.setItem('mneet_teacher_logged_session', JSON.stringify(mockTeacherData));
+                    window.location.href = 'teacher_dashboard.html';
+
+                } else if(selectedRoleIdentity === 'admin') {
+                    const passwordVal = secondaryInput.value;
+                    if(primaryVal === "admin@mneet.com" && passwordVal === "master2026") {
+                        localStorage.setItem('mneet_admin_session', true);
+                        window.location.href = 'admin_dashboard.html';
+                    } else {
+                        alert("Invalid administrative authority encryption access credential keys!");
+                    }
                 }
             }
         });
     </script>
 </body>
-</html>
+    </html>
+    
