@@ -1,5 +1,6 @@
 import { getStudentTestLayout, initStudentTestLogic } from './student_test_mod.js';
 import { getStudentShopLayout, initStudentShopLogic } from './student_shop_mod.js';
+import { getStudentDoubtsLayout, initStudentDoubtLogic } from './student_doubts_mod.js';
 
 const viewport = document.getElementById('student-main-render-area');
 const tabs = document.querySelectorAll('.dashboard-footer .footer-tab');
@@ -80,13 +81,14 @@ function switchStudentView(target) {
             break;
             
         case 'shop':
-            // Connects dynamic mStore marketplace frontend catalog codes securely
             viewport.innerHTML = getStudentShopLayout();
             initStudentShopLogic();
             break;
             
         case 'queries':
-            viewport.innerHTML = `<div style="padding:20px; font-weight:700;">Step 3.5: Ask Doubt Communication Desk Hub UI Loading...</div>`;
+            // Connects Student dynamic Ask Doubt desk workspace codes securely
+            viewport.innerHTML = getStudentDoubtsLayout();
+            initStudentDoubtLogic();
             break;
     }
 }
@@ -118,4 +120,4 @@ document.getElementById('student-logout-btn').addEventListener('click', () => {
 
 setupThemeHandler();
 switchStudentView('classroom');
-            
+    
