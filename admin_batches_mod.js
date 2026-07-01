@@ -1,13 +1,15 @@
-const STORAGE_KEY = 'mneet_managed_batches';
+// Importing dynamic Realtime Database configuration protocols directly from your config bridge
+import { db, ref, set, push, onValue, remove } from './firebase-config.js';
 
-// Minimalist Color Coding (Left side dynamic accent accent borders)
+const DATABASE_NODE_PATH = 'mneet_managed_batches';
+
 const PALETTE_COLORS = [
-    { border: '#800020', badgeBg: '#FCE7F3', badgeText: '#9D174D' }, // Deep Burgundy
-    { border: '#005A5B', badgeBg: '#CCFBF1', badgeText: '#115E59' }, // Deep Teal
-    { border: '#4B0082', badgeBg: '#F3E8FF', badgeText: '#6B21A8' }, // Deep Purple
-    { border: '#10B981', badgeBg: '#D1FAE5', badgeText: '#065F46' }, // Mint Green
-    { border: '#8B5CF6', badgeBg: '#EDE9FE', badgeText: '#5B21B6' }, // Pastel Purple
-    { border: '#0284C7', badgeBg: '#E0F2FE', badgeText: '#0369A1' }  // Akash Nil
+    { bg: '#800020', text: '#FFFFFF' }, // Deep Burgundy
+    { bg: '#005A5B', text: '#FFFFFF' }, // Deep Teal
+    { bg: '#4B0082', text: '#FFFFFF' }, // Deep Purple
+    { bg: '#A7F3D0', text: '#064E3B' }, // Mint Green
+    { bg: '#E9D5FF', text: '#581C87' }, // Pastel Purple
+    { bg: '#BAE6FD', text: '#0C4A6E' }  // Akash Nil
 ];
 
 export function getBatchesLayout() {
@@ -33,52 +35,26 @@ export function getBatchesLayout() {
         
         .section-divider { font-size: 18px; font-weight: 900; border-bottom: var(--black-stroke); padding-bottom: 6px; margin: 25px 0 20px 0; text-transform: uppercase; }
         
-        /* 🔥 NEW RE-DESIGNED ULTRA PREMIUM STUDENT CARD */
-        .student-mirror-card { 
-            background: var(--bg-surface) !important; 
-            color: var(--text-title) !important;
-            border: var(--black-stroke); 
-            border-radius: 16px; 
-            padding: 18px; 
-            margin-bottom: 20px; 
-            box-shadow: 4px 4px 0px #000000; 
-            position: relative; 
-            overflow: hidden;
-        }
-        .student-mirror-card.is-hidden-true { opacity: 0.4; filter: grayscale(100%); }
+        .student-mirror-card { border: var(--black-stroke); border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 5px 5px 0px #000000; position: relative; }
+        .student-mirror-card.is-hidden-true { opacity: 0.35; filter: grayscale(50%); }
+        .student-card-tag { display: inline-block; padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; border: var(--black-stroke); margin-bottom: 12px; text-transform: uppercase; background: rgba(255,255,255,0.25); }
+        .student-card-title { font-size: 22px; font-weight: 900; margin-bottom: 8px; }
+        .student-card-desc { font-size: 14px; opacity: 0.95; margin-bottom: 16px; line-height: 1.5; }
         
-        /* Premium Accent Tag on Left Frame instead of Full solid background color */
-        .card-left-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
+        .student-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; font-weight: 700; margin-bottom: 16px; padding-top: 12px; border-top: 1px dashed rgba(0,0,0,0.2); }
+        .student-meta-item { display: flex; align-items: center; gap: 8px; }
         
-        .student-card-tag { 
-            display: inline-block; 
-            padding: 4px 10px; 
-            border-radius: 6px; 
-            font-size: 11px; 
-            font-weight: 800; 
-            margin-bottom: 10px; 
-            text-transform: uppercase; 
-            border: 1px solid rgba(0,0,0,0.15);
-        }
-        .student-card-title { font-size: 20px; font-weight: 900; margin-bottom: 6px; }
-        .student-card-desc { font-size: 13px; opacity: 0.8; margin-bottom: 14px; line-height: 1.4; }
+        .student-price-container { display: flex; align-items: baseline; gap: 10px; margin-top: 12px; }
+        .student-main-price { font-size: 24px; font-weight: 900; color: #000000; background: #FFFFFF; padding: 4px 12px; border-radius: 10px; border: var(--black-stroke); }
+        .student-old-price { font-size: 14px; text-decoration: line-through; opacity: 0.6; font-weight: 600; }
         
-        .student-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; font-weight: 700; margin-bottom: 14px; padding-top: 10px; border-top: 1px dashed var(--border-line); }
-        .student-meta-item { display: flex; align-items: center; gap: 6px; color: var(--text-para); }
-        .student-meta-item i { color: var(--gold); }
-        
-        .student-price-container { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-        .student-main-price { font-size: 22px; font-weight: 900; color: var(--text-title); background: var(--bg-input); padding: 4px 10px; border-radius: 8px; border: var(--black-stroke); }
-        .student-old-price { font-size: 13px; text-decoration: line-through; opacity: 0.5; font-weight: 600; }
-        
-        .admin-modifier-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-line); }
-        .mod-btn { border: var(--black-stroke); background: var(--bg-surface); color: var(--text-title); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 800; box-shadow: 2px 2px 0px #000000; display: flex; align-items: center; gap: 4px; transition: 0.1s; }
-        .mod-btn:active { transform: translate(1px, 1px); box-shadow: 0px 0px 0px #000000; }
+        .admin-modifier-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 2px solid #000000; }
+        .mod-btn { border: var(--black-stroke); background: #FFFFFF; color: #000000; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 800; box-shadow: 2px 2px 0px #000000; display: flex; align-items: center; gap: 6px; }
     </style>
 
     <div class="batch-wrapper">
         <div class="batch-form-card">
-            <h2 class="batch-heading">Batch Control Panel</h2>
+            <h2 class="batch-heading">Batch Control Panel (Cloud Sync)</h2>
             <form id="modBatchForm">
                 <input type="hidden" id="formBatchId" value="">
                 
@@ -88,7 +64,7 @@ export function getBatchesLayout() {
                 <label class="input-label">Description</label>
                 <textarea id="bDesc" class="custom-input" rows="3" placeholder="Course features details add..." required></textarea>
 
-                <label class="input-label">Batch Thumbnail (Image or Video Link)</label>
+                <label class="input-label">Batch Thumbnail (Image Link)</label>
                 <input type="text" id="bThumb" class="custom-input" placeholder="https://domain.com/thumb.jpg">
 
                 <div class="flex-row">
@@ -156,11 +132,11 @@ export function getBatchesLayout() {
                     </div>
                 </div>
 
-                <button type="submit" class="btn-action-publish" id="modSubmitBtn">Publish Package</button>
+                <button type="submit" class="btn-action-publish" id="modSubmitBtn">Publish to Firebase Cloud</button>
             </form>
         </div>
 
-        <h3 class="section-divider">Managed Batches Queue</h3>
+        <h3 class="section-divider">Live Cloud Batches Queue</h3>
         <div id="renderBatchQueue"></div>
     </div>
     `;
@@ -183,60 +159,59 @@ export function initBatchesLogic() {
     baseInput.addEventListener('input', updateCalculatedPrice);
     discInput.addEventListener('input', updateCalculatedPrice);
 
-    function fetchState() { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
-    function saveState(arr) { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); renderQueue(); }
-
-    function renderQueue() {
-        let arr = fetchState();
+    // ☁️ FIREBASE REALTIME LISTENER (Automatic updates whenever data alters inside Cloud nodes)
+    const batchesRef = ref(db, DATABASE_NODE_PATH);
+    onValue(batchesRef, (snapshot) => {
         queueArea.innerHTML = '';
-        if(arr.length === 0) {
-            queueArea.innerHTML = `<p style="text-align:center; opacity:0.6; font-size:13px; font-weight:700; padding: 20px 0;">No active batches published yet.</p>`;
+        const dataMap = snapshot.val();
+        
+        if (!dataMap) {
+            queueArea.innerHTML = `<p style="text-align:center; opacity:0.6; font-size:13px; font-weight:700; padding: 20px 0;">No active cloud clusters configured.</p>`;
             return;
         }
-        
-        arr.forEach((item, index) => {
-            let configTheme = PALETTE_COLORS[index % PALETTE_COLORS.length];
+
+        let index = 0;
+        for (let key in dataMap) {
+            let item = dataMap[key];
+            let colorTheme = PALETTE_COLORS[index % PALETTE_COLORS.length];
             let card = document.createElement('div');
             card.className = `student-mirror-card ${item.isHidden ? 'is-hidden-true' : ''}`;
+            card.style.backgroundColor = colorTheme.bg;
+            card.style.color = colorTheme.text;
             
             card.innerHTML = `
-                <div class="card-left-accent" style="background-color: ${configTheme.border};"></div>
-                
                 <div>
-                    <span class="student-card-tag" style="background-color: ${configTheme.badgeBg}; color: ${configTheme.badgeText};">${item.tag}</span>
+                    <span class="student-card-tag" style="color: ${colorTheme.text}; border-color: ${colorTheme.text};">${item.tag}</span>
                     <h3 class="student-card-title">${item.name}</h3>
                     <p class="student-card-desc">${item.desc}</p>
-                    
-                    <div class="student-meta-grid">
+                    <div class="student-meta-grid" style="border-color: rgba(0,0,0,0.15);">
                         <div class="student-meta-item"><i class="fas fa-user-circle"></i> Mentor: ${item.mentor || 'Not Assigned'}</div>
-                        <div class="student-meta-item"><i class="fas fa-info-circle"></i> Status: ${item.status}</div>
+                        <div class="student-meta-item"><i class="fas fa-toggle-on"></i> Status: ${item.status}</div>
                         <div class="student-meta-item"><i class="fas fa-calendar-alt"></i> Start: ${item.start}</div>
                         <div class="student-meta-item"><i class="fas fa-plus-circle"></i> Buffer: +${item.buffer} Days</div>
                     </div>
-                    
                     <div class="student-price-container">
                         <span class="student-main-price">₹${item.finalPrice}</span>
-                        <span class="student-old-price">M.R.P: ₹${item.basePrice}</span>
+                        <span class="student-old-price" style="color: ${colorTheme.text};">M.R.P: ₹${item.basePrice}</span>
                     </div>
                 </div>
-                
                 <div class="admin-modifier-row">
-                    <button class="mod-btn act-edit" data-id="${item.id}"><i class="fas fa-edit" style="color:#2563EB;"></i> Edit</button>
-                    <button class="mod-btn act-hide" data-id="${item.id}"><i class="fas ${item.isHidden ? 'fa-eye' : 'fa-eye-slash'}" style="color:#D97706;"></i> ${item.isHidden ? 'Show' : 'Hide'}</button>
-                    <button class="mod-btn act-del" data-id="${item.id}"><i class="fas fa-trash" style="color:#EF4444;"></i> Delete</button>
+                    <button class="mod-btn act-edit" data-firebase-key="${key}"><i class="fas fa-edit" style="color:#2563EB;"></i> Edit</button>
+                    <button class="mod-btn act-hide" data-firebase-key="${key}" data-current-hidden="${item.isHidden || false}"><i class="fas ${item.isHidden ? 'fa-eye' : 'fa-eye-slash'}" style="color:#D97706;"></i> ${item.isHidden ? 'Show' : 'Hide'}</button>
+                    <button class="mod-btn act-del" data-firebase-key="${key}"><i class="fas fa-trash" style="color:#EF4444;"></i> Delete</button>
                 </div>
             `;
             queueArea.appendChild(card);
-        });
-    }
+            index++;
+        }
+    });
 
+    // 📤 FIREBASE CLOUD WRITE OPERATION
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        let arr = fetchState();
-        let targetId = document.getElementById('formBatchId').value;
+        let targetFirebaseKey = document.getElementById('formBatchId').value;
 
         let data = {
-            id: targetId ? parseInt(targetId) : Date.now(),
             name: document.getElementById('bName').value,
             desc: document.getElementById('bDesc').value,
             thumb: document.getElementById('bThumb').value,
@@ -252,34 +227,43 @@ export function initBatchesLogic() {
             test: document.getElementById('chkTest').checked,
             status: document.getElementById('bStatus').value,
             mentor: document.getElementById('bMentor').value,
-            isHidden: targetId ? (arr.find(b => b.id == targetId)?.isHidden || false) : false
+            isHidden: false
         };
 
-        if(targetId) {
-            arr = arr.map(b => b.id == targetId ? data : b);
-            document.getElementById('modSubmitBtn').innerText = "Publish Package";
-            document.getElementById('formBatchId').value = "";
+        if (targetFirebaseKey) {
+            // Update targeted specific data reference block
+            const updateRef = ref(db, `${DATABASE_NODE_PATH}/${targetFirebaseKey}`);
+            set(updateRef, data).then(() => {
+                document.getElementById('modSubmitBtn').innerText = "Publish to Firebase Cloud";
+                document.getElementById('formBatchId').value = "";
+                form.reset();
+                updateCalculatedPrice();
+            });
         } else {
-            arr.push(data);
+            // Push completely fresh automatic entry unique node token key sequence
+            const newBatchPushRef = push(ref(db, DATABASE_NODE_PATH));
+            set(newBatchPushRef, data).then(() => {
+                form.reset();
+                updateCalculatedPrice();
+            });
         }
-        saveState(arr);
-        form.reset();
-        updateCalculatedPrice();
     });
 
+    // ⚙️ CLOUD MUTATIONS CONTROLLERS
     queueArea.addEventListener('click', function(e) {
         let btn = e.target.closest('.mod-btn');
-        if(!btn) return;
-        let id = parseInt(btn.dataset.id);
-        let arr = fetchState();
+        if (!btn) return;
+        let firebaseKey = btn.dataset.firebaseKey;
 
-        if(btn.classList.contains('act-edit')) {
-            let item = arr.find(b => b.id === id);
-            if(item) {
-                document.getElementById('formBatchId').value = item.id;
+        if (btn.classList.contains('act-edit')) {
+            const singleFetchRef = ref(db, `${DATABASE_NODE_PATH}/${firebaseKey}`);
+            onValue(singleFetchRef, (snapshot) => {
+                let item = snapshot.val();
+                if (!item) return;
+                document.getElementById('formBatchId').value = firebaseKey;
                 document.getElementById('bName').value = item.name;
                 document.getElementById('bDesc').value = item.desc;
-                document.getElementById('bThumb').value = item.thumb;
+                document.getElementById('bThumb').value = item.thumb || '';
                 document.getElementById('bStart').value = item.start;
                 document.getElementById('bEnd').value = item.end;
                 baseInput.value = item.basePrice;
@@ -292,19 +276,21 @@ export function initBatchesLogic() {
                 document.getElementById('chkTest').checked = item.test;
                 document.getElementById('bStatus').value = item.status;
                 document.getElementById('bMentor').value = item.mentor;
-                document.getElementById('modSubmitBtn').innerText = "Update Package";
+                document.getElementById('modSubmitBtn').innerText = "Update Cloud Package";
                 document.getElementById('admin-main-render-area').scrollTo({top: 0, behavior: 'smooth'});
-            }
-        } else if(btn.classList.contains('act-hide')) {
-            arr = arr.map(b => b.id === id ? { ...b, isHidden: !b.isHidden } : b);
-            saveState(arr);
-        } else if(btn.classList.contains('act-del')) {
-            if(confirm("Are you sure to delete this package layout?")) {
-                arr = arr.filter(b => b.id !== id);
-                saveState(arr);
+            }, { onlyOnce: true });
+
+        } else if (btn.classList.contains('act-hide')) {
+            let currentHiddenState = btn.dataset.currentHidden === "true";
+            const visibilityUpdateRef = ref(db, `${DATABASE_NODE_PATH}/${firebaseKey}/isHidden`);
+            set(visibilityUpdateRef, !currentHiddenState);
+
+        } else if (btn.classList.contains('act-del')) {
+            if (confirm("Delete this package parameters instantly from live cloud servers?")) {
+                const targetDeleteRef = ref(db, `${DATABASE_NODE_PATH}/${firebaseKey}`);
+                remove(targetDeleteRef);
             }
         }
     });
-
-    renderQueue();
-}
+        }
+            
