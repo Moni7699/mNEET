@@ -1,15 +1,10 @@
-const BATCH_STORAGE_KEY = 'mneet_managed_batches';
-const STUDY_STORAGE_KEY = 'mneet_batch_study_materials';
+// Importing active Realtime Database connection parameters from config layer
+import { db, ref, set, push, onValue, remove } from './firebase-config.js';
+
+const BATCH_NODE_PATH = 'mneet_managed_batches';
+const STUDY_NODE_PATH = 'mneet_batch_study_materials';
 
 export function getTeacherMaterialsLayout(facultySubject) {
-    let savedBatches = localStorage.getItem(BATCH_STORAGE_KEY);
-    let batches = savedBatches ? JSON.parse(savedBatches) : [];
-
-    let optionsHTML = batches.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
-    if (batches.length === 0) {
-        optionsHTML = `<option value="">No Active Batches - Contact Administrator</option>`;
-    }
-
     return `
     <style>
         .t-mat-panel { max-width: 600px; margin: 0 auto; padding-bottom: 40px; font-family: system-ui, -apple-system, sans-serif; }
@@ -58,7 +53,7 @@ export function getTeacherMaterialsLayout(facultySubject) {
                 
                 <label class="t-label">Select Targeted Student Batch</label>
                 <select id="fBatchId" class="t-input" required>
-                    ${optionsHTML}
+                    <option value="">Loading active cohorts map...</option>
                 </select>
 
                 <label class="t-label">Topic / Lecture Chapter Title</label>
@@ -92,7 +87,7 @@ export function getTeacherMaterialsLayout(facultySubject) {
                     </div>
                 </div>
 
-                <button type="submit" class="btn-faculty-upload" id="facSubmitBtn">Push to Classroom</button>
+                <button type="submit" class="btn-faculty-upload" id="facSubmitBtn">Push to Cloud Classroom</button>
             </form>
         </div>
 
@@ -105,57 +100,83 @@ export function getTeacherMaterialsLayout(facultySubject) {
 export function initTeacherMaterialsLogic(facultySubject) {
     const form = document.getElementById('facultyStudyForm');
     const queueArea = document.getElementById('renderFacultyMaterialsQueue');
+    const batchSelect = document.getElementById('fBatchId');
 
-    function fetchBatches() { return JSON.parse(localStorage.getItem(BATCH_STORAGE_KEY)) || []; }
-    function fetchState() { return JSON.parse(localStorage.getItem(STUDY_STORAGE_KEY)) || []; }
-    function saveState(arr) { localStorage.setItem(STUDY_STORAGE_KEY, JSON.stringify(arr)); renderQueue(); }
+    let cacheBatchesMap = {};
 
-    function renderQueue() {
-        let arr = fetchState();
-        let batches = fetchBatches();
-        queueArea.innerHTML = '';
+    // ☁️ 1. FETCH LIVE CLOUD BATCH COHORTS FOR SELECTION TARGET DROPDOWN
+    const batchesRef = ref(db, BATCH_NODE_PATH);
+    onValue(batchesRef, (snapshot) => {
+        const dataMap = snapshot.val() || {};
+        cacheBatchesMap = dataMap;
         
-        // Filtering content belonging only to this teacher's specialty parameters code
-        let filtered = arr.filter(m => m.subject.toLowerCase() === facultySubject.toLowerCase());
+        let htmlOptions = '<option value="">-- Choose Target Batch --</option>';
+        for (let key in dataMap) {
+            htmlOptions += `<option value="${key}">${dataMap[key].name}</option>`;
+        }
+        batchSelect.innerHTML = htmlOptions;
+    }, { onlyOnce: true });
 
-        if(filtered.length === 0) {
-            queueArea.innerHTML = `<p style="text-align:center; opacity:0.6; font-size:13px; font-weight:700; padding: 20px 0;">No materials uploaded by you yet.</p>`;
+    // ☁️ 2. LISTEN REAL-TIME CONTENT REPOSITORY FEEDS
+    const studyRef = ref(db, STUDY_NODE_PATH);
+    onValue(studyRef, (snapshot) => {
+        queueArea.innerHTML = '';
+        const dataMap = snapshot.val();
+
+        if (!dataMap) {
+            queueArea.innerHTML = `<p style="text-align:center; opacity:0.6; font-size:13px; font-weight:700; padding: 20px 0;">No materials uploaded inside your workspace cloud environment nodes yet.</p>`;
             return;
         }
-        
-        filtered.forEach(item => {
-            let batch = batches.find(b => b.id == item.batchId);
-            let card = document.createElement('div');
-            card.className = `faculty-log-card`;
-            
-            card.innerHTML = `
-                <div class="faculty-accent-bar"></div>
-                <div>
-                    <span class="faculty-batch-badge">${batch ? batch.name : 'All Cohorts'}</span>
-                    <h3 class="faculty-mat-title">${item.title}</h3>
-                    <div class="links-stack">
-                        <a href="${item.videoUrl}" target="_blank" class="link-row-node"><i class="fas fa-video"></i> <span>Video Stream Link</span></a>
-                        ${item.notesUrl ? `<a href="${item.notesUrl}" target="_blank" class="link-row-node"><i class="fas fa-file-pdf"></i> <span>Notes Reference Document</span></a>` : ''}
-                        ${item.dppUrl ? `<a href="${item.dppUrl}" target="_blank" class="link-row-node"><i class="fas fa-clipboard-list"></i> <span>Daily Practice Sheet</span></a>` : ''}
-                    </div>
-                </div>
-                <div class="card-actions-row">
-                    <button class="act-btn act-edit" data-id="${item.id}" style="color:#2563EB;"><i class="fas fa-edit"></i> Edit</button>
-                    <button class="act-btn act-del" data-id="${item.id}" style="color:#EF4444;"><i class="fas fa-trash"></i> Remove</button>
-                </div>
-            `;
-            queueArea.appendChild(card);
-        });
-    }
 
+        let hasContent = false;
+        for (let key in dataMap) {
+            let item = dataMap[key];
+            
+            // Checking logic parameters boundary to filter item profiles matching this teacher specialty code only
+            if (item.subject.toLowerCase() === facultySubject.toLowerCase()) {
+                hasContent = true;
+                let batchObj = cacheBatchesMap[item.batchId];
+                let parentBatchTitle = batchObj ? batchObj.name : 'Target Course Expired';
+                
+                let card = document.createElement('div');
+                card.className = `faculty-log-card`;
+                card.innerHTML = `
+                    <div class="faculty-accent-bar"></div>
+                    <div>
+                        <span class="faculty-batch-badge">${parentBatchTitle}</span>
+                        <h3 class="faculty-mat-title">${item.title}</h3>
+                        <div class="links-stack">
+                            <a href="${item.videoUrl}" target="_blank" class="link-row-node"><i class="fas fa-video"></i> <span>Video Stream Link</span></a>
+                            ${item.notesUrl ? `<a href="${item.notesUrl}" target="_blank" class="link-row-node"><i class="fas fa-file-pdf"></i> <span>Notes Reference Document</span></a>` : ''}
+                            ${item.dppUrl ? `<a href="${item.dppUrl}" target="_blank" class="link-row-node"><i class="fas fa-clipboard-list"></i> <span>Daily Practice Sheet</span></a>` : ''}
+                        </div>
+                    </div>
+                    <div class="card-actions-row">
+                        <button class="act-btn act-edit" data-firebase-key="${key}" style="color:#2563EB;"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="act-btn act-del" data-firebase-key="${key}" style="color:#EF4444;"><i class="fas fa-trash"></i> Remove</button>
+                    </div>
+                `;
+                queueArea.appendChild(card);
+            }
+        }
+
+        if (!hasContent) {
+            queueArea.innerHTML = `<p style="text-align:center; opacity:0.6; font-size:13px; font-weight:700; padding: 20px 0;">No materials uploaded by you inside current configuration streams.</p>`;
+        }
+    });
+
+    // 📤 3. DISPATCH EXECUTIONS SYSTEM WRITE CODES DATA PAYLOAD TO CLOUD CLUSTER NODE TREE
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        let arr = fetchState();
-        let targetId = document.getElementById('facContentId').value;
-        let selectedBatch = document.getElementById('fBatchId').value;
+        let targetFirebaseKey = document.getElementById('facContentId').value;
+        let selectedBatch = batchSelect.value;
+
+        if (!selectedBatch) {
+            alert("Please bundle an active structural cohort database index key destination!");
+            return;
+        }
 
         let data = {
-            id: targetId ? parseInt(targetId) : Date.now(),
             batchId: selectedBatch,
             title: document.getElementById('fTitle').value,
             videoUrl: document.getElementById('fVideoUrl').value,
@@ -165,45 +186,51 @@ export function initTeacherMaterialsLogic(facultySubject) {
             visibility: document.getElementById('fVisibility').value
         };
 
-        if(targetId) {
-            arr = arr.map(c => c.id == targetId ? data : c);
-            document.getElementById('facSubmitBtn').innerText = "Push to Classroom";
-            document.getElementById('facContentId').value = "";
+        if (targetFirebaseKey) {
+            const contentUpdateRef = ref(db, `${STUDY_NODE_PATH}/${targetFirebaseKey}`);
+            set(contentUpdateRef, data).then(() => {
+                document.getElementById('facSubmitBtn').innerText = "Push to Cloud Classroom";
+                document.getElementById('facContentId').value = "";
+                form.reset();
+                document.getElementById('fSubject').value = facultySubject;
+            });
         } else {
-            arr.push(data);
+            const contentPushRef = push(ref(db, STUDY_NODE_PATH));
+            set(contentPushRef, data).then(() => {
+                form.reset();
+                document.getElementById('fSubject').value = facultySubject;
+            });
         }
-        saveState(arr);
-        form.reset();
-        document.getElementById('fSubject').value = facultySubject;
     });
 
+    // ⚙️ 4. BIND MODIFIERS REMOVE/UPDATE OPERATION LOOPS
     queueArea.addEventListener('click', function(e) {
         let btn = e.target.closest('.act-btn');
-        if(!btn) return;
-        let id = parseInt(btn.dataset.id);
-        let arr = fetchState();
+        if (!btn) return;
+        let firebaseKey = btn.dataset.firebaseKey;
 
-        if(btn.classList.contains('act-edit')) {
-            let item = arr.find(c => c.id === id);
-            if(item) {
-                document.getElementById('facContentId').value = item.id;
-                document.getElementById('fBatchId').value = item.batchId;
+        if (btn.classList.contains('act-edit')) {
+            const targetNodeFetchRef = ref(db, `${STUDY_NODE_PATH}/${firebaseKey}`);
+            onValue(targetNodeFetchRef, (snapshot) => {
+                let item = snapshot.val();
+                if (!item) return;
+                document.getElementById('facContentId').value = firebaseKey;
+                batchSelect.value = item.batchId;
                 document.getElementById('fTitle').value = item.title;
                 document.getElementById('fVideoUrl').value = item.videoUrl;
                 document.getElementById('fNotesUrl').value = item.notesUrl;
                 document.getElementById('fDppUrl').value = item.dppUrl;
                 document.getElementById('fVisibility').value = item.visibility;
-                document.getElementById('facSubmitBtn').innerText = "Update Content";
+                document.getElementById('facSubmitBtn').innerText = "Update Cloud Locker Data";
                 document.getElementById('teacher-main-render-area').scrollTo({top: 0, behavior: 'smooth'});
-            }
-        } else if(btn.classList.contains('act-del')) {
-            if(confirm("Delete this material profile?")) {
-                arr = arr.filter(c => c.id !== id);
-                saveState(arr);
+            }, { onlyOnce: true });
+
+        } else if (btn.classList.contains('act-del')) {
+            if (confirm("Delete this specialized study resource matrix document sheet node parameter from online cloud server arrays?")) {
+                const targetedEraserRef = ref(db, `${STUDY_NODE_PATH}/${firebaseKey}`);
+                remove(targetedEraserRef);
             }
         }
     });
-
-    renderQueue();
-          }
-
+                          }
+                                                        
