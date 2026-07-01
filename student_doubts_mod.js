@@ -1,4 +1,7 @@
-const DOUBT_STORAGE_KEY = 'mneet_global_student_doubts_db';
+// Importing dynamic Realtime Database configuration protocols directly from your config bridge
+import { db, ref, set, push, onValue } from './firebase-config.js';
+
+const DOUBT_NODE_PATH = 'mneet_global_student_doubts_db';
 
 export function getStudentDoubtsLayout() {
     return `
@@ -16,7 +19,6 @@ export function getStudentDoubtsLayout() {
         
         .s-divider { font-size: 18px; font-weight: 900; border-bottom: var(--black-stroke); padding-bottom: 6px; margin: 25px 0 20px 0; text-transform: uppercase; }
         
-        /* 💬 PREMIUM STUDENT DOUBT TRACKING CARD */
         .ticket-status-card { 
             background: var(--bg-surface) !important; 
             color: var(--text-title) !important;
@@ -57,7 +59,7 @@ export function getStudentDoubtsLayout() {
             </form>
         </div>
 
-        <h3 class="s-divider">My Doubt History Logs</h3>
+        <h3 class="s-divider">My Doubt History Logs (Cloud Sync)</h3>
         <div id="renderStudentDoubtsHistoryArea"></div>
     </div>
     `;
@@ -67,58 +69,56 @@ export function initStudentDoubtLogic() {
     const form = document.getElementById('studentDoubtForm');
     const container = document.getElementById('renderStudentDoubtsHistoryArea');
 
-    function fetchState() { return JSON.parse(localStorage.getItem(DOUBT_STORAGE_KEY)) || []; }
-    function saveState(arr) { localStorage.setItem(DOUBT_STORAGE_KEY, JSON.stringify(arr)); renderHistoryGrid(); }
-
-    function renderHistoryGrid() {
-        let arr = fetchState();
+    // ☁️ 1. LISTEN TO REAL-TIME QUERY REGISTRY DIRECT FROM CENTRAL SERVERS
+    const doubtsRef = ref(db, DOUBT_NODE_PATH);
+    onValue(doubtsRef, (snapshot) => {
         container.innerHTML = '';
+        const dataMap = snapshot.val();
 
-        if(arr.length === 0) {
-            container.innerHTML = `<p style="text-align:center; opacity:0.6; font-size:13px; font-weight:700; padding: 20px 0;">No doubt queries dispatched yet.</p>`;
+        if (!dataMap) {
+            container.innerHTML = `<p style="text-align:center; opacity:0.6; font-size:13px; font-weight:700; padding: 20px 0;">No doubt queries dispatched inside cloud infrastructure registry yet.</p>`;
             return;
         }
 
-        arr.forEach(ticket => {
+        for (let key in dataMap) {
+            let ticket = dataMap[key];
+            let isResolved = ticket.reply !== null && ticket.reply !== undefined;
+            
             let card = document.createElement('div');
             card.className = `ticket-status-card`;
-            let isResolved = ticket.reply !== null;
-
             card.innerHTML = `
                 <div class="ticket-bar-indicator ${isResolved ? 'is-resolved' : ''}"></div>
                 <div class="ticket-header">
-                    <span>Subject: ${ticket.subject}</span>
-                    <span style="color: ${isResolved ? 'var(--neon-green)' : 'var(--neon-red)'};">${isResolved ? 'RESOLVED' : 'PENDING'}</span>
+                    <span>Subject Area: ${ticket.subject}</span>
+                    <span style="color: ${isResolved ? 'var(--neon-green)' : 'var(--neon-red)'}; font-weight:800;">${isResolved ? 'RESOLVED' : 'PENDING FACULTY RESPONSE'}</span>
                 </div>
                 <p class="ticket-query">${ticket.query}</p>
                 ${isResolved ? `
                 <div class="ticket-solution-node">
-                    <strong>Faculty Response:</strong>
+                    <strong>Faculty Solutions Explanation:</strong>
                     ${ticket.reply}
                 </div>` : ''}
             `;
             container.appendChild(card);
-        });
-    }
+        }
+    });
 
+    // 📤 2. PUSH FRESH TICKET SUBMISSION STRUCTURAL DOCUMENT DATA TO REMOTE DATABASE
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        let arr = fetchState();
 
         let data = {
-            id: Date.now(),
-            studentName: "Tanmoy Das (Self)",
+            studentName: "Tanmoy Das (Self-Aspirant)",
             subject: document.getElementById('sdSubject').value,
             query: document.getElementById('sdQuery').value,
             reply: null,
-            timestamp: "Just Now"
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
 
-        arr.push(data);
-        saveState(arr);
-        form.reset();
+        // Generates automatic randomized unique child key nodes on live production cloud streams
+        const newDoubtPushRef = push(ref(db, DOUBT_NODE_PATH));
+        set(newDoubtPushRef, data).then(() => {
+            form.reset();
+        });
     });
-
-    renderHistoryGrid();
-}
-
+                                                   }
