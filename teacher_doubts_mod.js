@@ -1,4 +1,7 @@
-const DOUBT_STORAGE_KEY = 'mneet_global_student_doubts_db';
+// Importing active Realtime Database connection parameters from config layer
+import { db, ref, set, push, onValue, remove } from './firebase-config.js';
+
+const DOUBT_NODE_PATH = 'mneet_global_student_doubts_db';
 
 export function getTeacherDoubtsLayout(facultySubject) {
     return `
@@ -10,7 +13,6 @@ export function getTeacherDoubtsLayout(facultySubject) {
         
         .t-divider { font-size: 16px; font-weight: 900; border-bottom: var(--black-stroke); padding-bottom: 6px; margin: 20px 0 15px 0; text-transform: uppercase; color: var(--text-title); }
         
-        /* 💬 PREMIUM FACULTY DOUBT CHAT ROW CARD */
         .doubt-resolver-card { 
             background: var(--bg-surface) !important; 
             color: var(--text-title) !important;
@@ -38,7 +40,7 @@ export function getTeacherDoubtsLayout(facultySubject) {
     <div class="t-doubt-panel">
         <div class="t-doubt-hero">
             <h2>Doubt Resolution Desk</h2>
-            <p>Real-time academic ticket query router stream filtered under: <strong>${facultySubject} Core</strong>.</p>
+            <p>Real-time academic ticket query router stream cloud sync filtered under: <strong>${facultySubject} Core</strong>.</p>
         </div>
 
         <h3 class="t-divider">Pending Student Tickets</h3>
@@ -54,94 +56,84 @@ export function initTeacherDoubtsLogic(facultySubject) {
     const pendingContainer = document.getElementById('renderPendingDoubtsContainer');
     const resolvedContainer = document.getElementById('renderResolvedDoubtsContainer');
 
-    // Seed mock initial values safely if storage layer database empty parameters keys
-    function getDoubtsState() {
-        let saved = localStorage.getItem(DOUBT_STORAGE_KEY);
-        if(!saved) {
-            let initialMockSeed = [
-                { id: 101, studentName: "Rahul Sen", subject: facultySubject, query: "NCERT Biology Page 84 complex equation structure tracking problem. Please clarify mitosis logic mapping checkpoints.", reply: null, timestamp: "Today, 11:20 AM" },
-                { id: 102, studentName: "Ananya Roy", subject: facultySubject, query: "DPP 02 Question number 14 calculation parameter error or mismatch?", reply: "Check option C layout, recalculate parameters base index values.", timestamp: "Yesterday, 4:15 PM" }
-            ];
-            localStorage.setItem(DOUBT_STORAGE_KEY, JSON.stringify(initialMockSeed));
-            return initialMockSeed;
-        }
-        return JSON.parse(saved);
-    }
-
-    function saveDoubtsState(arr) {
-        localStorage.setItem(DOUBT_STORAGE_KEY, JSON.stringify(arr));
-        renderDoubtsDesk();
-    }
-
-    function renderDoubtsDesk() {
-        let arr = getDoubtsState();
+    // ☁️ 1. LISTEN TO CLOUD STUDENT DOUBTS MATRIX
+    const doubtsRef = ref(db, DOUBT_NODE_PATH);
+    onValue(doubtsRef, (snapshot) => {
         pendingContainer.innerHTML = '';
         resolvedContainer.innerHTML = '';
+        const dataMap = snapshot.val();
 
-        // Filter queries matching this teacher subject profile parameters keys
-        let filtered = arr.filter(d => d.subject.toLowerCase() === facultySubject.toLowerCase());
+        if (!dataMap) {
+            pendingContainer.innerHTML = `<p style="text-align:center; opacity:0.5; font-size:12px; padding:15px 0; font-weight:700;">Clean desk! No dynamic pending doubt tokens registered on server.</p>`;
+            resolvedContainer.innerHTML = `<p style="text-align:center; opacity:0.5; font-size:12px; padding:15px 0; font-weight:700;">No query resolution log blueprint history tracked.</p>`;
+            return;
+        }
 
         let pendingCount = 0;
         let resolvedCount = 0;
 
-        filtered.forEach(ticket => {
-            let card = document.createElement('div');
-            card.className = `doubt-resolver-card`;
+        for (let key in dataMap) {
+            let ticket = dataMap[key];
             
-            if(!ticket.reply) {
-                pendingCount++;
-                card.innerHTML = `
-                    <div class="doubt-status-bar"></div>
-                    <div class="doubt-meta-header">
-                        <span>Student: ${ticket.studentName}</span>
-                        <span>${ticket.timestamp}</span>
-                    </div>
-                    <p class="doubt-body-text">${ticket.query}</p>
-                    <div>
-                        <textarea class="reply-input-ctrl" id="rawReplyField_${ticket.id}" rows="2" placeholder="Type verified clear explanations solutions..."></textarea>
-                        <button class="btn-resolve-trigger act-submit-reply" data-id="${ticket.id}"><i class="fas fa-paper-plane"></i> Dispatch Resolution</button>
-                    </div>
-                `;
-                pendingContainer.appendChild(card);
-            } else {
-                resolvedCount++;
-                card.innerHTML = `
-                    <div class="doubt-status-bar is-resolved"></div>
-                    <div class="doubt-meta-header">
-                        <span>Student: ${ticket.studentName}</span>
-                        <span>Resolved Mode</span>
-                    </div>
-                    <p class="doubt-body-text" style="opacity:0.75; font-weight:500;">${ticket.query}</p>
-                    <div class="faculty-reply-box">
-                        <strong>Your Solution Key Response:</strong>
-                        ${ticket.reply}
-                    </div>
-                `;
-                resolvedContainer.appendChild(card);
+            // Filtering ticket array logs matching this teacher subject profile logic configuration rules
+            if (ticket.subject.toLowerCase() === facultySubject.toLowerCase()) {
+                let card = document.createElement('div');
+                card.className = `doubt-resolver-card`;
+
+                if (!ticket.reply) {
+                    pendingCount++;
+                    card.innerHTML = `
+                        <div class="doubt-status-bar"></div>
+                        <div class="doubt-meta-header">
+                            <span>Student: ${ticket.studentName}</span>
+                            <span>${ticket.timestamp || 'Just Now'}</span>
+                        </div>
+                        <p class="doubt-body-text">${ticket.query}</p>
+                        <div>
+                            <textarea class="reply-input-ctrl" id="rawReplyField_${key}" rows="2" placeholder="Type verified explanations solutions..."></textarea>
+                            <button class="btn-resolve-trigger act-submit-reply" data-firebase-key="${key}"><i class="fas fa-paper-plane"></i> Dispatch Resolution</button>
+                        </div>
+                    `;
+                    pendingContainer.appendChild(card);
+                } else {
+                    resolvedCount++;
+                    card.innerHTML = `
+                        <div class="doubt-status-bar is-resolved"></div>
+                        <div class="doubt-meta-header">
+                            <span>Student: ${ticket.studentName}</span>
+                            <span>Resolved Protocol Mapped</span>
+                        </div>
+                        <p class="doubt-body-text" style="opacity:0.75; font-weight:500;">${ticket.query}</p>
+                        <div class="faculty-reply-box">
+                            <strong>Your Solution Key Response:</strong>
+                            ${ticket.reply}
+                        </div>
+                    `;
+                    resolvedContainer.appendChild(card);
+                }
             }
-        });
+        }
 
-        if(pendingCount === 0) pendingContainer.innerHTML = `<p style="text-align:center; opacity:0.5; font-size:12px; padding:15px 0; font-weight:700;">Clean desk! No pending doubt tokens.</p>`;
-        if(resolvedCount === 0) resolvedContainer.innerHTML = `<p style="text-align:center; opacity:0.5; font-size:12px; padding:15px 0; font-weight:700;">No query resolution log footprint history.</p>`;
-    }
+        if (pendingCount === 0) pendingContainer.innerHTML = `<p style="text-align:center; opacity:0.5; font-size:12px; padding:15px 0; font-weight:700;">Clean desk! No pending doubt tokens.</p>`;
+        if (resolvedCount === 0) resolvedContainer.innerHTML = `<p style="text-align:center; opacity:0.5; font-size:12px; padding:15px 0; font-weight:700;">No query resolution log footprint history.</p>`;
+    });
 
-    // Capture response trigger execution binding
+    // 📤 2. MUTATION WRITE OPERATIONS DISPATCH BACK RESPONSE TO ONLINE DATABASE SERVER TREE NODE
     document.addEventListener('click', function(e) {
         let btn = e.target.closest('.act-submit-reply');
-        if(!btn) return;
-        let id = parseInt(btn.dataset.id);
-        let textVal = document.getElementById(`rawReplyField_${id}`).value.trim();
+        if (!btn) return;
+        let firebaseKey = btn.dataset.firebaseKey;
+        let textVal = document.getElementById(`rawReplyField_${firebaseKey}`).value.trim();
 
-        if(textVal === "") {
-            alert("Explanation parameter cannot be dispatched empty!");
+        if (textVal === "") {
+            alert("Explanation query parameter block data text payload cannot be dispatched empty!");
             return;
         }
 
-        let arr = getDoubtsState();
-        arr = arr.map(t => t.id === id ? { ...t, reply: textVal } : t);
-        saveDoubtsState(arr);
+        // Apply targeted specific updates inside existing doubt data cluster path
+        const replyUpdateRef = ref(db, `${DOUBT_NODE_PATH}/${firebaseKey}/reply`);
+        set(replyUpdateRef, textVal).then(() => {
+            console.log(`Dispatched verification tokens payload to key node: ${firebaseKey}`);
+        });
     });
-
-    renderDoubtsDesk();
-    }
-              
+            }
