@@ -1,4 +1,7 @@
-const MSTORE_STORAGE_KEY = 'mneet_store_products_db';
+// Importing dynamic Realtime Database configuration protocols directly from your config bridge
+import { db, ref, set, push, onValue, remove } from './firebase-config.js';
+
+const MSTORE_NODE_PATH = 'mneet_store_products_db';
 
 export function getMStoreLayout() {
     return `
@@ -19,7 +22,6 @@ export function getMStoreLayout() {
         
         .section-divider { font-size: 18px; font-weight: 900; border-bottom: var(--black-stroke); padding-bottom: 6px; margin: 25px 0 20px 0; text-transform: uppercase; }
         
-        /* 📦 PREMIUM MSTORE ITEM GRID CARD */
         .store-item-card { 
             background: var(--bg-surface) !important; 
             color: var(--text-title) !important;
@@ -44,7 +46,6 @@ export function getMStoreLayout() {
         
         .admin-modifier-row { display: flex; flex-direction: column; gap: 6px; justify-content: center; }
         .mod-btn { border: var(--black-stroke); background: var(--bg-surface); color: var(--text-title); padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 800; box-shadow: 2px 2px 0px #000000; display: flex; align-items: center; gap: 4px; }
-        .mod-btn:active { transform: translate(1px, 1px); box-shadow: 0px 0px 0px #000000; }
     </style>
 
     <div class="mstore-manager-panel">
@@ -94,11 +95,11 @@ export function getMStoreLayout() {
                     </div>
                 </div>
 
-                <button type="submit" class="btn-action-store" id="mstoreSubmitBtn">Publish to mStore</button>
+                <button type="submit" class="btn-action-store" id="mstoreSubmitBtn">Publish to Live mStore</button>
             </form>
         </div>
 
-        <h3 class="section-divider">mStore Inventory Catalog</h3>
+        <h3 class="section-divider">mStore Inventory Catalog (Cloud)</h3>
         <div id="renderMStoreQueue"></div>
     </div>
     `;
@@ -121,19 +122,19 @@ export function initMStoreLogic() {
     baseInput.addEventListener('input', updateCalculatedPrice);
     discInput.addEventListener('input', updateCalculatedPrice);
 
-    function fetchState() { return JSON.parse(localStorage.getItem(MSTORE_STORAGE_KEY)) || []; }
-    function saveState(arr) { localStorage.setItem(MSTORE_STORAGE_KEY, JSON.stringify(arr)); renderQueue(); }
-
-    function renderQueue() {
-        let arr = fetchState();
+    // ☁️ 1. LISTEN LIVE CATALOG FROM FIREBASE CLOUD NODE
+    const mstoreRef = ref(db, MSTORE_NODE_PATH);
+    onValue(mstoreRef, (snapshot) => {
         queueArea.innerHTML = '';
-        
-        if(arr.length === 0) {
-            queueArea.innerHTML = `<p style="text-align:center; opacity:0.6; font-size:13px; font-weight:700; padding: 20px 0;">No store products cataloged yet.</p>`;
+        const catalogMap = snapshot.val();
+
+        if (!catalogMap) {
+            queueArea.innerHTML = `<p style="text-align:center; opacity:0.6; font-size:13px; font-weight:700; padding: 20px 0;">No publications cataloged inside online database node.</p>`;
             return;
         }
-        
-        arr.forEach(item => {
+
+        for (let key in catalogMap) {
+            let item = catalogMap[key];
             let card = document.createElement('div');
             card.className = `store-item-card`;
             
@@ -146,26 +147,25 @@ export function initMStoreLogic() {
                     <span class="product-cat-tag">${item.category}</span>
                     <h3 class="product-title">${item.name}</h3>
                     <div class="product-meta-row">
-                        <span>Status: <strong style="color:var(--gold);">${item.stock}</strong></span>
+                        <span>Inventory: <strong style="color:var(--gold);">${item.stock}</strong></span>
                     </div>
                     <div class="product-price-badge">₹${item.finalPrice} <span style="font-size:11px; text-decoration:line-through; opacity:0.5;">₹${item.basePrice}</span></div>
                 </div>
                 <div class="admin-modifier-row">
-                    <button class="mod-btn act-edit" data-id="${item.id}"><i class="fas fa-edit" style="color:#2563EB;"></i></button>
-                    <button class="mod-btn act-del" data-id="${item.id}"><i class="fas fa-trash" style="color:#EF4444;"></i></button>
+                    <button class="mod-btn act-edit" data-firebase-key="${key}"><i class="fas fa-edit" style="color:#2563EB;"></i></button>
+                    <button class="mod-btn act-del" data-firebase-key="${key}"><i class="fas fa-trash" style="color:#EF4444;"></i></button>
                 </div>
             `;
             queueArea.appendChild(card);
-        });
-    }
+        }
+    });
 
+    // 📤 2. PUSH PRODUCTS PAYLOAD STORAGE TO CLOUD ENGINE
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        let arr = fetchState();
-        let targetId = document.getElementById('formProductId').value;
+        let targetFirebaseKey = document.getElementById('formProductId').value;
 
         let data = {
-            id: targetId ? parseInt(targetId) : Date.now(),
             name: document.getElementById('pName').value,
             desc: document.getElementById('pDesc').value,
             image: document.getElementById('pImage').value,
@@ -176,28 +176,35 @@ export function initMStoreLogic() {
             stock: document.getElementById('pStock').value
         };
 
-        if(targetId) {
-            arr = arr.map(p => p.id == targetId ? data : p);
-            document.getElementById('mstoreSubmitBtn').innerText = "Publish to mStore";
-            document.getElementById('formProductId').value = "";
+        if (targetFirebaseKey) {
+            const productUpdateRef = ref(db, `${MSTORE_NODE_PATH}/${targetFirebaseKey}`);
+            set(productUpdateRef, data).then(() => {
+                document.getElementById('mstoreSubmitBtn').innerText = "Publish to Live mStore";
+                document.getElementById('formProductId').value = "";
+                form.reset();
+                updateCalculatedPrice();
+            });
         } else {
-            arr.push(data);
+            const productPushRef = push(ref(db, MSTORE_NODE_PATH));
+            set(productPushRef, data).then(() => {
+                form.reset();
+                updateCalculatedPrice();
+            });
         }
-        saveState(arr);
-        form.reset();
-        updateCalculatedPrice();
     });
 
+    // ⚙️ 3. MUTATION MODIFIER SYSTEM CONTROLS
     queueArea.addEventListener('click', function(e) {
         let btn = e.target.closest('.mod-btn');
-        if(!btn) return;
-        let id = parseInt(btn.dataset.id);
-        let arr = fetchState();
+        if (!btn) return;
+        let firebaseKey = btn.dataset.firebaseKey;
 
-        if(btn.classList.contains('act-edit')) {
-            let item = arr.find(p => p.id === id);
-            if(item) {
-                document.getElementById('formProductId').value = item.id;
+        if (btn.classList.contains('act-edit')) {
+            const itemTargetRef = ref(db, `${MSTORE_NODE_PATH}/${firebaseKey}`);
+            onValue(itemTargetRef, (snapshot) => {
+                let item = snapshot.val();
+                if (!item) return;
+                document.getElementById('formProductId').value = firebaseKey;
                 document.getElementById('pName').value = item.name;
                 document.getElementById('pDesc').value = item.desc;
                 document.getElementById('pImage').value = item.image;
@@ -206,17 +213,15 @@ export function initMStoreLogic() {
                 finalCalc.innerText = item.finalPrice;
                 document.getElementById('pCategory').value = item.category;
                 document.getElementById('pStock').value = item.stock;
-                document.getElementById('mstoreSubmitBtn').innerText = "Update Product";
+                document.getElementById('mstoreSubmitBtn').innerText = "Update Cloud Catalog";
                 document.getElementById('admin-main-render-area').scrollTo({top: 0, behavior: 'smooth'});
-            }
-        } else if(btn.classList.contains('act-del')) {
-            if(confirm("Are you sure to delete this product from stock catalog?")) {
-                arr = arr.filter(p => p.id !== id);
-                saveState(arr);
+            }, { onlyOnce: true });
+
+        } else if (btn.classList.contains('act-del')) {
+            if (confirm("Purge this inventory product document sheet entirely from live infrastructure?")) {
+                const targetNodeDeleteRef = ref(db, `${MSTORE_NODE_PATH}/${firebaseKey}`);
+                remove(targetNodeDeleteRef);
             }
         }
     });
-
-    renderQueue();
-                                              }
-                              
+    }
