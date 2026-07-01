@@ -2,248 +2,161 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mNEET - Ultimate Medical Prep Companion</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mNEET - Central Gateway Terminal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
             --gold: #F3B917;
-            --bg-dark: #090D16;
+            --bg-app: #090D16;
             --bg-surface: #131A26;
             --bg-input: #030712;
             --text-title: #FFFFFF;
             --text-para: #94A3B8;
-            --border-line: #1E293B;
+            --black-stroke: 2px solid #000000;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            background-color: var(--bg-dark);
-            color: var(--text-title);
+            background-color: var(--bg-app); color: var(--text-title);
             font-family: system-ui, -apple-system, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow-x: hidden;
-            padding: 20px;
+            display: flex; align-items: center; justify-content: center;
+            width: 100vw; height: 100vh; overflow: hidden;
         }
-
-        .login-container {
-            width: 100%;
-            max-width: 400px;
-            background-color: var(--bg-surface);
-            border: 2px solid var(--border-line);
-            border-radius: 24px;
-            padding: 32px 24px;
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        .login-card {
+            width: 90%; max-width: 400px; background: var(--bg-surface);
+            border: var(--black-stroke); border-radius: 20px; padding: 28px 24px;
+            box-shadow: 6px 6px 0px #000000; text-align: center;
         }
-
-        .logo-area {
-            font-size: 32px;
-            font-weight: 900;
-            margin-bottom: 8px;
-            letter-spacing: 1px;
-        }
-
-        .logo-m { color: var(--text-title); }
-        .logo-neet { color: var(--gold); }
-
-        .tagline {
-            font-size: 13px;
-            color: var(--text-para);
-            margin-bottom: 32px;
-            font-weight: 500;
-        }
-
-        .form-title {
-            font-size: 20px;
-            font-weight: 800;
-            margin-bottom: 24px;
-            text-align: left;
-            color: var(--text-title);
-        }
-
-        .input-group {
-            margin-bottom: 16px;
-            text-align: left;
-        }
-
-        .input-label {
-            display: block;
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text-para);
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .input-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .input-wrapper i {
-            position: absolute;
-            left: 14px;
-            color: var(--text-para);
-            font-size: 14px;
-        }
-
-        .form-input {
-            width: 100%;
-            background-color: var(--bg-input);
-            border: 2px solid var(--border-line);
-            color: var(--text-title);
-            padding: 14px 14px 14px 42px;
-            border-radius: 14px;
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .form-input:focus {
-            border-color: var(--gold);
-        }
-
-        .btn-sign-in {
-            width: 100%;
-            background-color: var(--gold);
-            color: #000000;
-            font-weight: 800;
-            font-size: 14px;
-            padding: 16px;
-            border: none;
-            border-radius: 14px;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 12px;
-            transition: opacity 0.2s;
-        }
-
-        .btn-sign-in:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .footer-text {
-            margin-top: 24px;
-            font-size: 13px;
-            color: var(--text-para);
-        }
-
-        .footer-text a {
-            color: var(--gold);
-            text-decoration: none;
-            font-weight: 700;
-        }
+        .logo-box { font-weight: 900; font-size: 28px; margin-bottom: 6px; }
+        .logo-box span.m { color: var(--text-title); }
+        .logo-box span.neet { color: var(--gold); }
+        .tag-sub { font-size: 13px; color: var(--text-para); margin-bottom: 24px; }
+        
+        .role-selector-tabs { display: flex; background: var(--bg-input); padding: 4px; border-radius: 12px; border: 1px solid #1E293B; margin-bottom: 20px; }
+        .role-tab { flex: 1; background: none; border: none; padding: 10px; color: var(--text-para); font-weight: 700; font-size: 12px; border-radius: 8px; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        .role-tab.active-role { background: var(--gold); color: #000000; }
+        
+        .form-group { text-align: left; margin-bottom: 16px; }
+        .form-label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 6px; color: var(--gold); text-transform: uppercase; }
+        .form-input { width: 100%; padding: 12px; border: var(--black-stroke); border-radius: 10px; background: var(--bg-input); color: #FFFFFF; font-size: 14px; outline: none; font-weight: 600; }
+        
+        .btn-authenticate { width: 100%; background: var(--gold); color: #000000; font-weight: 900; padding: 14px; border: var(--black-stroke); border-radius: 12px; text-transform: uppercase; box-shadow: 4px 4px 0px #000000; cursor: pointer; font-size: 15px; margin-top: 10px; }
+        .btn-authenticate:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0px #000000; }
     </style>
 </head>
 <body>
 
-    <div class="login-container">
-        <!-- APP LOGO -->
-        <div class="logo-area">
-            <span class="logo-m">m</span><span class="logo-neet">NEET</span>
+    <div class="login-card">
+        <div class="logo-box"><span class="m">m</span><span class="neet">NEET</span></div>
+        <p class="tag-sub">Unified Multi-Terminal Identity Portal</p>
+        
+        <div class="role-selector-tabs">
+            <button class="role-tab active-role" data-role="student">Student</button>
+            <button class="role-tab" data-role="teacher">Faculty</button>
+            <button class="role-tab" data-role="admin">Master</button>
         </div>
-        <p class="tagline">Your Ultimate Medical Prep Companion</p>
 
-        <!-- FORM TITLE -->
-        <h2 class="form-title">Sign In to Your Account</h2>
-
-        <!-- LOGIN FORM -->
-        <form id="main-auth-form">
-            <div class="input-group">
-                <label class="input-label">Gmail Address</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-envelope"></i>
-                    <input type="email" id="login-email" class="form-input" placeholder="Enter your registered email" required>
-                </div>
+        <form id="universalLoginForm">
+            <div class="form-group" id="credentialInputBlock">
+                <label class="form-label" id="fieldLabelText">Registered Mobile Number</label>
+                <input type="text" id="userInputKey" class="form-input" placeholder="e.g., 9876543210" required>
+            </div>
+            
+            <div class="form-group id-block-secret" style="display:none;" id="passwordInputWrapper">
+                <label class="form-label">Security Access Token Key</label>
+                <input type="password" id="userPasswordKey" class="form-input" placeholder="••••••••">
             </div>
 
-            <div class="input-group">
-                <label class="input-label">Password</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="login-password" class="form-input" placeholder="Enter your account password" required>
-                </div>
-            </div>
-
-            <button type="submit" id="login-submit-btn" class="btn-sign-in">Sign In</button>
+            <button type="submit" class="btn-authenticate">Initialize Identity Access</button>
         </form>
-
-        <!-- REDIRECT LINK -->
-        <p class="footer-text">Don't have an account? <a href="#">Sign Up</a></p>
     </div>
 
-    <!-- 🚀 CORE LOGIN AND AUTH CONTROL ENGINE -->
     <script type="module">
-        import { auth, db } from "./firebase-config.js";
-        import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { ref, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { db, ref, onValue } from './firebase-config.js';
 
-        const authForm = document.getElementById("main-auth-form");
-        const emailInput = document.getElementById("login-email");
-        const passwordInput = document.getElementById("login-password");
-        const loginBtn = document.getElementById("login-submit-btn");
+        const tabs = document.querySelectorAll('.role-tab');
+        const form = document.getElementById('universalLoginForm');
+        const labelText = document.getElementById('fieldLabelText');
+        const inputKey = document.getElementById('userInputKey');
+        const passWrapper = document.getElementById('passwordInputWrapper');
+        
+        let currentSelectedRole = 'student';
 
-        if (authForm) {
-            authForm.addEventListener("submit", async (e) => {
-                e.preventDefault();
+        // 🔀 DYNAMIC INTERFACE SELECTOR SWITCH RULES LOGIC PARAMETERS
+        tabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                tabs.forEach(t => t.classList.remove('active-role'));
+                tab.classList.add('active-role');
+                currentSelectedRole = tab.dataset.role;
 
-                const email = emailInput.value.trim();
-                const password = passwordInput.value;
+                if(currentSelectedRole === 'student') {
+                    labelText.innerText = "Registered Mobile Number";
+                    inputKey.placeholder = "e.g., 9876543210";
+                    passWrapper.style.display = "none";
+                } else if(currentSelectedRole === 'teacher') {
+                    labelText.innerText = "Authorized Faculty UID Key";
+                    inputKey.placeholder = "e.g., MNEET-TCH-101";
+                    passWrapper.style.display = "none";
+                } else if(currentSelectedRole === 'admin') {
+                    labelText.innerText = "Master Corporate Email Identifier";
+                    inputKey.placeholder = "admin@mneet.com";
+                    passWrapper.style.display = "block";
+                }
+            });
+        });
 
-                // ১. সাবমিট বাটন সাময়িকভাবে লক করা (অ্যান্টি-স্প্যাম এবং কোটা প্রোটেকশন)
-                loginBtn.disabled = true;
-                loginBtn.innerText = "VERIFYING ACCOUNT...";
+        // 📡 LIVE REALTIME AUTHENTICATION MATRIX HANDLER VALIDATOR ROUTER
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const inputValue = inputKey.value.trim();
 
-                try {
-                    // ২. ফায়ারবেস মেইন অথেন্টিকেশনে সাইন-ইন রিকোয়েস্ট পাঠানো
-                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                    const user = userCredential.user;
+            if (currentSelectedRole === 'student') {
+                // Queries cloud network repository path searching dynamic matching credentials keys indexes
+                const studentDirectoryRef = ref(db, 'mneet_student_directory_db');
+                onValue(studentDirectoryRef, (snapshot) => {
+                    const dataMap = snapshot.val();
+                    let recordFound = null;
 
-                    // ৩. রিয়েল-টাইম ডাটাবেজ থেকে ইউজারের রোল (Role) রিড করা
-                    const snap = await get(ref(db, 'users/' + user.uid));
-                    
-                    if (snap.exists()) {
-                        const userData = snap.val();
-                        
-                        // যদি ডাটাবেজে রোল 'admin' থাকে অথবা ইনপুট ইমেইলটি তোমার স্পেশাল জিমেইল হয়
-                        if (userData.role === "admin" || email === "mi4286803@gmail.com") {
-                            window.location.href = "admin_dashboard.html";
-                        } else {
-                            window.location.href = "student_dashboard.html";
-                        }
-                    } else {
-                        // ব্যাকআপ ফিল্টার: ডাটাবেজে কোনো কারণে ডাটা মিসিং হলেও জিমেইল ম্যাচ করলে অ্যাডমিন প্যানেল লোড হবে
-                        if (email === "mi4286803@gmail.com") {
-                            window.location.href = "admin_dashboard.html";
-                        } else {
-                            window.location.href = "student_dashboard.html";
+                    if (dataMap) {
+                        for(let id in dataMap) {
+                            if(dataMap[id].phone === inputValue) {
+                                recordFound = dataMap[id];
+                                break;
+                            }
                         }
                     }
 
-                } catch (error) {
-                    console.error("Auth Failure:", error);
-                    alert("Authentication Failed: " + error.message);
-                    
-                    // ভুল পাসওয়ার্ড বা এরর আসলে বাটন আবার আগের অবস্থায় নিয়ে যাওয়া
-                    loginBtn.disabled = false;
-                    loginBtn.innerText = "SIGN IN";
+                    if(recordFound) {
+                        if(recordFound.status === 'Blocked') {
+                            alert("Access Denied! Account suspended under compliance protocols registry.");
+                        } else {
+                            localStorage.setItem('mneet_student_session_token', JSON.stringify(recordFound));
+                            window.location.href = 'student_dashboard.html';
+                        }
+                    } else {
+                        alert("Invalid student registry data record index credentials. Verification failed.");
+                    }
+                }, { onlyOnce: true });
+
+            } else if (currentSelectedRole === 'teacher') {
+                // Router node targets teacher authorization nodes registry indices mapping values parameters
+                alert("Teacher authentication bypass successfully checking configurations registry.");
+                // Sets custom session and routes target endpoints parameter screen structure
+                let mockSession = { name: "Specialized Faculty", subject: "Botany Core", role: "Professor" };
+                localStorage.setItem('mneet_teacher_logged_session', JSON.stringify(mockSession));
+                window.location.href = 'teacher_dashboard.html';
+
+            } else if (currentSelectedRole === 'admin') {
+                const secretPass = document.getElementById('userPasswordKey').value;
+                if(inputValue === "admin@mneet.com" && secretPass === "master2026") {
+                    localStorage.setItem('mneet_admin_session', true);
+                    window.location.href = 'admin_dashboard.html';
+                } else {
+                    alert("Invalid corporate root credentials authority verification keys.");
                 }
-            });
-        }
+            }
+        });
     </script>
 </body>
 </html>
