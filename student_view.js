@@ -1,13 +1,12 @@
+import { getStudentTestLayout, initStudentTestLogic } from './student_test_mod.js';
+
 const viewport = document.getElementById('student-main-render-area');
 const tabs = document.querySelectorAll('.dashboard-footer .footer-tab');
 const body = document.body;
 
-// Enterprise Schema Shared Local Storage Keys
 const BATCH_STORAGE_KEY = 'mneet_managed_batches';
 const STUDY_STORAGE_KEY = 'mneet_batch_study_materials';
 const TEST_STORAGE_KEY = 'mneet_batch_test_series';
-const MSTORE_STORAGE_KEY = 'mneet_store_products_db';
-const DOUBT_STORAGE_KEY = 'mneet_global_student_doubts_db';
 
 function setupThemeHandler() {
     const themeToggle = document.getElementById('student-theme-toggle');
@@ -17,13 +16,11 @@ function setupThemeHandler() {
     });
 }
 
-// 📚 SUB-ROUTER MODULE: RENDERS STUDENT CLASSROOM BATCHES & INSIDE MATERIALS
 function renderClassroomModule() {
     let batches = JSON.parse(localStorage.getItem(BATCH_STORAGE_KEY)) || [];
     let materials = JSON.parse(localStorage.getItem(STUDY_STORAGE_KEY)) || [];
 
     let batchesHTML = batches.filter(b => !b.isHidden).map(batch => {
-        // Filter elements belonging exclusively to this selected cohort block
         let classContents = materials.filter(m => m.batchId == batch.id);
         
         let lecturesRows = classContents.map(c => `
@@ -69,7 +66,6 @@ function renderClassroomModule() {
     `;
 }
 
-// 🎛️ GLOBAL TAB NAVIGATION DISPATCHER SWITCH MANAGER ROUTER
 function switchStudentView(target) {
     viewport.innerHTML = '';
     
@@ -79,7 +75,9 @@ function switchStudentView(target) {
             break;
             
         case 'testpack':
-            viewport.innerHTML = `<div style="padding:20px; font-weight:700;">Step 3.3: National Test Series Simulation Engine UI Loading...</div>`;
+            // Connects dynamic mock examinations portal parameters layout codes securely
+            viewport.innerHTML = getStudentTestLayout();
+            initStudentTestLogic();
             break;
             
         case 'shop':
@@ -101,7 +99,6 @@ tabs.forEach(tab => {
     });
 });
 
-// Sidebar Profile Drawer toggles triggers setup controls parameters
 document.getElementById('student-drawer-open-btn').addEventListener('click', () => {
     document.getElementById('profile-drawer').className = 'drawer-open';
     document.getElementById('drawer-overlay').classList.remove('hidden-widget');
@@ -118,6 +115,6 @@ document.getElementById('student-logout-btn').addEventListener('click', () => {
     closeDrawer();
 });
 
-// Primary System Launch baseline configurations setup executions
 setupThemeHandler();
 switchStudentView('classroom');
+                                             
