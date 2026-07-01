@@ -3,34 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mNEET - Unified Portal</title>
+    <title>mNEET - Learner Lounge</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         :root {
             --gold: #F3B917;
-            --wp-green: #25D366;
             --neon-blue: #2563EB;
-            --neon-purple: #8B5CF6;
             --neon-red: #EF4444;
             --neon-green: #10B981;
+            --burgundy: #800020;
+            --black-stroke: 2px solid #000000;
         }
-        .theme-dark {
+        body.theme-dark {
             --bg-app: #090D16; --bg-surface: #131A26; --bg-input: #030712;
             --text-title: #FFFFFF; --text-para: #94A3B8; --border-line: #1E293B; --m-logo: #FFFFFF;
         }
-        .theme-white {
+        body.theme-white {
             --bg-app: #F8FAFC; --bg-surface: #FFFFFF; --bg-input: #F1F5F9;
             --text-title: #451A03; --text-para: #7F1D1D; --border-line: #451A03; --m-logo: #7F1D1D;
         }
         * { box-sizing: border-box !important; margin: 0; padding: 0; }
         body {
-            background-color: var(--bg-app) !important; color: var(--text-title) !important;
+            background-color: var(--bg-app); color: var(--text-title);
             font-family: system-ui, -apple-system, sans-serif; width: 100vw; height: 100vh; overflow: hidden;
+            transition: background-color 0.2s, color 0.2s;
         }
+        
+        /* 🏛️ PREMIUM STUDENT MAIN NAVIGATION HEADER FRAME */
         .dashboard-header {
             position: fixed; top: 0; left: 0; right: 0; height: 60px;
-            background-color: var(--bg-surface) !important; border-bottom: 2px solid var(--border-line);
+            background-color: var(--bg-surface); border-bottom: 2px solid var(--border-line);
             display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 999;
         }
         .dashboard-viewport {
@@ -38,106 +41,85 @@
         }
         .dashboard-footer {
             position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
-            background-color: var(--bg-surface) !important; border-top: 2px solid var(--border-line);
+            background-color: var(--bg-surface); border-top: 2px solid var(--border-line);
             display: flex; justify-content: space-around; align-items: center; z-index: 999;
         }
+        
+        /* 👥 SIDE DRAWER INTERFACE CONTROL OVERLAY SYSTEM */
         #profile-drawer {
             position: fixed; top: 0; bottom: 0; right: 0; width: 85%; max-width: 320px;
-            background-color: var(--bg-surface) !important; z-index: 100000 !important;
+            background-color: var(--bg-surface); z-index: 100000;
             border-left: 2px solid var(--border-line); padding: 24px 20px; transition: transform 0.3s ease; display: flex; flex-direction: column;
         }
         .drawer-closed { transform: translateX(100%); }
         .drawer-open { transform: translateX(0); }
-        #drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 99999 !important; }
-        .premium-name-card { background: linear-gradient(135deg, var(--bg-surface) 0%, rgba(37, 99, 235, 0.05) 100%); border: 2px solid var(--border-line); border-radius: 22px; padding: 18px; margin-bottom: 16px; }
-        .card-mneet { background-color: var(--bg-surface) !important; border-radius: 20px; padding: 16px; margin-bottom: 16px; border: 2px solid var(--border-line); }
-        .border-gold { border-color: var(--gold) !important; }
-        .border-blue { border-color: var(--neon-blue) !important; }
-        .border-purple { border-color: var(--neon-purple) !important; }
-        .border-red { border-color: var(--neon-red) !important; }
-        .border-green { border-color: var(--neon-green) !important; }
-        .input-field { width: 100%; background-color: var(--bg-input) !important; border: 2px solid var(--border-line) !important; color: var(--text-title) !important; padding: 12px; border-radius: 12px; font-size: 14px; outline: none; }
-        .btn-mneet { width: 100%; background-color: var(--gold) !important; color: #000000 !important; font-weight: 800; padding: 14px; border: none; border-radius: 14px; cursor: pointer; text-transform: uppercase; }
-        .footer-tab { background: none; border: none; color: var(--text-para); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 20%; }
+        #drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 99999; }
+        
+        .footer-tab { background: none; border: none; color: var(--text-para); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 25%; outline: none; }
         .active-tab { color: var(--gold) !important; }
         .link-btn { background: none; border: none; cursor: pointer; }
         .hidden-widget { display: none !important; }
-        .node-row { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-radius: 20px; margin-bottom: 10px; }
-        .battle-user-badge { display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-input); padding: 8px 12px; border-radius: 10px; font-size: 12px; }
+        
+        /* THEME TOGGLE WIREFRAME UTILITIES */
+        .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+        .switch input { display: none; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #475569; border-radius: 34px; transition: .3s; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .3s; }
+        input:checked + .slider { background-color: var(--gold); }
+        input:checked + .slider:before { transform: translateX(18px); }
     </style>
 </head>
 <body class="theme-dark">
 
     <header class="dashboard-header">
         <div class="header-left">
-            <button id="dashboard-back-btn" class="hidden-widget link-btn" style="font-size: 18px; color: var(--text-title);"><i class="fas fa-arrow-left"></i></button>
-            <div id="home-top-widgets" style="display: flex; align-items: center; gap: 14px;">
-                <button id="wp-community-btn" class="link-btn" style="color: var(--wp-green) !important; font-size: 22px;"><i class="fab fa-whatsapp"></i></button>
-                <button id="noti-btn" class="link-btn" style="color: var(--gold); font-size: 18px; position: relative;">
-                    <i class="fas fa-bell"></i>
-                    <span style="position: absolute; top: -2px; right: -2px; width: 6px; height: 6px; background-color: #EF4444; border-radius: 50%;"></span>
-                </button>
-            </div>
+            <span style="font-size: 11px; font-weight: 800; color: var(--neon-green); background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Aspirant Lounge</span>
         </div>
         <div style="font-weight: 900; font-size: 20px;">
-            <span style="color: var(--m-logo);">m</span><span style="color: var(--gold);">NEET</span>
+            <span style="color: var(--m-logo);">m</span><span style="color: var(--gold);">NEET</span><span style="font-size: 10px; color: var(--text-para); margin-left: 4px;">Classroom</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <div id="top-bp-trigger-btn" style="font-size: 11px; font-weight: 800; color: var(--gold); background: rgba(243,185,23,0.1); border: 1px solid rgba(243,185,23,0.3); padding: 5px 10px; border-radius: 20px; cursor: pointer;">
-                <i class="fas fa-coins" style="margin-right: 5px;"></i><span id="top-bp-count">0 BP</span>
-            </div>
-            <button id="drawer-open-btn" class="link-btn" style="color: var(--text-title); font-size: 18px;"><i class="fas fa-bars"></i></button>
+        <div>
+            <button id="student-drawer-open-btn" class="link-btn" style="color: var(--text-title); font-size: 18px;"><i class="fas fa-user-circle"></i></button>
         </div>
     </header>
 
-    <main class="dashboard-viewport" id="dashboard-main-render-area"></main>
+    <main class="dashboard-viewport" id="student-main-render-area">
+        </main>
 
-    <!-- ROBUST OUTER DRAWER -->
     <div id="profile-drawer" class="drawer-closed">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-line); padding-bottom: 10px;">
-            <h3 style="margin: 0; font-size: 16px; color: var(--gold);">Student Station</h3>
-            <button id="drawer-close-btn" class="link-btn" style="color: var(--text-title); font-size: 18px;"><i class="fas fa-times"></i></button>
+            <h3 style="margin: 0; font-size: 16px; color: var(--gold);">My Profile Core</h3>
+            <button id="student-drawer-close-btn" class="link-btn" style="color: var(--text-title); font-size: 18px;"><i class="fas fa-times"></i></button>
         </div>
         <div style="display: flex; align-items: center; gap: 12px; background-color: var(--bg-input); padding: 12px; border-radius: 16px; margin-bottom: 20px;">
-            <div id="user-avatar" style="width: 36px; height: 36px; background-color: var(--gold); border-radius: 50%; color: #000; font-weight: 900; display: flex; align-items: center; justify-content: center;">M</div>
+            <div style="width: 36px; height: 36px; background-color: var(--neon-green); border-radius: 50%; color: #fff; font-weight: 900; display: flex; align-items: center; justify-content: center;"><i class="fas fa-graduation-cap"></i></div>
             <div>
-                <h4 id="profile-name-display" style="margin: 0; font-size: 14px; font-weight: 700;">Student</h4>
-                <p id="profile-phone-display" style="margin: 4px 0 0 0; font-size: 11px; color: var(--text-para);">Phone</p>
+                <h4 id="drawerStudentName" style="margin: 0; font-size: 14px; font-weight: 700;">NEET Aspirant</h4>
+                <p id="drawerStudentPhone" style="margin: 4px 0 0 0; font-size: 11px; color: var(--text-para);">Premium Member</p>
             </div>
         </div>
+        
         <div style="display: flex; flex-direction: column; gap: 8px;">
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 4px; font-size: 13px; font-weight: 600;">
                 <span><i class="fas fa-adjust" style="margin-right: 8px;"></i> Dark Mode Theme</span>
                 <label class="switch">
-                    <input type="checkbox" id="dashboard-theme-toggle" checked>
+                    <input type="checkbox" id="student-theme-toggle" checked>
                     <span class="slider"></span>
                 </label>
             </div>
         </div>
-        <div style="margin-top: 15px; padding: 12px; border: 1px dashed var(--border-line); border-radius: 14px; margin-bottom: 15px;">
-            <h5 style="margin: 0 0 8px 0; font-size: 11px; color: var(--gold); text-transform: uppercase;">Set My Custom Targets</h5>
-            <div style="margin-bottom: 8px;">
-                <input type="text" id="target-college-input" class="input-field" placeholder="Target Medical College">
-            </div>
-            <div style="margin-bottom: 12px;">
-                <input type="date" id="target-date-input" class="input-field">
-            </div>
-            <button id="save-goals-btn" class="btn-mneet" style="padding: 8px; font-size: 12px;">Update My Targets</button>
-        </div>
-        <button id="logout-submit-btn" style="width:100%; background-color:#EF4444; color:white; border:none; padding:12px; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer; margin-top: auto;"><i class="fas fa-power-off"></i> Secure Log Out</button>
+        
+        <button id="student-logout-btn" style="width:100%; background-color:#EF4444; color:white; border:none; padding:12px; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer; margin-top: auto;"><i class="fas fa-power-off"></i> Secure Logout</button>
     </div>
     <div id="drawer-overlay" class="hidden-widget"></div>
 
     <footer class="dashboard-footer">
-        <button class="footer-tab active-tab" data-target="home"><i class="fas fa-home"></i><span style="font-size:9px; font-weight:700;">Home</span></button>
-        <button class="footer-tab" data-target="batches"><i class="fas fa-layer-group"></i><span style="font-size:9px; font-weight:700;">Batches</span></button>
-        <button class="footer-tab" data-target="study"><i class="fas fa-graduation-cap"></i><span style="font-size:9px; font-weight:700;">Study</span></button>
-        <button class="footer-tab" data-target="test"><i class="fas fa-file-invoice"></i><span style="font-size:9px; font-weight:700;">Test</span></button>
-        <button class="footer-tab" data-target="mstore"><i class="fas fa-shopping-bag"></i><span style="font-size:9px; font-weight:700;">mStore</span></button>
+        <button class="footer-tab active-tab" data-target="classroom"><i class="fas fa-book-reader"></i><span style="font-size:9px; font-weight:700;">My Batches</span></button>
+        <button class="footer-tab" data-target="testpack"><i class="fas fa-file-signature"></i><span style="font-size:9px; font-weight:700;">Test Series</span></button>
+        <button class="footer-tab" data-target="shop"><i class="fas fa-store"></i><span style="font-size:9px; font-weight:700;">mStore Shop</span></button>
+        <button class="footer-tab" data-target="queries"><i class="fas fa-question-circle"></i><span style="font-size:9px; font-weight:700;">Ask Doubt</span></button>
     </footer>
 
-    <script type="module" src="dashboard_view.js"></script>
-    <script type="module" src="dashboard_logic.js"></script>
+    <script type="module" src="student_view.js"></script>
 </body>
-            </html>
-            
+</html>
