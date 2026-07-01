@@ -1,12 +1,13 @@
 const STORAGE_KEY = 'mneet_managed_batches';
 
+// Minimalist Color Coding (Left side dynamic accent accent borders)
 const PALETTE_COLORS = [
-    { bg: '#800020', text: '#FFFFFF' }, // Deep Burgundy
-    { bg: '#005A5B', text: '#FFFFFF' }, // Deep Teal
-    { bg: '#4B0082', text: '#FFFFFF' }, // Deep Purple
-    { bg: '#A7F3D0', text: '#064E3B' }, // Mint Green
-    { bg: '#E9D5FF', text: '#581C87' }, // Pastel Purple
-    { bg: '#BAE6FD', text: '#0C4A6E' }  // Akash Nil
+    { border: '#800020', badgeBg: '#FCE7F3', badgeText: '#9D174D' }, // Deep Burgundy
+    { border: '#005A5B', badgeBg: '#CCFBF1', badgeText: '#115E59' }, // Deep Teal
+    { border: '#4B0082', badgeBg: '#F3E8FF', badgeText: '#6B21A8' }, // Deep Purple
+    { border: '#10B981', badgeBg: '#D1FAE5', badgeText: '#065F46' }, // Mint Green
+    { border: '#8B5CF6', badgeBg: '#EDE9FE', badgeText: '#5B21B6' }, // Pastel Purple
+    { border: '#0284C7', badgeBg: '#E0F2FE', badgeText: '#0369A1' }  // Akash Nil
 ];
 
 export function getBatchesLayout() {
@@ -32,22 +33,47 @@ export function getBatchesLayout() {
         
         .section-divider { font-size: 18px; font-weight: 900; border-bottom: var(--black-stroke); padding-bottom: 6px; margin: 25px 0 20px 0; text-transform: uppercase; }
         
-        .student-mirror-card { border: var(--black-stroke); border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 5px 5px 0px #000000; position: relative; }
-        .student-mirror-card.is-hidden-true { opacity: 0.35; filter: grayscale(50%); }
-        .student-card-tag { display: inline-block; padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; border: var(--black-stroke); margin-bottom: 12px; text-transform: uppercase; background: rgba(255,255,255,0.25); }
-        .student-card-title { font-size: 22px; font-weight: 900; margin-bottom: 8px; }
-        .student-card-desc { font-size: 14px; opacity: 0.95; margin-bottom: 16px; line-height: 1.5; }
+        /* 🔥 NEW RE-DESIGNED ULTRA PREMIUM STUDENT CARD */
+        .student-mirror-card { 
+            background: var(--bg-surface) !important; 
+            color: var(--text-title) !important;
+            border: var(--black-stroke); 
+            border-radius: 16px; 
+            padding: 18px; 
+            margin-bottom: 20px; 
+            box-shadow: 4px 4px 0px #000000; 
+            position: relative; 
+            overflow: hidden;
+        }
+        .student-mirror-card.is-hidden-true { opacity: 0.4; filter: grayscale(100%); }
         
-        .student-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; font-weight: 700; margin-bottom: 16px; padding-top: 12px; border-top: 1px dashed rgba(0,0,0,0.2); }
-        .student-meta-item { display: flex; align-items: center; gap: 8px; }
+        /* Premium Accent Tag on Left Frame instead of Full solid background color */
+        .card-left-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
         
-        .student-price-container { display: flex; align-items: baseline; gap: 10px; margin-top: 12px; }
-        .student-main-price { font-size: 24px; font-weight: 900; color: #000000; background: #FFFFFF; padding: 4px 12px; border-radius: 10px; border: var(--black-stroke); }
-        .student-old-price { font-size: 14px; text-decoration: line-through; opacity: 0.6; font-weight: 600; }
+        .student-card-tag { 
+            display: inline-block; 
+            padding: 4px 10px; 
+            border-radius: 6px; 
+            font-size: 11px; 
+            font-weight: 800; 
+            margin-bottom: 10px; 
+            text-transform: uppercase; 
+            border: 1px solid rgba(0,0,0,0.15);
+        }
+        .student-card-title { font-size: 20px; font-weight: 900; margin-bottom: 6px; }
+        .student-card-desc { font-size: 13px; opacity: 0.8; margin-bottom: 14px; line-height: 1.4; }
         
-        .admin-modifier-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 2px solid #000000; }
-        .mod-btn { border: var(--black-stroke); background: #FFFFFF; color: #000000; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 800; box-shadow: 2px 2px 0px #000000; display: flex; align-items: center; gap: 6px; }
-        .mod-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px #000000; }
+        .student-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; font-weight: 700; margin-bottom: 14px; padding-top: 10px; border-top: 1px dashed var(--border-line); }
+        .student-meta-item { display: flex; align-items: center; gap: 6px; color: var(--text-para); }
+        .student-meta-item i { color: var(--gold); }
+        
+        .student-price-container { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .student-main-price { font-size: 22px; font-weight: 900; color: var(--text-title); background: var(--bg-input); padding: 4px 10px; border-radius: 8px; border: var(--black-stroke); }
+        .student-old-price { font-size: 13px; text-decoration: line-through; opacity: 0.5; font-weight: 600; }
+        
+        .admin-modifier-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-line); }
+        .mod-btn { border: var(--black-stroke); background: var(--bg-surface); color: var(--text-title); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 800; box-shadow: 2px 2px 0px #000000; display: flex; align-items: center; gap: 4px; transition: 0.1s; }
+        .mod-btn:active { transform: translate(1px, 1px); box-shadow: 0px 0px 0px #000000; }
     </style>
 
     <div class="batch-wrapper">
@@ -169,28 +195,28 @@ export function initBatchesLogic() {
         }
         
         arr.forEach((item, index) => {
-            let colorTheme = PALETTE_COLORS[index % PALETTE_COLORS.length];
+            let configTheme = PALETTE_COLORS[index % PALETTE_COLORS.length];
             let card = document.createElement('div');
             card.className = `student-mirror-card ${item.isHidden ? 'is-hidden-true' : ''}`;
-            card.style.backgroundColor = colorTheme.bg;
-            card.style.color = colorTheme.text;
             
             card.innerHTML = `
+                <div class="card-left-accent" style="background-color: ${configTheme.border};"></div>
+                
                 <div>
-                    <span class="student-card-tag" style="color: ${colorTheme.text}; border-color: ${colorTheme.text};">${item.tag}</span>
+                    <span class="student-card-tag" style="background-color: ${configTheme.badgeBg}; color: ${configTheme.badgeText};">${item.tag}</span>
                     <h3 class="student-card-title">${item.name}</h3>
                     <p class="student-card-desc">${item.desc}</p>
                     
-                    <div class="student-meta-grid" style="border-color: rgba(0,0,0,0.15);">
+                    <div class="student-meta-grid">
                         <div class="student-meta-item"><i class="fas fa-user-circle"></i> Mentor: ${item.mentor || 'Not Assigned'}</div>
-                        <div class="student-meta-item"><i class="fas fa-toggle-on"></i> Status: ${item.status}</div>
+                        <div class="student-meta-item"><i class="fas fa-info-circle"></i> Status: ${item.status}</div>
                         <div class="student-meta-item"><i class="fas fa-calendar-alt"></i> Start: ${item.start}</div>
                         <div class="student-meta-item"><i class="fas fa-plus-circle"></i> Buffer: +${item.buffer} Days</div>
                     </div>
                     
                     <div class="student-price-container">
                         <span class="student-main-price">₹${item.finalPrice}</span>
-                        <span class="student-old-price" style="color: ${colorTheme.text};">M.R.P: ₹${item.basePrice}</span>
+                        <span class="student-old-price">M.R.P: ₹${item.basePrice}</span>
                     </div>
                 </div>
                 
@@ -281,5 +307,4 @@ export function initBatchesLogic() {
     });
 
     renderQueue();
-            }
-            
+}
