@@ -1,4 +1,5 @@
 import { getStudentTestLayout, initStudentTestLogic } from './student_test_mod.js';
+import { getStudentShopLayout, initStudentShopLogic } from './student_shop_mod.js';
 
 const viewport = document.getElementById('student-main-render-area');
 const tabs = document.querySelectorAll('.dashboard-footer .footer-tab');
@@ -6,7 +7,6 @@ const body = document.body;
 
 const BATCH_STORAGE_KEY = 'mneet_managed_batches';
 const STUDY_STORAGE_KEY = 'mneet_batch_study_materials';
-const TEST_STORAGE_KEY = 'mneet_batch_test_series';
 
 function setupThemeHandler() {
     const themeToggle = document.getElementById('student-theme-toggle');
@@ -75,13 +75,14 @@ function switchStudentView(target) {
             break;
             
         case 'testpack':
-            // Connects dynamic mock examinations portal parameters layout codes securely
             viewport.innerHTML = getStudentTestLayout();
             initStudentTestLogic();
             break;
             
         case 'shop':
-            viewport.innerHTML = `<div style="padding:20px; font-weight:700;">Step 3.4: mStore Book Store E-commerce Gateway Grid Loading...</div>`;
+            // Connects dynamic mStore marketplace frontend catalog codes securely
+            viewport.innerHTML = getStudentShopLayout();
+            initStudentShopLogic();
             break;
             
         case 'queries':
@@ -117,4 +118,4 @@ document.getElementById('student-logout-btn').addEventListener('click', () => {
 
 setupThemeHandler();
 switchStudentView('classroom');
-                                             
+            
