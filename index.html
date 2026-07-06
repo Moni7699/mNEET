@@ -3,239 +3,309 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET - Sign In Gateway</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <title>mNEET - Authentication</title>
     <style>
-        :root {
-            --gold: #F3B917;
-            --bg-app: #090D16;
-            --bg-surface: #131A26;
-            --bg-input: #0A111E;
-            --text-title: #FFFFFF;
-            --text-para: #94A3B8;
-            --border-line: #1E293B;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            background-color: var(--bg-app); color: var(--text-title);
-            font-family: system-ui, -apple-system, sans-serif;
-            display: flex; align-items: center; justify-content: center;
-            width: 100vw; height: 100vh; overflow-y: auto; padding: 20px 0;
+            background-color: #0d1424; /* Explicit dark background color matching image */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
         }
-        .gateway-card {
-            width: 90%; max-width: 400px; background: var(--bg-surface);
-            border-radius: 24px; padding: 36px 28px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5); border: 1px solid var(--border-line);
+
+        .auth-container {
+            background-color: #172237; /* Rounded inner card color matching image */
+            width: 100%;
+            max-width: 400px;
+            padding: 40px 30px;
+            border-radius: 40px; /* Deep rounded corners from image */
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            text-align: center;
         }
-        .logo-box { font-weight: 900; font-size: 32px; margin-bottom: 6px; text-align: center; }
-        .logo-box span.m { color: var(--text-title); }
-        .logo-box span.neet { color: var(--gold); }
-        .tag-sub { font-size: 13px; color: var(--text-para); margin-bottom: 28px; text-align: center; }
-        
-        .form-title { font-size: 22px; font-weight: 800; margin-bottom: 24px; text-align: left; color: #FFFFFF; }
-        
-        .form-group { text-align: left; margin-bottom: 16px; }
-        .form-label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 8px; color: var(--text-para); text-transform: uppercase; letter-spacing: 0.5px; }
-        
-        .input-container { position: relative; width: 100%; }
-        .input-container i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-para); font-size: 14px; }
-        
-        .form-input { width: 100%; padding: 14px 14px 14px 42px; border: 1px solid var(--border-line); border-radius: 12px; background: var(--bg-input); color: #FFFFFF; font-size: 14px; outline: none; font-weight: 600; transition: 0.2s; }
-        .form-input:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(243, 185, 23, 0.1); }
-        
-        .btn-submit-action { width: 100%; background: var(--gold); color: #000000; font-weight: 900; padding: 15px; border: none; border-radius: 12px; text-transform: uppercase; cursor: pointer; font-size: 15px; margin-top: 14px; letter-spacing: 0.5px; transition: 0.2s; }
-        .btn-submit-action:hover { background: #e0aa12; }
-        
-        .switch-prompt { font-size: 13px; color: var(--text-para); margin-top: 24px; font-weight: 600; text-align: center; }
-        .switch-prompt span { color: var(--gold); cursor: pointer; text-decoration: none; font-weight: 700; margin-left: 4px; }
+
+        .logo {
+            font-size: 38pt;
+            font-weight: 900;
+            font-style: italic;
+            color: #ffffff;
+            margin-bottom: 35px;
+            letter-spacing: -1px;
+        }
+
+        .logo span {
+            color: #f1b80d; /* Golden amber/yellow accent from user image */
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 16px 20px;
+            background-color: #0f1826; /* Darker input fields matching image */
+            border: 1px solid #22314d;
+            border-radius: 15px;
+            color: #ffffff;
+            font-size: 11pt;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input::placeholder {
+            color: #64748b;
+        }
+
+        .form-group input:focus {
+            border-color: #f1b80d;
+            box-shadow: 0 0 8px rgba(241, 184, 13, 0.2);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            background-color: #f1b80d; /* Amber/Yellow submit button from image */
+            border: none;
+            border-radius: 15px;
+            color: #0d1424;
+            font-size: 12pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-submit:hover {
+            background-color: #d9a406;
+        }
+
+        .switch-text {
+            color: #94a3b8;
+            font-size: 9.5pt;
+            margin-top: 25px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .switch-text span {
+            color: #f1b80d;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .switch-text span:hover {
+            text-decoration: underline;
+        }
+
+        /* Error/Success Messages */
+        .message {
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 10pt;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .error-msg {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .success-msg {
+            background-color: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        /* Utility classes to toggle screens */
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
 
-    <div class="gateway-card">
-        <div class="logo-box"><span class="m">m</span><span class="neet">NEET</span></div>
-        <p class="tag-sub">Your Ultimate Medical Prep Companion</p>
-        
-        <h2 class="form-title" id="formCurrentHeading">Sign In to Your Account</h2>
+    <div class="auth-container">
+        <!-- Logo Header -->
+        <div class="logo">M<span>NEET</span></div>
 
-        <form id="authCoreForm">
-            <div class="form-group signup-only" style="display: none;">
-                <label class="form-label">Full Name</label>
-                <div class="input-container">
-                    <i class="fas fa-user"></i>
-                    <input type="text" id="regName" class="form-input" placeholder="Enter your full name">
-                </div>
-            </div>
+        <!-- Global Alert Box -->
+        <div id="alertBox" class="message"></div>
 
+        <!-- ================= SIGN IN FORM ================= -->
+        <form id="signInForm">
             <div class="form-group">
-                <label class="form-label">Gmail Address</label>
-                <div class="input-container">
-                    <i class="fas fa-envelope"></i>
-                    <input type="email" id="regEmail" class="form-input" placeholder="Enter your registered email" required>
-                </div>
+                <input type="email" id="loginEmail" placeholder="ENTER YOUR GMAIL" required>
             </div>
-
-            <div class="form-group signup-only" style="display: none;">
-                <label class="form-label">Phone Number</label>
-                <div class="input-container">
-                    <i class="fas fa-phone"></i>
-                    <input type="text" id="regPhone" class="form-input" placeholder="Enter mobile number">
-                </div>
-            </div>
-
             <div class="form-group">
-                <label class="form-label">Password</label>
-                <div class="input-container">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="regPassword" class="form-input" placeholder="Enter your account password" required>
-                </div>
+                <input type="password" id="loginPassword" placeholder="ENTER PASSWORD" required>
             </div>
-
-            <div class="form-group signup-only" style="display: none;">
-                <label class="form-label">City</label>
-                <div class="input-container">
-                    <i class="fas fa-map-marker-alt"></i>
-                    <input type="text" id="regCity" class="form-input" placeholder="Enter your city">
-                </div>
+            <button type="submit" class="btn-submit">SIGN IN</button>
+            <div class="switch-text">
+                NEW SURGEON? <span id="toSignUp">SIGN UP</span>
             </div>
-
-            <button type="submit" class="btn-submit-action" id="submitActionBtn">Sign In</button>
         </form>
 
-        <p class="switch-prompt" id="switchTextPrompt">Don't have an account?<span id="triggerSwitchSpan">Sign Up</span></p>
+        <!-- ================= SIGN UP FORM ================= -->
+        <form id="signUpForm" class="hidden">
+            <div class="form-group">
+                <input type="text" id="regName" placeholder="FULL NAME" required>
+            </div>
+            <div class="form-group">
+                <input type="email" id="regEmail" placeholder="GMAIL ADDRESS" required>
+            </div>
+            <div class="form-group">
+                <input type="tel" id="regPhone" placeholder="PHONE NUMBER" required>
+            </div>
+            <div class="form-group">
+                <input type="text" id="regCity" placeholder="CITY / TOWN" required>
+            </div>
+            <div class="form-group">
+                <input type="password" id="regPassword" placeholder="CREATE PASSWORD" required>
+            </div>
+            <button type="submit" class="btn-submit">CREATE ACCOUNT</button>
+            <div class="switch-text">
+                ALREADY A MEMBER? <span id="toSignIn">SIGN IN</span>
+            </div>
+        </form>
     </div>
 
+    <!-- Firebase App & Database Implementation Logic -->
     <script type="module">
-        import { db, ref, set, push, onValue } from './firebase-config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        const formHeading = document.getElementById('formCurrentHeading');
-        const signupFields = document.querySelectorAll('.signup-only');
-        const submitBtn = document.getElementById('submitActionBtn');
-        const switchSpan = document.getElementById('triggerSwitchSpan');
-        const switchText = document.getElementById('switchTextPrompt');
-        const form = document.getElementById('authCoreForm');
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
+            authDomain: "mneet-spark.firebaseapp.com",
+            databaseURL: "https://mneet-spark-default-rtdb.firebaseio.com",
+            projectId: "mneet-spark",
+            storageBucket: "mneet-spark.firebasestorage.app",
+            messagingSenderId: "252201633700",
+            appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
+        };
 
-        let isSignUpMode = false;
-        const STUDENT_DB_NODE = 'mneet_student_directory_db';
+        // Initialize App & Services
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        // DOM Elements
+        const signInForm = document.getElementById('signInForm');
+        const signUpForm = document.getElementById('signUpForm');
+        const alertBox = document.getElementById('alertBox');
         
-        // 🏛️ CENTRAL MANAGEMENT SECURITY RULES
-        const MASTER_ADMIN_GMAIL = "admin@mneet.com";
-
-        switchSpan.addEventListener('click', () => {
-            isSignUpMode = !isSignUpMode;
-            if (isSignUpMode) {
-                formHeading.innerText = "Create Your Account";
-                signupFields.forEach(el => el.style.display = 'block');
-                submitBtn.innerText = "Register Now";
-                switchText.innerHTML = `Already have an account?<span id="triggerSwitchSpan">Sign In</span>`;
-            } else {
-                formHeading.innerText = "Sign In to Your Account";
-                signupFields.forEach(el => el.style.display = 'none');
-                submitBtn.innerText = "Sign In";
-                switchText.innerHTML = `Don't have an account?<span id="triggerSwitchSpan">Sign Up</span>`;
-            }
-            document.getElementById('triggerSwitchSpan').addEventListener('click', () => switchSpan.click());
+        // Navigation Switches
+        document.getElementById('toSignUp').addEventListener('click', () => {
+            signInForm.classList.add('hidden');
+            signUpForm.classList.remove('hidden');
+            hideAlert();
         });
 
-        form.addEventListener('submit', function(e) {
+        document.getElementById('toSignIn').addEventListener('click', () => {
+            signUpForm.classList.add('hidden');
+            signInForm.classList.remove('hidden');
+            hideAlert();
+        });
+
+        function showAlert(msg, isError = true) {
+            alertBox.textContent = msg;
+            alertBox.className = isError ? "message error-msg" : "message success-msg";
+            alertBox.style.display = "block";
+        }
+
+        function hideAlert() {
+            alertBox.style.display = "none";
+        }
+
+        // ================= SIGN UP LOGIC =================
+        signUpForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const emailValue = document.getElementById('regEmail').value.trim();
-            const passwordValue = document.getElementById('regPassword').value;
+            hideAlert();
 
-            // ─── 1. REGISTER PIPELINE ───
-            if (isSignUpMode) {
-                const nameValue = document.getElementById('regName').value.trim();
-                const phoneValue = document.getElementById('regPhone').value.trim();
-                const cityValue = document.getElementById('regCity').value.trim();
+            const name = document.getElementById('regName').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const phone = document.getElementById('regPhone').value.trim();
+            const city = document.getElementById('regCity').value.trim();
+            const password = document.getElementById('regPassword').value;
 
-                const checkRef = ref(db, STUDENT_DB_NODE);
-                onValue(checkRef, (snapshot) => {
-                    const data = snapshot.val();
-                    let emailExists = false;
+            try {
+                // 1. Create User Authentication account
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const uid = userCredential.user.uid;
 
-                    if (data) {
-                        for (let id in data) {
-                            if (data[id].email === emailValue) { emailExists = true; break; }
-                        }
-                    }
+                // 2. Save complete user metadata to Realtime Database
+                await set(ref(db, 'users/' + uid), {
+                    name: name,
+                    email: email,
+                    phone: phone,
+                    city: city,
+                    role: 'student',
+                    createdAt: new Date().toISOString()
+                });
 
-                    if (emailExists) {
-                        alert("This Gmail address is already registered!");
-                    } else {
-                        let newStudent = {
-                            name: nameValue,
-                            email: emailValue,
-                            phone: phoneValue,
-                            password: passwordValue,
-                            city: cityValue,
-                            status: "Active",
-                            batchId: "-KGx_FallbackDefaultNodeKey"
-                        };
+                showAlert("Account successfully registered! Switching to Login...", false);
+                signUpForm.reset();
+                setTimeout(() => {
+                    document.getElementById('toSignIn').click();
+                }, 2000);
 
-                        const newPushRef = push(ref(db, STUDENT_DB_NODE));
-                        set(newPushRef, newStudent).then(() => {
-                            alert("Account created successfully!");
-                            localStorage.setItem('mneet_student_session_token', JSON.stringify(newStudent));
-                            window.location.href = 'student_dashboard.html';
-                        });
-                    }
-                }, { onlyOnce: true });
+            } catch (error) {
+                showAlert("Registration Error: " + error.message);
+            }
+        });
 
-            // ─── 2. MULTI-TERMINAL AUTOMATED SIGN IN ROUTER ───
-            } else {
-                // A. MASTER ROOT ADMIN DETECTOR BYPASS
-                if (emailValue === MASTER_ADMIN_GMAIL && passwordValue === "master2026") {
-                    localStorage.setItem('mneet_admin_session', true);
-                    window.location.href = 'admin_dashboard.html';
-                    return;
-                }
+        // ================= SIGN IN & AUTO DETECT LOGIC =================
+        signInForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hideAlert();
 
-                // B. FACULTY/TEACHER SUB-DOMAIN MATCH ENGINES (Auto-Detect Logic)
-                if (emailValue.endsWith("@mneetteacher.com")) {
-                    // Standard verification bypass token mapping for teachers
-                    alert("Faculty configuration token validated successfully!");
-                    let facultySubject = "Botany"; 
-                    if(emailValue.includes("zoology")) facultySubject = "Zoology";
-                    if(emailValue.includes("physics")) facultySubject = "Physics";
-                    
-                    let teacherSession = { 
-                        name: "Specialized Professor Panel", 
-                        subject: facultySubject, 
-                        role: "Senior Lecturer" 
-                    };
-                    localStorage.setItem('mneet_teacher_logged_session', JSON.stringify(teacherSession));
-                    window.location.href = 'teacher_dashboard.html';
-                    return;
-                }
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
 
-                // C. PREMIUM SYSTEM STUDENT SERVER LOOKUP
-                const loginSearchRef = ref(db, STUDENT_DB_NODE);
-                onValue(loginSearchRef, (snapshot) => {
-                    const map = snapshot.val();
-                    let matchedUser = null;
+            try {
+                // 1. Authenticate with Firebase
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const uid = userCredential.user.uid;
 
-                    if (map) {
-                        for (let node in map) {
-                            if (map[node].email === emailValue && map[node].password === passwordValue) {
-                                matchedUser = map[node];
-                                break;
-                            }
-                        }
-                    }
+                // 2. Fetch the role from Realtime Database to perform Auto-Detection
+                const snapshot = await get(ref(db, 'users/' + uid));
+                
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    const role = userData.role;
 
-                    if (matchedUser) {
-                        if (matchedUser.status === 'Blocked') {
-                            alert("Access Denied! Your account has been suspended.");
+                    showAlert(`Welcome back, ${userData.name || 'User'}! Redirecting...`, false);
+
+                    // 3. Conditional Auto-Detection Navigation
+                    setTimeout(() => {
+                        if (role === 'admin') {
+                            window.location.href = "admin_dashboard.html";
                         } else {
-                            localStorage.setItem('mneet_student_session_token', JSON.stringify(matchedUser));
-                            window.location.href = 'student_dashboard.html';
+                            window.location.href = "student_dashboard.html";
                         }
-                    } else {
-                        alert("Invalid Gmail or Password profile keys combination!");
-                    }
-                }, { onlyOnce: true });
+                    }, 1500);
+                } else {
+                    showAlert("User profile data not found, accessing Student space by default.", false);
+                    setTimeout(() => {
+                        window.location.href = "student_dashboard.html";
+                    }, 1500);
+                }
+
+            } catch (error) {
+                showAlert("Authentication Failed: " + error.message);
             }
         });
     </script>
