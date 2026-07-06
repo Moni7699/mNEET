@@ -2,148 +2,470 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mNEET - Command Center (Admin)</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mNEET Admin Panel</title>
     <style>
+        /* --- DYNAMIC COLOR THEME VARIABLES --- */
         :root {
-            --gold: #F3B917;
-            --wp-green: #25D366;
-            --neon-blue: #2563EB;
-            --neon-purple: #8B5CF6;
-            --neon-red: #EF4444;
-            --neon-green: #10B981;
-            --burgundy: #800020;
-            --black-stroke: 2px solid #000000;
+            --bg-color: #0d1424;
+            --card-bg: #172237;
+            --text-color: #ffffff;
+            --border-color: #22314d;
+            --accent-color: #f1b80d;
+            --input-bg: #0f1826;
+            --muted-text: #94a3b8;
         }
-        
-        /* CLEAN THEME ROOT OVERLAY FIX */
-        body.theme-dark {
-            --bg-app: #090D16; 
-            --bg-surface: #131A26; 
-            --bg-input: #030712;
-            --text-title: #FFFFFF; 
-            --text-para: #94A3B8; 
-            --border-line: #1E293B; 
-            --m-logo: #FFFFFF;
+
+        /* Light Mode Specific Colors */
+        [data-theme="light"] {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #cbd5e1;
+            --accent-color: #d9a406;
+            --input-bg: #f8fafc;
+            --muted-text: #64748b;
         }
-        body.theme-white {
-            --bg-app: #F8FAFC; 
-            --bg-surface: #FFFFFF; 
-            --bg-input: #F1F5F9;
-            --text-title: #451A03; 
-            --text-para: #7F1D1D; 
-            --border-line: #451A03; 
-            --m-logo: #7F1D1D;
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
         }
-        
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        
+
         body {
-            background-color: var(--bg-app); 
-            color: var(--text-title);
-            font-family: system-ui, -apple-system, sans-serif; 
-            width: 100vw; 
-            height: 100vh; 
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
             overflow: hidden;
-            transition: background-color 0.2s, color 0.2s;
         }
-        
-        .dashboard-header {
-            position: fixed; top: 0; left: 0; right: 0; height: 60px;
-            background-color: var(--bg-surface); border-bottom: 2px solid var(--border-line);
-            display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 999;
+
+        /* --- TOP FIXED ROW --- */
+        .top-navbar {
+            background-color: var(--card-bg);
+            height: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            border-bottom: 1px solid var(--border-color);
         }
-        
-        .dashboard-viewport {
-            position: absolute; top: 60px; bottom: 68px; left: 0; right: 0; padding: 16px; overflow-y: auto; overflow-x: hidden;
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
         }
-        
-        .dashboard-footer {
-            position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
-            background-color: var(--bg-surface); border-top: 2px solid var(--border-line);
-            display: flex; justify-content: space-around; align-items: center; z-index: 999;
+
+        .nav-btn:hover {
+            background-color: var(--input-bg);
         }
-        
-        #profile-drawer {
-            position: fixed; top: 0; bottom: 0; right: 0; width: 85%; max-width: 320px;
-            background-color: var(--bg-surface); z-index: 100000;
-            border-left: 2px solid var(--border-line); padding: 24px 20px; transition: transform 0.3s ease; display: flex; flex-direction: column;
+
+        .app-title {
+            font-size: 20px;
+            font-weight: 900;
+            font-style: italic;
         }
-        .drawer-closed { transform: translateX(100%); }
-        .drawer-open { transform: translateX(0); }
-        #drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 99999; }
-        
-        .footer-tab { background: none; border: none; color: var(--text-para); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; width: 16.6%; outline: none; }
-        .active-tab { color: var(--gold) !important; }
-        .link-btn { background: none; border: none; cursor: pointer; }
-        .hidden-widget { display: none !important; }
-        
-        .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
-        .switch input { display: none; }
-        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #475569; border-radius: 34px; transition: .3s; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .3s; }
-        input:checked + .slider { background-color: var(--gold); }
-        input:checked + .slider:before { transform: translateX(18px); }
+        .app-title span { color: var(--accent-color); }
+
+        /* --- MIDDLE SCROLLABLE CANVAS --- */
+        .main-content {
+            margin-top: 60px;
+            margin-bottom: 70px;
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .section-view {
+            display: none;
+        }
+        .section-view.active {
+            display: block;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* --- BOTTOM FIXED NAVIGATION ROW --- */
+        .bottom-navbar {
+            background-color: var(--card-bg);
+            height: 70px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--muted-text);
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bottom-nav-item.active {
+            color: var(--accent-color);
+        }
+
+        .bottom-nav-item svg {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 4px;
+            fill: currentColor;
+        }
+
+        /* --- SIDEBAR PANEL (Three lines tray) --- */
+        .profile-sidebar {
+            position: fixed;
+            top: 0;
+            right: -320px;
+            width: 320px;
+            height: 100vh;
+            background-color: var(--card-bg);
+            z-index: 200;
+            box-shadow: -5px 0 25px rgba(0,0,0,0.3);
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            padding: 30px 20px;
+            border-left: 1px solid var(--border-color);
+        }
+        .profile-sidebar.open {
+            right: 0;
+        }
+
+        /* --- NOTIFICATION DROPDOWN CONTAINER --- */
+        .notification-tray {
+            position: fixed;
+            top: 65px;
+            left: 10px;
+            width: 300px;
+            max-height: 400px;
+            background-color: var(--card-bg);
+            z-index: 150;
+            border-radius: 15px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            display: none;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        .notification-item {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 12px;
+            color: var(--text-color);
+        }
+
+        /* Theme Control Area */
+        .theme-switch-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: var(--input-bg);
+            border-radius: 10px;
+        }
+
+        /* Profile Inputs styling */
+        .profile-group {
+            margin-bottom: 15px;
+        }
+        .profile-group label {
+            display: block;
+            font-size: 11px;
+            color: var(--muted-text);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        .profile-group input {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-color);
+            outline: none;
+        }
+
+        .social-link {
+            display: block;
+            color: var(--accent-color);
+            text-decoration: none;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+
+        .btn-logout {
+            width: 100%;
+            padding: 12px;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+        }
     </style>
 </head>
-<body class="theme-dark">
+<body>
 
-    <header class="dashboard-header">
-        <div class="header-left">
-            <button id="admin-back-btn" class="hidden-widget link-btn" style="font-size: 18px; color: var(--text-title);"><i class="fas fa-arrow-left"></i></button>
-            <div id="admin-top-widgets" style="display: flex; align-items: center; gap: 14px;">
-                <button id="admin-broadcast-btn" class="link-btn" style="color: var(--neon-red); font-size: 20px;"><i class="fas fa-bullhorn"></i></button>
-                <span style="font-size: 11px; font-weight: 800; color: var(--neon-red); background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); padding: 4px 10px; border-radius: 20px;">ADMIN CORE</span>
-            </div>
-        </div>
-        <div style="font-weight: 900; font-size: 20px;">
-            <span style="color: var(--m-logo);">m</span><span style="color: var(--gold);">NEET</span><span style="font-size: 10px; color: var(--text-para); margin-left: 4px;">Control</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <button id="admin-drawer-open-btn" class="link-btn" style="color: var(--text-title); font-size: 18px;"><i class="fas fa-bars"></i></button>
-        </div>
-    </header>
-
-    <main class="dashboard-viewport" id="admin-main-render-area">
-        </main>
-
-    <div id="profile-drawer" class="drawer-closed">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-line); padding-bottom: 10px;">
-            <h3 style="margin: 0; font-size: 16px; color: var(--gold);">Command Station</h3>
-            <button id="admin-drawer-close-btn" class="link-btn" style="color: var(--text-title); font-size: 18px;"><i class="fas fa-times"></i></button>
-        </div>
-        <div style="display: flex; align-items: center; gap: 12px; background-color: var(--bg-input); padding: 12px; border-radius: 16px; margin-bottom: 20px;">
-            <div style="width: 36px; height: 36px; background-color: var(--neon-red); border-radius: 50%; color: #fff; font-weight: 900; display: flex; align-items: center; justify-content: center;">A</div>
-            <div>
-                <h4 style="margin: 0; font-size: 14px; font-weight: 700;">Head Administrator</h4>
-                <p style="margin: 4px 0 0 0; font-size: 11px; color: var(--text-para);">Root Access Locked</p>
-            </div>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 4px; font-size: 13px; font-weight: 600;">
-                <span><i class="fas fa-adjust" style="margin-right: 8px;"></i> Dark Mode Theme</span>
-                <label class="switch">
-                    <input type="checkbox" id="admin-theme-toggle" checked>
-                    <span class="slider"></span>
-                </label>
-            </div>
-        </div>
-        <button id="admin-logout-btn" style="width:100%; background-color:#EF4444; color:white; border:none; padding:12px; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer; margin-top: auto;"><i class="fas fa-power-off"></i> Safe Exit</button>
+    <!-- ================= TOP FIXED NAVBAR ================= -->
+    <div class="top-navbar">
+        <button class="nav-btn" id="notiBtn">🔔</button>
+        <div class="app-title">M<span>NEET</span></div>
+        <button class="nav-btn" id="menuBtn">☰</button>
     </div>
-    <div id="drawer-overlay" class="hidden-widget"></div>
 
-    <footer class="dashboard-footer">
-        <button class="footer-tab active-tab" data-target="home"><i class="fas fa-home"></i><span style="font-size:9px; font-weight:700;">Home Admin</span></button>
-        <button class="footer-tab" data-target="batches"><i class="fas fa-layer-group"></i><span style="font-size:9px; font-weight:700;">Batches Mgr</span></button>
-        <button class="footer-tab" data-target="study"><i class="fas fa-graduation-cap"></i><span style="font-size:9px; font-weight:700;">Study Engine</span></button>
-        <button class="footer-tab" data-target="test"><i class="fas fa-file-invoice"></i><span style="font-size:9px; font-weight:700;">Test Series</span></button>
-        <button class="footer-tab" data-target="mstore"><i class="fas fa-shopping-bag"></i><span style="font-size:9px; font-weight:700;">mStore Upload</span></button>
-        <button class="footer-tab" data-target="students"><i class="fas fa-user-graduate"></i><span style="font-size:9px; font-weight:700;">Student Ctrl</span></button>
-    </footer>
+    <!-- NOTIFICATION CONTAINER -->
+    <div class="notification-tray" id="notiTray">
+        <h4 style="margin-bottom: 10px; color: var(--accent-color);">Live Alerts</h4>
+        <div id="notiContainer">
+            <div class="notification-item">🔄 Syncing with Realtime Engine Alerts...</div>
+        </div>
+    </div>
 
-    <script type="module" src="admin_view.js"></script>
+    <!-- ================= RIGHT SIDEBAR TRAY ================= -->
+    <div class="profile-sidebar" id="profileSidebar">
+        <h3 style="margin-bottom: 20px; color: var(--accent-color); display: flex; justify-content: space-between;">
+            Control Menu <span style="cursor: pointer;" id="closeSidebar">✕</span>
+        </h3>
+
+        <!-- DARK MODE / LIGHT MODE TOGGLE OPTION -->
+        <div class="theme-switch-container">
+            <span style="font-size: 13px; font-weight: 600;">App UI View Mode</span>
+            <button id="themeToggleBtn" class="nav-btn" style="font-size: 16px;">🌓 Toggle</button>
+        </div>
+        
+        <!-- Profile Form Inputs -->
+        <div class="profile-group">
+            <label>Admin Name</label>
+            <input type="text" id="adminName" placeholder="Admin Full Name">
+        </div>
+        <div class="profile-group">
+            <label>Profile Image URL</label>
+            <input type="text" id="adminPhoto" placeholder="Link to photo file">
+        </div>
+        <div class="profile-group">
+            <label>Target Exam Date</label>
+            <input type="date" id="targetExamDate">
+        </div>
+        <div class="profile-group">
+            <label>Dream Medical College</label>
+            <input type="text" id="dreamCollege" placeholder="e.g. AIIMS New Delhi">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
+        
+        <!-- Social Resource Trays -->
+        <h5 style="color: var(--muted-text); text-transform: uppercase; font-size: 11px;">Social Links Channel</h5>
+        <a href="#" target="_blank" class="social-link">📺 YouTube Channel</a>
+        <a href="#" target="_blank" class="social-link">✈️ Telegram Channel</a>
+        <a href="#" target="_blank" class="social-link">📘 Facebook Group</a>
+        <a href="#" target="_blank" class="social-link">📸 Instagram Profile</a>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
+        <p style="font-size: 11px; color: var(--muted-text);">mNEET Engine v1.1.0 (Safe Architecture Mode)</p>
+
+        <button class="btn-logout" id="logoutBtn">LOGOUT</button>
+    </div>
+
+    <!-- ================= MAIN MID-SCROLL SCREEN ================= -->
+    <div class="main-content">
+        
+        <!-- HOME CANVAS VIEW -->
+        <div class="section-view active" id="view-home">
+            <div class="card">
+                <h2>Welcome Back Admin</h2>
+                <p style="color: var(--muted-text); margin-top: 5px;">Dynamic workspace modules running smoothly.</p>
+            </div>
+        </div>
+
+        <!-- TEST CREATION VIEW -->
+        <div class="section-view" id="view-test">
+            <div class="card">
+                <h2>Create Mock Test</h2>
+                <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">Setup your NEET pattern question series packages.</p>
+            </div>
+        </div>
+
+        <!-- QUESTION UPLOAD ENGINE -->
+        <div class="section-view" id="view-question">
+            <div class="card">
+                <h2>Question Management Engine</h2>
+                <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">Inject MCQs into created exams.</p>
+            </div>
+        </div>
+
+        <!-- NCERT ENGINE VIEW -->
+        <div class="section-view" id="view-ncert">
+            <div class="card">
+                <h2>NCERT Reader Panel</h2>
+                <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">Manage textbooks and map PYQ tags.</p>
+            </div>
+        </div>
+
+        <!-- STUDENTS CONTROL SECTION -->
+        <div class="section-view" id="view-students">
+            <div class="card">
+                <h2>Student Control Pipeline</h2>
+                <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">Track registrations and overall score matrices.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= FIXED BOTTOM NAV BAR ================= -->
+    <div class="bottom-navbar">
+        <div class="bottom-nav-item active" data-target="home">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            Home
+        </div>
+        <div class="bottom-nav-item" data-target="test">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            Test
+        </div>
+        <div class="bottom-nav-item" data-target="question">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+            Question
+        </div>
+        <div class="bottom-nav-item" data-target="ncert">
+            <svg viewBox="0 0 24 24"><path d="M12 11.55C9.64 9.35 6.48 8 3 8v11c3.48 0 6.64 1.35 9 3.55 2.36-2.2 5.52-3.55 9-3.55V8c-3.48 0-6.64 1.35-9 3.55zM12 2c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/></svg>
+            NCERT
+        </div>
+        <div class="bottom-nav-item" data-target="students">
+            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            Students
+        </div>
+    </div>
+
+    <!-- ================= PIPELINE SCRIPT INTERFACES ================= -->
+    <script type="module">
+        import { auth, db, ref, set, get } from './config.js';
+        import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // Navigation Controller UI
+        const navItems = document.querySelectorAll('.bottom-nav-item');
+        const sections = document.querySelectorAll('.section-view');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                navItems.forEach(i => i.classList.remove('active'));
+                sections.forEach(s => s.classList.remove('active'));
+
+                item.classList.add('active');
+                const target = item.getAttribute('data-target');
+                document.getElementById(`view-${target}`).classList.add('active');
+            });
+        });
+
+        // Menu Triggers 
+        const menuBtn = document.getElementById('menuBtn');
+        const sidebar = document.getElementById('profileSidebar');
+        const closeSidebar = document.getElementById('closeSidebar');
+        const notiBtn = document.getElementById('notiBtn');
+        const notiTray = document.getElementById('notiTray');
+
+        menuBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+        closeSidebar.addEventListener('click', () => sidebar.classList.remove('open'));
+        
+        notiBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            notiTray.style.display = notiTray.style.display === 'block' ? 'none' : 'block';
+        });
+
+        document.addEventListener('click', () => { notiTray.style.display = 'none'; });
+        notiTray.addEventListener('click', (e) => e.stopPropagation());
+
+        // --- DARK MODE / LIGHT MODE ENGINE LOGIC ---
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        
+        // Initial setup check from Local Storage
+        if (localStorage.getItem('theme') === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            let currentTheme = document.documentElement.getAttribute('data-theme');
+            if (currentTheme === 'light') {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+
+        // Firebase Sync for Notifications Stream
+        const usersRef = ref(db, 'users');
+        onValue(usersRef, (snapshot) => {
+            const notiContainer = document.getElementById('notiContainer');
+            notiContainer.innerHTML = '';
+            
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                let hasAlerts = false;
+
+                Object.keys(data).forEach(userId => {
+                    const user = data[userId];
+                    if (user.role === 'student') {
+                        hasAlerts = true;
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'notification-item';
+                        alertDiv.innerHTML = `🎓 <b>${user.name}</b> joined from ${user.city || 'Unknown Location'}`;
+                        notiContainer.appendChild(alertDiv);
+                    }
+                });
+
+                if (!hasAlerts) {
+                    notiContainer.innerHTML = '<div class="notification-item">No new activities.</div>';
+                }
+            } else {
+                notiContainer.innerHTML = '<div class="notification-item">No records found.</div>';
+            }
+        });
+
+        // Logout Event handler
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                window.location.href = "index.html";
+            } catch (error) {
+                alert("Logout Error: " + error.message);
+            }
+        });
+    </script>
 </body>
     </html>
     
