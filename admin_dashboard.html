@@ -68,6 +68,7 @@
             cursor: pointer;
             padding: 8px;
             border-radius: 50%;
+            outline: none;
         }
 
         .nav-btn:hover {
@@ -191,12 +192,12 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            padding: 10px;
+            padding: 12px;
             background-color: var(--input-bg);
             border-radius: 10px;
         }
 
-        /* Profile Inputs styling */
+        /* Inputs styling */
         .profile-group {
             margin-bottom: 15px;
         }
@@ -207,7 +208,7 @@
             margin-bottom: 5px;
             text-transform: uppercase;
         }
-        .profile-group input {
+        .profile-group input, .profile-group select {
             width: 100%;
             padding: 12px;
             background-color: var(--input-bg);
@@ -225,6 +226,21 @@
             font-size: 13px;
         }
 
+        .btn-submit {
+            padding: 14px;
+            background-color: var(--accent-color);
+            border: none;
+            border-radius: 10px;
+            color: #0d1424;
+            font-size: 11pt;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-submit:hover {
+            background-color: #d9a406;
+        }
+
         .btn-logout {
             width: 100%;
             padding: 12px;
@@ -235,6 +251,10 @@
             cursor: pointer;
             font-weight: bold;
             margin-top: 20px;
+        }
+
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
@@ -247,7 +267,7 @@
         <button class="nav-btn" id="menuBtn">☰</button>
     </div>
 
-    <!-- NOTIFICATION CONTAINER -->
+    <!-- NOTIFICATION DROPDOWN -->
     <div class="notification-tray" id="notiTray">
         <h4 style="margin-bottom: 10px; color: var(--accent-color);">Live Alerts</h4>
         <div id="notiContainer">
@@ -255,19 +275,19 @@
         </div>
     </div>
 
-    <!-- ================= RIGHT SIDEBAR TRAY ================= -->
+    <!-- ================= RIGHT SIDEBAR SETTINGS TRAY ================= -->
     <div class="profile-sidebar" id="profileSidebar">
         <h3 style="margin-bottom: 20px; color: var(--accent-color); display: flex; justify-content: space-between;">
             Control Menu <span style="cursor: pointer;" id="closeSidebar">✕</span>
         </h3>
 
-        <!-- DARK MODE / LIGHT MODE TOGGLE OPTION -->
+        <!-- DARK MODE / LIGHT MODE SWITCH -->
         <div class="theme-switch-container">
             <span style="font-size: 13px; font-weight: 600;">App UI View Mode</span>
-            <button id="themeToggleBtn" class="nav-btn" style="font-size: 16px;">🌓 Toggle</button>
+            <button id="themeToggleBtn" class="nav-btn" style="font-size: 14px; background:var(--bg-color); padding: 5px 10px; border-radius: 6px;">🌓 Toggle</button>
         </div>
         
-        <!-- Profile Form Inputs -->
+        <!-- Profile Customization Elements -->
         <div class="profile-group">
             <label>Admin Name</label>
             <input type="text" id="adminName" placeholder="Admin Full Name">
@@ -287,7 +307,7 @@
 
         <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
         
-        <!-- Social Resource Trays -->
+        <!-- Social Reference Blocks -->
         <h5 style="color: var(--muted-text); text-transform: uppercase; font-size: 11px;">Social Links Channel</h5>
         <a href="#" target="_blank" class="social-link">📺 YouTube Channel</a>
         <a href="#" target="_blank" class="social-link">✈️ Telegram Channel</a>
@@ -295,51 +315,147 @@
         <a href="#" target="_blank" class="social-link">📸 Instagram Profile</a>
 
         <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
-        <p style="font-size: 11px; color: var(--muted-text);">mNEET Engine v1.1.0 (Safe Architecture Mode)</p>
+        <p style="font-size: 11px; color: var(--muted-text);">mNEET Engine v1.2.0 (Dynamic Processing Mode)</p>
 
         <button class="btn-logout" id="logoutBtn">LOGOUT</button>
     </div>
 
-    <!-- ================= MAIN MID-SCROLL SCREEN ================= -->
+    <!-- ================= SCROLLABLE ENGINE CANVAS ================= -->
     <div class="main-content">
         
-        <!-- HOME CANVAS VIEW -->
+        <!-- ================= HOME CANVAS VIEW ================= -->
         <div class="section-view active" id="view-home">
-            <div class="card">
+            <div class="card" style="border-left: 5px solid var(--accent-color);">
                 <h2>Welcome Back Admin</h2>
-                <p style="color: var(--muted-text); margin-top: 5px;">Dynamic workspace modules running smoothly.</p>
+                <p style="color: var(--muted-text); margin-top: 5px;">Configure your workspace by selecting the active test instance below.</p>
+                
+                <div style="margin-top: 20px; background-color: var(--input-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <label style="display: block; font-size: 11px; color: var(--muted-text); text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Select Active Target Test Instance</label>
+                    <select id="globalTestSelector" style="width: 100%; padding: 12px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-weight: bold; font-size: 14px; outline: none;">
+                        <option value="">-- No Active Test Selected (Select to Unlock App Routes) --</option>
+                    </select>
+                    <p style="font-size: 11px; color: #ef4444; margin-top: 8px; font-weight: 500;" id="selectorAlert">⚠️ Question, NCERT, and Student systems will lock to this specific test context.</p>
+                </div>
             </div>
         </div>
 
-        <!-- TEST CREATION VIEW -->
+        <!-- ================= TEST CREATION VIEW ================= -->
         <div class="section-view" id="view-test">
+            <!-- Form to Create/Edit Test -->
             <div class="card">
-                <h2>Create Mock Test</h2>
-                <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">Setup your NEET pattern question series packages.</p>
+                <h3 id="formTitle" style="color: var(--accent-color); margin-bottom: 15px;">Create Custom Assessment Package</h3>
+                <form id="testControlForm">
+                    <input type="hidden" id="editTestId" value="">
+                    
+                    <div class="profile-group">
+                        <label>Test Name</label>
+                        <input type="text" id="testName" placeholder="e.g., Full Syllabus NEET Grand Mock 01" required>
+                    </div>
+                    <div class="profile-group">
+                        <label>Test Description</label>
+                        <input type="text" id="testDesc" placeholder="Brief info about syllabus, instructions..." required>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="profile-group">
+                            <label>Price (INR) <span style="font-size: 9px; color:var(--muted-text)">(0 for Free)</span></label>
+                            <input type="number" id="testPrice" placeholder="0" min="0" required>
+                        </div>
+                        <div class="profile-group">
+                            <label>Pass Percentage (%)</label>
+                            <input type="number" id="testPassMark" placeholder="50" min="0" max="100" required>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="profile-group">
+                            <label>Start Window Date & Time</label>
+                            <input type="datetime-local" id="testStart" required>
+                        </div>
+                        <div class="profile-group">
+                            <label>End Window Date & Time</label>
+                            <input type="datetime-local" id="testEnd" required>
+                        </div>
+                    </div>
+
+                    <div class="profile-group">
+                        <label>Thumbnail Media (Image/Video URL)</label>
+                        <input type="url" id="testThumbnail" placeholder="https://example.com/image.jpg">
+                    </div>
+
+                    <!-- Checked Multi-selection Subject Array -->
+                    <div class="profile-group" style="background-color: var(--input-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
+                        <label style="margin-bottom: 10px; font-weight: bold;">Map Syllabus Subjects (Select all that apply)</label>
+                        <div style="display: flex; gap: 20px; align-items: center; padding-top: 5px;">
+                            <label style="display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 14px; color: var(--text-color); cursor: pointer;">
+                                <input type="checkbox" name="subjectCheck" value="Biology" style="width: auto; transform: scale(1.2);"> Biology
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 14px; color: var(--text-color); cursor: pointer;">
+                                <input type="checkbox" name="subjectCheck" value="Physics" style="width: auto; transform: scale(1.2);"> Physics
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 14px; color: var(--text-color); cursor: pointer;">
+                                <input type="checkbox" name="subjectCheck" value="Chemistry" style="width: auto; transform: scale(1.2);"> Chemistry
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitFormBtn" class="btn-submit" style="margin-top: 15px; width: 100%;">Save Assessment Package</button>
+                    <button type="button" id="cancelEditBtn" class="btn-logout" style="background-color: var(--muted-text); display: none; margin-top: 10px;">Cancel Editing</button>
+                </form>
+            </div>
+
+            <!-- Dynamic Card List View Grid -->
+            <h3 style="margin: 25px 0 15px 0; color: var(--text-color); display: flex; align-items: center; gap: 8px;">
+                <span>📋</span> Configured Test Repositories
+            </h3>
+            <div id="testCardsGrid" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+                <!-- Cards inject dynamically via Firebase engine -->
             </div>
         </div>
 
-        <!-- QUESTION UPLOAD ENGINE -->
+        <!-- ================= QUESTION UPLOAD ENGINE ================= -->
         <div class="section-view" id="view-question">
             <div class="card">
                 <h2>Question Management Engine</h2>
-                <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">Inject MCQs into created exams.</p>
+                <div id="activeTestNoticeQ" style="margin: 10px 0; padding: 10px; border-radius: 8px; font-weight: bold; background-color: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                    🔒 Please select an Active Test from the Home Page to inject questions.
+                </div>
+                <div id="questionContainerBody" class="hidden">
+                    <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">
+                        Injecting questions directly into: <span id="currentQTestName" style="color: var(--accent-color); font-weight: bold;"></span>
+                    </p>
+                    <!-- Form fields for questions will go here inside Step 3 -->
+                </div>
             </div>
         </div>
 
-        <!-- NCERT ENGINE VIEW -->
+        <!-- ================= NCERT ENGINE VIEW ================= -->
         <div class="section-view" id="view-ncert">
             <div class="card">
                 <h2>NCERT Reader Panel</h2>
-                <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">Manage textbooks and map PYQ tags.</p>
+                <div id="activeTestNoticeN" style="margin: 10px 0; padding: 10px; border-radius: 8px; font-weight: bold; background-color: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                    🔒 Please select an Active Test from the Home Page to view or tag NCERT content.
+                </div>
+                <div id="ncertContainerBody" class="hidden">
+                    <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">
+                        Configuring NCERT materials mapped to: <span id="currentNcertTestName" style="color: var(--accent-color); font-weight: bold;"></span>
+                    </p>
+                </div>
             </div>
         </div>
 
-        <!-- STUDENTS CONTROL SECTION -->
+        <!-- ================= STUDENTS CONTROL SECTION ================= -->
         <div class="section-view" id="view-students">
             <div class="card">
                 <h2>Student Control Pipeline</h2>
-                <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">Track registrations and overall score matrices.</p>
+                <div id="activeTestNoticeS" style="margin: 10px 0; padding: 10px; border-radius: 8px; font-weight: bold; background-color: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                    🔒 Please select an Active Test from the Home Page to monitor target student logs.
+                </div>
+                <div id="studentsContainerBody" class="hidden">
+                    <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">
+                        Tracking data limits isolated to: <span id="currentStudentsTestName" style="color: var(--accent-color); font-weight: bold;"></span>
+                    </p>
+                </div>
             </div>
         </div>
 
@@ -356,116 +472,4 @@
             Test
         </div>
         <div class="bottom-nav-item" data-target="question">
-            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
-            Question
-        </div>
-        <div class="bottom-nav-item" data-target="ncert">
-            <svg viewBox="0 0 24 24"><path d="M12 11.55C9.64 9.35 6.48 8 3 8v11c3.48 0 6.64 1.35 9 3.55 2.36-2.2 5.52-3.55 9-3.55V8c-3.48 0-6.64 1.35-9 3.55zM12 2c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/></svg>
-            NCERT
-        </div>
-        <div class="bottom-nav-item" data-target="students">
-            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-            Students
-        </div>
-    </div>
-
-    <!-- ================= PIPELINE SCRIPT INTERFACES ================= -->
-    <script type="module">
-        import { auth, db, ref, set, get } from './config.js';
-        import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-        // Navigation Controller UI
-        const navItems = document.querySelectorAll('.bottom-nav-item');
-        const sections = document.querySelectorAll('.section-view');
-
-        navItems.forEach(item => {
-            item.addEventListener('click', () => {
-                navItems.forEach(i => i.classList.remove('active'));
-                sections.forEach(s => s.classList.remove('active'));
-
-                item.classList.add('active');
-                const target = item.getAttribute('data-target');
-                document.getElementById(`view-${target}`).classList.add('active');
-            });
-        });
-
-        // Menu Triggers 
-        const menuBtn = document.getElementById('menuBtn');
-        const sidebar = document.getElementById('profileSidebar');
-        const closeSidebar = document.getElementById('closeSidebar');
-        const notiBtn = document.getElementById('notiBtn');
-        const notiTray = document.getElementById('notiTray');
-
-        menuBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
-        closeSidebar.addEventListener('click', () => sidebar.classList.remove('open'));
-        
-        notiBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            notiTray.style.display = notiTray.style.display === 'block' ? 'none' : 'block';
-        });
-
-        document.addEventListener('click', () => { notiTray.style.display = 'none'; });
-        notiTray.addEventListener('click', (e) => e.stopPropagation());
-
-        // --- DARK MODE / LIGHT MODE ENGINE LOGIC ---
-        const themeToggleBtn = document.getElementById('themeToggleBtn');
-        
-        // Initial setup check from Local Storage
-        if (localStorage.getItem('theme') === 'light') {
-            document.documentElement.setAttribute('data-theme', 'light');
-        }
-
-        themeToggleBtn.addEventListener('click', () => {
-            let currentTheme = document.documentElement.getAttribute('data-theme');
-            if (currentTheme === 'light') {
-                document.documentElement.removeAttribute('data-theme');
-                localStorage.setItem('theme', 'dark');
-            } else {
-                document.documentElement.setAttribute('data-theme', 'light');
-                localStorage.setItem('theme', 'light');
-            }
-        });
-
-        // Firebase Sync for Notifications Stream
-        const usersRef = ref(db, 'users');
-        onValue(usersRef, (snapshot) => {
-            const notiContainer = document.getElementById('notiContainer');
-            notiContainer.innerHTML = '';
-            
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                let hasAlerts = false;
-
-                Object.keys(data).forEach(userId => {
-                    const user = data[userId];
-                    if (user.role === 'student') {
-                        hasAlerts = true;
-                        const alertDiv = document.createElement('div');
-                        alertDiv.className = 'notification-item';
-                        alertDiv.innerHTML = `🎓 <b>${user.name}</b> joined from ${user.city || 'Unknown Location'}`;
-                        notiContainer.appendChild(alertDiv);
-                    }
-                });
-
-                if (!hasAlerts) {
-                    notiContainer.innerHTML = '<div class="notification-item">No new activities.</div>';
-                }
-            } else {
-                notiContainer.innerHTML = '<div class="notification-item">No records found.</div>';
-            }
-        });
-
-        // Logout Event handler
-        document.getElementById('logoutBtn').addEventListener('click', async () => {
-            try {
-                await signOut(auth);
-                window.location.href = "index.html";
-            } catch (error) {
-                alert("Logout Error: " + error.message);
-            }
-        });
-    </script>
-</body>
-    </html>
-    
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0
