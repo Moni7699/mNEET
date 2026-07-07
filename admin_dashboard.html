@@ -5,471 +5,99 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>mNEET Admin Panel</title>
     <style>
-        /* --- DYNAMIC COLOR THEME VARIABLES --- */
         :root {
-            --bg-color: #0d1424;
-            --card-bg: #172237;
-            --text-color: #ffffff;
-            --border-color: #22314d;
-            --accent-color: #f1b80d;
-            --input-bg: #0f1826;
-            --muted-text: #94a3b8;
+            --bg-color: #0d1424; --card-bg: #172237; --text-color: #ffffff;
+            --border-color: #22314d; --accent-color: #f1b80d; --input-bg: #0f1826; --muted-text: #94a3b8;
         }
-
-        /* Light Mode Specific Colors */
         [data-theme="light"] {
-            --bg-color: #f0f2f5;
-            --card-bg: #ffffff;
-            --text-color: #1e293b;
-            --border-color: #cbd5e1;
-            --accent-color: #d9a406;
-            --input-bg: #f8fafc;
-            --muted-text: #64748b;
+            --bg-color: #f0f2f5; --card-bg: #ffffff; --text-color: #1e293b;
+            --border-color: #cbd5e1; --accent-color: #d9a406; --input-bg: #f8fafc; --muted-text: #64748b;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* --- TOP FIXED ROW --- */
-        .top-navbar {
-            background-color: var(--card-bg);
-            height: 60px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .nav-btn {
-            background: none;
-            border: none;
-            color: var(--text-color);
-            font-size: 20px;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 50%;
-            outline: none;
-        }
-
-        .nav-btn:hover {
-            background-color: var(--input-bg);
-        }
-
-        .app-title {
-            font-size: 20px;
-            font-weight: 900;
-            font-style: italic;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; transition: background 0.2s, color 0.2s; }
+        body { background-color: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        .top-navbar { background-color: var(--card-bg); height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; position: fixed; top: 0; left: 0; right: 0; z-index: 100; border-bottom: 1px solid var(--border-color); }
+        .nav-btn { background: none; border: none; color: var(--text-color); font-size: 20px; cursor: pointer; padding: 8px; border-radius: 50%; }
+        .app-title { font-size: 20px; font-weight: 900; font-style: italic; }
         .app-title span { color: var(--accent-color); }
 
-        /* --- MIDDLE SCROLLABLE CANVAS --- */
-        .main-content {
-            margin-top: 60px;
-            margin-bottom: 70px;
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-        }
-
-        .section-view {
-            display: none;
-        }
-        .section-view.active {
-            display: block;
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            padding: 20px;
-            border-radius: 20px;
-            margin-bottom: 20px;
-            border: 1px solid var(--border-color);
-        }
-
-        /* --- BOTTOM FIXED NAVIGATION ROW --- */
-        .bottom-navbar {
-            background-color: var(--card-bg);
-            height: 70px;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .bottom-nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: var(--muted-text);
-            cursor: pointer;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .bottom-nav-item.active {
-            color: var(--accent-color);
-        }
-
-        .bottom-nav-item svg {
-            width: 24px;
-            height: 24px;
-            margin-bottom: 4px;
-            fill: currentColor;
-        }
-
-        /* --- SIDEBAR PANEL (Three lines tray) --- */
-        .profile-sidebar {
-            position: fixed;
-            top: 0;
-            right: -320px;
-            width: 320px;
-            height: 100vh;
-            background-color: var(--card-bg);
-            z-index: 200;
-            box-shadow: -5px 0 25px rgba(0,0,0,0.3);
-            transition: right 0.3s ease;
-            overflow-y: auto;
-            padding: 30px 20px;
-            border-left: 1px solid var(--border-color);
-        }
-        .profile-sidebar.open {
-            right: 0;
-        }
-
-        /* --- NOTIFICATION DROPDOWN CONTAINER --- */
-        .notification-tray {
-            position: fixed;
-            top: 65px;
-            left: 10px;
-            width: 300px;
-            max-height: 400px;
-            background-color: var(--card-bg);
-            z-index: 150;
-            border-radius: 15px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            display: none;
-            overflow-y: auto;
-            padding: 15px;
-        }
-        .notification-item {
-            padding: 10px;
-            border-bottom: 1px solid var(--border-color);
-            font-size: 12px;
-            color: var(--text-color);
-        }
-
-        /* Theme Control Area */
-        .theme-switch-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding: 12px;
-            background-color: var(--input-bg);
-            border-radius: 10px;
-        }
-
-        /* Inputs styling */
-        .profile-group {
-            margin-bottom: 15px;
-        }
-        .profile-group label {
-            display: block;
-            font-size: 11px;
-            color: var(--muted-text);
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
-        .profile-group input, .profile-group select {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--input-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            color: var(--text-color);
-            outline: none;
-        }
-
-        .social-link {
-            display: block;
-            color: var(--accent-color);
-            text-decoration: none;
-            margin: 10px 0;
-            font-size: 13px;
-        }
-
-        .btn-submit {
-            padding: 14px;
-            background-color: var(--accent-color);
-            border: none;
-            border-radius: 10px;
-            color: #0d1424;
-            font-size: 11pt;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-submit:hover {
-            background-color: #d9a406;
-        }
-
-        .btn-logout {
-            width: 100%;
-            padding: 12px;
-            background-color: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-top: 20px;
-        }
-
-        .hidden {
-            display: none !important;
-        }
+        .main-content { margin-top: 60px; margin-bottom: 70px; flex: 1; overflow-y: auto; padding: 20px; }
+        .bottom-navbar { background-color: var(--card-bg); height: 70px; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid var(--border-color); }
+        .bottom-nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted-text); cursor: pointer; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+        .bottom-nav-item.active { color: var(--accent-color); }
+        .bottom-nav-item svg { width: 24px; height: 24px; margin-bottom: 4px; fill: currentColor; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <!-- ================= TOP FIXED NAVBAR ================= -->
     <div class="top-navbar">
         <button class="nav-btn" id="notiBtn">🔔</button>
         <div class="app-title">M<span>NEET</span></div>
         <button class="nav-btn" id="menuBtn">☰</button>
     </div>
 
-    <!-- NOTIFICATION DROPDOWN -->
-    <div class="notification-tray" id="notiTray">
-        <h4 style="margin-bottom: 10px; color: var(--accent-color);">Live Alerts</h4>
-        <div id="notiContainer">
-            <div class="notification-item">🔄 Syncing with Realtime Engine Alerts...</div>
-        </div>
-    </div>
+    <div id="notification-tray-target"></div>
+    <div id="sidebar-drawer-target"></div>
 
-    <!-- ================= RIGHT SIDEBAR SETTINGS TRAY ================= -->
-    <div class="profile-sidebar" id="profileSidebar">
-        <h3 style="margin-bottom: 20px; color: var(--accent-color); display: flex; justify-content: space-between;">
-            Control Menu <span style="cursor: pointer;" id="closeSidebar">✕</span>
-        </h3>
+    <div class="main-content" id="app-dynamic-view-canvas"></div>
 
-        <!-- DARK MODE / LIGHT MODE SWITCH -->
-        <div class="theme-switch-container">
-            <span style="font-size: 13px; font-weight: 600;">App UI View Mode</span>
-            <button id="themeToggleBtn" class="nav-btn" style="font-size: 14px; background:var(--bg-color); padding: 5px 10px; border-radius: 6px;">🌓 Toggle</button>
-        </div>
-        
-        <!-- Profile Customization Elements -->
-        <div class="profile-group">
-            <label>Admin Name</label>
-            <input type="text" id="adminName" placeholder="Admin Full Name">
-        </div>
-        <div class="profile-group">
-            <label>Profile Image URL</label>
-            <input type="text" id="adminPhoto" placeholder="Link to photo file">
-        </div>
-        <div class="profile-group">
-            <label>Target Exam Date</label>
-            <input type="date" id="targetExamDate">
-        </div>
-        <div class="profile-group">
-            <label>Dream Medical College</label>
-            <input type="text" id="dreamCollege" placeholder="e.g. AIIMS New Delhi">
-        </div>
-
-        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
-        
-        <!-- Social Reference Blocks -->
-        <h5 style="color: var(--muted-text); text-transform: uppercase; font-size: 11px;">Social Links Channel</h5>
-        <a href="#" target="_blank" class="social-link">📺 YouTube Channel</a>
-        <a href="#" target="_blank" class="social-link">✈️ Telegram Channel</a>
-        <a href="#" target="_blank" class="social-link">📘 Facebook Group</a>
-        <a href="#" target="_blank" class="social-link">📸 Instagram Profile</a>
-
-        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
-        <p style="font-size: 11px; color: var(--muted-text);">mNEET Engine v1.2.0 (Dynamic Processing Mode)</p>
-
-        <button class="btn-logout" id="logoutBtn">LOGOUT</button>
-    </div>
-
-    <!-- ================= SCROLLABLE ENGINE CANVAS ================= -->
-    <div class="main-content">
-        
-        <!-- ================= HOME CANVAS VIEW ================= -->
-        <div class="section-view active" id="view-home">
-            <div class="card" style="border-left: 5px solid var(--accent-color);">
-                <h2>Welcome Back Admin</h2>
-                <p style="color: var(--muted-text); margin-top: 5px;">Configure your workspace by selecting the active test instance below.</p>
-                
-                <div style="margin-top: 20px; background-color: var(--input-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
-                    <label style="display: block; font-size: 11px; color: var(--muted-text); text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Select Active Target Test Instance</label>
-                    <select id="globalTestSelector" style="width: 100%; padding: 12px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-weight: bold; font-size: 14px; outline: none;">
-                        <option value="">-- No Active Test Selected (Select to Unlock App Routes) --</option>
-                    </select>
-                    <p style="font-size: 11px; color: #ef4444; margin-top: 8px; font-weight: 500;" id="selectorAlert">⚠️ Question, NCERT, and Student systems will lock to this specific test context.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= TEST CREATION VIEW ================= -->
-        <div class="section-view" id="view-test">
-            <!-- Form to Create/Edit Test -->
-            <div class="card">
-                <h3 id="formTitle" style="color: var(--accent-color); margin-bottom: 15px;">Create Custom Assessment Package</h3>
-                <form id="testControlForm">
-                    <input type="hidden" id="editTestId" value="">
-                    
-                    <div class="profile-group">
-                        <label>Test Name</label>
-                        <input type="text" id="testName" placeholder="e.g., Full Syllabus NEET Grand Mock 01" required>
-                    </div>
-                    <div class="profile-group">
-                        <label>Test Description</label>
-                        <input type="text" id="testDesc" placeholder="Brief info about syllabus, instructions..." required>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div class="profile-group">
-                            <label>Price (INR) <span style="font-size: 9px; color:var(--muted-text)">(0 for Free)</span></label>
-                            <input type="number" id="testPrice" placeholder="0" min="0" required>
-                        </div>
-                        <div class="profile-group">
-                            <label>Pass Percentage (%)</label>
-                            <input type="number" id="testPassMark" placeholder="50" min="0" max="100" required>
-                        </div>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div class="profile-group">
-                            <label>Start Window Date & Time</label>
-                            <input type="datetime-local" id="testStart" required>
-                        </div>
-                        <div class="profile-group">
-                            <label>End Window Date & Time</label>
-                            <input type="datetime-local" id="testEnd" required>
-                        </div>
-                    </div>
-
-                    <div class="profile-group">
-                        <label>Thumbnail Media (Image/Video URL)</label>
-                        <input type="url" id="testThumbnail" placeholder="https://example.com/image.jpg">
-                    </div>
-
-                    <!-- Checked Multi-selection Subject Array -->
-                    <div class="profile-group" style="background-color: var(--input-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
-                        <label style="margin-bottom: 10px; font-weight: bold;">Map Syllabus Subjects (Select all that apply)</label>
-                        <div style="display: flex; gap: 20px; align-items: center; padding-top: 5px;">
-                            <label style="display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 14px; color: var(--text-color); cursor: pointer;">
-                                <input type="checkbox" name="subjectCheck" value="Biology" style="width: auto; transform: scale(1.2);"> Biology
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 14px; color: var(--text-color); cursor: pointer;">
-                                <input type="checkbox" name="subjectCheck" value="Physics" style="width: auto; transform: scale(1.2);"> Physics
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 8px; text-transform: none; font-size: 14px; color: var(--text-color); cursor: pointer;">
-                                <input type="checkbox" name="subjectCheck" value="Chemistry" style="width: auto; transform: scale(1.2);"> Chemistry
-                            </label>
-                        </div>
-                    </div>
-
-                    <button type="submit" id="submitFormBtn" class="btn-submit" style="margin-top: 15px; width: 100%;">Save Assessment Package</button>
-                    <button type="button" id="cancelEditBtn" class="btn-logout" style="background-color: var(--muted-text); display: none; margin-top: 10px;">Cancel Editing</button>
-                </form>
-            </div>
-
-            <!-- Dynamic Card List View Grid -->
-            <h3 style="margin: 25px 0 15px 0; color: var(--text-color); display: flex; align-items: center; gap: 8px;">
-                <span>📋</span> Configured Test Repositories
-            </h3>
-            <div id="testCardsGrid" style="display: grid; grid-template-columns: 1fr; gap: 20px;">
-                <!-- Cards inject dynamically via Firebase engine -->
-            </div>
-        </div>
-
-        <!-- ================= QUESTION UPLOAD ENGINE ================= -->
-        <div class="section-view" id="view-question">
-            <div class="card">
-                <h2>Question Management Engine</h2>
-                <div id="activeTestNoticeQ" style="margin: 10px 0; padding: 10px; border-radius: 8px; font-weight: bold; background-color: rgba(239, 68, 68, 0.1); color: #ef4444;">
-                    🔒 Please select an Active Test from the Home Page to inject questions.
-                </div>
-                <div id="questionContainerBody" class="hidden">
-                    <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">
-                        Injecting questions directly into: <span id="currentQTestName" style="color: var(--accent-color); font-weight: bold;"></span>
-                    </p>
-                    <!-- Form fields for questions will go here inside Step 3 -->
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= NCERT ENGINE VIEW ================= -->
-        <div class="section-view" id="view-ncert">
-            <div class="card">
-                <h2>NCERT Reader Panel</h2>
-                <div id="activeTestNoticeN" style="margin: 10px 0; padding: 10px; border-radius: 8px; font-weight: bold; background-color: rgba(239, 68, 68, 0.1); color: #ef4444;">
-                    🔒 Please select an Active Test from the Home Page to view or tag NCERT content.
-                </div>
-                <div id="ncertContainerBody" class="hidden">
-                    <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">
-                        Configuring NCERT materials mapped to: <span id="currentNcertTestName" style="color: var(--accent-color); font-weight: bold;"></span>
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= STUDENTS CONTROL SECTION ================= -->
-        <div class="section-view" id="view-students">
-            <div class="card">
-                <h2>Student Control Pipeline</h2>
-                <div id="activeTestNoticeS" style="margin: 10px 0; padding: 10px; border-radius: 8px; font-weight: bold; background-color: rgba(239, 68, 68, 0.1); color: #ef4444;">
-                    🔒 Please select an Active Test from the Home Page to monitor target student logs.
-                </div>
-                <div id="studentsContainerBody" class="hidden">
-                    <p style="color: var(--muted-text); font-size: 13px; margin-bottom: 15px;">
-                        Tracking data limits isolated to: <span id="currentStudentsTestName" style="color: var(--accent-color); font-weight: bold;"></span>
-                    </p>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- ================= FIXED BOTTOM NAV BAR ================= -->
     <div class="bottom-navbar">
         <div class="bottom-nav-item active" data-target="home">
-            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-            Home
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Home
         </div>
         <div class="bottom-nav-item" data-target="test">
-            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-            Test
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>Test
         </div>
         <div class="bottom-nav-item" data-target="question">
-            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>Question
+        </div>
+        <div class="bottom-nav-item" data-target="ncert">
+            <svg viewBox="0 0 24 24"><path d="M12 11.55C9.64 9.35 6.48 8 3 8v11c3.48 0 6.64 1.35 9 3.55 2.36-2.2 5.52-3.55 9-3.55V8c-3.48 0-6.64 1.35-9 3.55zM12 2c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/></svg>NCERT
+        </div>
+        <div class="bottom-nav-item" data-target="students">
+            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Students
+        </div>
+    </div>
+
+    <script type="module">
+        import { initNotification } from './src/admin/notification.js';
+        import { initSidebar } from './src/admin/sidebar.js';
+        import { renderHome, getSelectedTestId } from './src/admin/viewHome.js';
+        import { renderTest } from './src/admin/viewTest.js';
+        import { renderQuestion } from './src/admin/viewQuestion.js';
+        import { renderNcert } from './src/admin/viewNcert.js';
+        import { renderStudents } from './src/admin/viewStudents.js';
+
+        // Load Header Overlay Modules
+        initNotification();
+        initSidebar();
+
+        const canvas = document.getElementById('app-dynamic-view-canvas');
+        const navItems = document.querySelectorAll('.bottom-navbar .bottom-nav-item');
+
+        // Dynamic State Screen View Navigation Manager mapping core routing functions
+        function routeTo(target) {
+            canvas.innerHTML = ''; // Reset core target space context view area
+            const activeTestId = getSelectedTestId();
+
+            if (target === 'home') renderHome(canvas);
+            else if (target === 'test') renderTest(canvas);
+            else if (target === 'question') renderQuestion(canvas, activeTestId);
+            else if (target === 'ncert') renderNcert(canvas, activeTestId);
+            else if (target === 'students') renderStudents(canvas, activeTestId);
+        }
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                navItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                routeTo(item.getAttribute('data-target'));
+            });
+        });
+
+        // Initialize Home component rendering on start lifecycle
+        routeTo('home');
+    </script>
+</body>
+</html>
