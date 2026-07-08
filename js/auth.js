@@ -1,8 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// ফায়ারবেস কনফিগারেশন
+// তোমার অরিজিনাল ফায়ারবেস কনফিগারেশন
 const firebaseConfig = {
   apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
   authDomain: "mneet-spark.firebaseapp.com",
@@ -17,84 +17,76 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// ফায়ারবেসে অলরেডি রেজিস্টার্ড থাকা নির্দিষ্ট অ্যাডমিন জিমেইল
 const ADMIN_EMAIL = "mi4286803@gmail.com";
-let currentUserRole = "student"; 
 
 // DOM Elements
+const splashScreen = document.getElementById('splash-screen');
 const authContainer = document.getElementById('auth-container');
 const appDashboard = document.getElementById('app-dashboard');
+const signinCard = document.getElementById('signin-card');
+const signupCard = document.getElementById('signup-card');
+const forgotCard = document.getElementById('forgot-card');
 const sidebar = document.getElementById('app-sidebar');
 const overlay = document.getElementById('sb-overlay');
-const dynamicContainer = document.getElementById('dynamic-middle-container');
 
-// সাইডবার ওপেন/ক্লোজ মেকানিজম
+// কার্ড ও স্ক্রিন সুইচ লজিক (আগের মতো নিখুঁত)
+document.getElementById('go-to-signup').addEventListener('click', () => switchCard(signupCard));
+document.getElementById('go-to-signin').addEventListener('click', () => switchCard(signinCard));
+document.getElementById('go-to-forgot').addEventListener('click', () => switchCard(forgotCard));
+document.getElementById('back-to-signin').addEventListener('click', () => switchCard(signinCard));
+
+function switchCard(targetCard) {
+    [signinCard, signupCard, forgotCard].forEach(card => card.classList.remove('active'));
+    targetCard.classList.add('active');
+}
+
+// সাইডবার ওপেন ও ক্লোজ ইভেন্ট
 document.getElementById('btn-sidebar-open').addEventListener('click', () => { sidebar.classList.add('open'); overlay.classList.add('active'); });
 document.getElementById('btn-sidebar-close').addEventListener('click', closeSidebar);
 overlay.addEventListener('click', closeSidebar);
 function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
 
-// ডার্ক এবং হোয়াইট মোড টগল লজিক
+// থিম পরিবর্তন (ডার্ক মোড / হোয়াইট মোড টগল)
 document.getElementById('btn-theme-toggle').addEventListener('click', () => {
     document.body.classList.toggle('white-mode');
     localStorage.setItem('mneet-theme', document.body.classList.contains('white-mode') ? 'light' : 'dark');
 });
 if(localStorage.getItem('mneet-theme') === 'light') document.body.classList.add('white-mode');
 
-// ট্যাব পরিবর্তনের মেকানিজম এবং আলাদা ফাইল কলিং ট্রিপার
-const tabs = document.querySelectorAll('.nav-tab');
-tabs.forEach(tab => {
-    tab.addEventListener('click', (e) => {
-        tabs.forEach(t => t.classList.remove('active-tab'));
-        const targetTab = e.currentTarget;
-        targetTab.classList.add('active-tab');
-        loadTabScreen(targetTab.getAttribute('data-target'));
-    });
-});
-
-// 🔄 আলাদা আলাদা ফাইল থেকে স্ক্রিন ডাটা ইম্পোর্ট করার ডাইনামিক ফাংশন
-async function loadTabScreen(tabName) {
-    dynamicContainer.innerHTML = `<div style="text-align:center; padding:5px;">Loading Grid...</div>`;
-    try {
-        // মডিউলগুলো ডাইনামিকালি আলাদা আলাদা ফাইল থেকে রান হবে
-        const module = await import(`./${tabName}.js`);
-        module.renderScreen(dynamicContainer, currentUserRole === 'admin');
-    } catch (err) {
-        dynamicContainer.innerHTML = `<div style="color:var(--accent-red)">Error loading section: ${err.message}</div>`;
-    }
-}
-
-// 🔄 সেশন অবজার্ভার
+// 🔄 ইউজার সেশন ও মিরর রোল অবজার্ভার
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const userDoc = await getDoc(doc(db, "users", user.uid));
-        let userData = userDoc.exists() ? userDoc.data() : {};
+        let userData = userDoc.exists() ? userDoc.data() : { displayName: "Aspirant" };
 
-        currentUserRole = (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) ? "admin" : "student";
-        
-        // টপ বার আপডেট
+        // টপ বার ও ড্যাশবোর্ডে নাম এবং কয়েন সিঙ্ক
         document.getElementById('nav-user-name').innerText = userData.displayName || "Aspirant";
+        document.getElementById('dash-user-name').innerText = userData.displayName || "Aspirant";
         document.getElementById('user-bp-coins').innerText = userData.bp_coins || 0;
 
-        // সাইডবার প্রোফাইল ফিলআপ
+        // সাইডবার ফর্ম ফিলআপ
         document.getElementById('sb-name').value = userData.displayName || "";
         document.getElementById('sb-phone').value = userData.phone || "";
         document.getElementById('sb-dream-college').value = userData.dreamCollege || "";
         document.getElementById('sb-target-date').value = userData.targetDate || "";
 
-        // সোশ্যাল মিডিয়া লিংক অ্যাডমিন হ্যান্ডেল সেটআপ
+        // সোশ্যাল লিংক ডিরেকশন
         document.getElementById('link-yt').href = "https://youtube.com";
         document.getElementById('link-insta').href = "https://instagram.com";
         document.getElementById('link-fb').href = "https://facebook.com";
         document.getElementById('link-tele').href = "https://t.me";
 
-        // মিরর মোড চেক
-        if (currentUserRole === "admin") {
+        // 👑 মিরর লজিক: অ্যাডমিন ও স্টুডেন্টদের স্ক্রিন একই কিন্তু কন্ট্রোল আলাদা
+        if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
             document.getElementById('admin-mirror-tag').style.display = "inline-block";
+            document.getElementById('admin-control-panel').classList.remove('hidden');
         } else {
             document.getElementById('admin-mirror-tag').style.display = "none";
+            document.getElementById('admin-control-panel').classList.add('hidden');
         }
 
-        // রিয়েল-টাইম সাইডবার আপডেট সেভ লজিক
+        // সাইডবারের ড্রিম কলেজ ও এক্সাম ডেট ফায়ারবেসে অটো-আপডেট সেভ করার লজিক
         ['sb-dream-college', 'sb-target-date'].forEach(id => {
             document.getElementById(id).addEventListener('change', async (e) => {
                 const field = id === 'sb-dream-college' ? 'dreamCollege' : 'targetDate';
@@ -102,39 +94,57 @@ onAuthStateChanged(auth, async (user) => {
             });
         });
 
+        splashScreen.classList.remove('active');
         authContainer.classList.remove('active');
-        appDashboard.classList.add('active');
-        loadTabScreen('home'); // বাই-ডিফল্ট হোম পেজ লোড হবে
+        appDashboard.add('active');
     } else {
+        splashScreen.classList.remove('active');
         appDashboard.classList.remove('active');
         authContainer.classList.add('active');
     }
 });
 
-// সাইন-আপ, সাইন-ইন ও লগআউট ইভেন্ট লিসেনার
-document.getElementById('go-to-signup').addEventListener('click', () => { document.getElementById('signin-card').classList.remove('active'); document.getElementById('signup-card').classList.add('active'); });
-document.getElementById('go-to-signin').addEventListener('click', () => { document.getElementById('signup-card').classList.remove('active'); document.getElementById('signin-card').classList.add('active'); });
-
-document.getElementById('signin-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value)
-    .catch(err => alert(err.message));
-});
-
+// 📝 সাইন-আপ সাবমিশন (আগের মতো নিখুঁত কালেকশন মেকার)
 document.getElementById('signup-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('reg-name').value;
     const email = document.getElementById('reg-email').value;
+    const phone = document.getElementById('reg-phone').value;
+    const city = document.getElementById('reg-city').value;
+    const password = document.getElementById('reg-password').value;
+
     try {
-        const cred = await createUserWithEmailAndPassword(auth, email, document.getElementById('reg-password').value);
-        await setDoc(doc(db, "users", cred.user.uid), {
-            uid: cred.user.uid, displayName: name, email: email,
-            phone: document.getElementById('reg-phone').value,
-            city: document.getElementById('reg-city').value,
-            bp_coins: 100, streak: 1, createdAt: new Date()
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+            uid: userCredential.user.uid,
+            displayName: name,
+            email: email,
+            phone: phone,
+            city: city,
+            bp_coins: 100,
+            streak: 1,
+            createdAt: new Date()
         });
-    } catch (err) { alert(err.message); }
+        alert("Account registered inside mNEET!");
+    } catch (error) { alert("Registration Failed: " + error.message); }
 });
 
-const logoutHandler = () => signOut(auth).then(() => closeSidebar()).catch(err => console.size(err));
-document.getElementById('btn-sidebar-logout').addEventListener('click', logoutHandler);
+// 🔑 সাইন-ইন সাবমিশন
+document.getElementById('signin-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value)
+        .catch(error => alert("Authentication Failed: " + error.message));
+});
+
+// 📨 ফরগট পাসওয়ার্ড
+document.getElementById('forgot-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    sendPasswordResetEmail(auth, document.getElementById('forgot-email').value)
+        .then(() => { alert("Password reset link dispatched!"); switchCard(signinCard); })
+        .catch(error => alert("Error: " + error.message));
+});
+
+// 🚪 লগআউট
+const performLogout = () => signOut(auth).then(() => closeSidebar()).catch(err => console.error(err));
+document.getElementById('btn-sidebar-logout').addEventListener('click', performLogout);
+  
