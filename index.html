@@ -3,311 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET - Authentication</title>
+    <title>mNEET - Advanced Learning Platform</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        :root {
+            --bg-dark: #0d1117;
+            --card-dark: #161b22;
+            --accent-blue: #58a6ff;
+            --accent-green: #2ea44f;
+            --accent-red: #da3637;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --border-color: #30363d;
         }
 
         body {
-            background-color: #0d1424; /* Explicit dark background color matching image */
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .screen {
+            display: none;
+            min-height: 100vh;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .screen.active {
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+        }
+
+        #app-dashboard.screen.active {
+            display: block;
             padding: 20px;
         }
 
-        .auth-container {
-            background-color: #172237; /* Rounded inner card color matching image */
-            width: 100%;
+        /* Splash Screen */
+        .glow-text {
+            font-size: 3rem;
+            color: #fff;
+            text-shadow: 0 0 10px var(--accent-blue), 0 0 20px var(--accent-blue);
+            margin-bottom: 5px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: var(--accent-blue);
+            animation: spin 1s linear infinite;
+            margin-top: 20px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Cards & Auth Inputs */
+        .auth-card {
+            display: none;
+            background: var(--card-dark);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
             max-width: 400px;
-            padding: 40px 30px;
-            border-radius: 40px; /* Deep rounded corners from image */
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-            text-align: center;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
         }
 
-        .logo {
-            font-size: 38pt;
-            font-weight: 900;
-            font-style: italic;
-            color: #ffffff;
-            margin-bottom: 35px;
-            letter-spacing: -1px;
-        }
+        .auth-card.active { display: block; }
 
-        .logo span {
-            color: #f1b80d; /* Golden amber/yellow accent from user image */
-        }
+        h2 { margin-top: 0; color: #fff; text-align: center; }
 
-        .form-group {
-            margin-bottom: 20px;
-            text-align: left;
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px; }
+        .input-group input {
+            width: 100%; padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);
+            background: #0d1117; color: #fff; box-sizing: border-box; font-size: 1rem;
         }
+        .input-group input:focus { border-color: var(--accent-blue); outline: none; }
 
-        .form-group input {
-            width: 100%;
-            padding: 16px 20px;
-            background-color: #0f1826; /* Darker input fields matching image */
-            border: 1px solid #22314d;
-            border-radius: 15px;
-            color: #ffffff;
-            font-size: 11pt;
-            outline: none;
-            transition: all 0.3s ease;
+        .btn-primary {
+            width: 100%; padding: 12px; background: var(--accent-blue); border: none;
+            border-radius: 6px; color: #fff; font-size: 1rem; font-weight: bold; cursor: pointer; transition: 0.2s;
         }
+        .btn-primary:hover { background: #408ce4; }
 
-        .form-group input::placeholder {
-            color: #64748b;
-        }
+        .forgot-link { text-align: right; margin-bottom: 15px; }
+        .forgot-link a, .switch-text a { color: var(--accent-blue); text-decoration: none; font-size: 0.9rem; }
 
-        .form-group input:focus {
-            border-color: #f1b80d;
-            box-shadow: 0 0 8px rgba(241, 184, 13, 0.2);
-        }
+        /* App Dashboard Header */
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+        .hidden-tag { display: none; }
+        #admin-tag.active-tag { display: inline-block; background: var(--accent-red); color: white; padding: 2px 6px; font-size: 0.75rem; font-weight: bold; border-radius: 4px; margin-left: 8px; }
 
-        .btn-submit {
-            width: 100%;
-            padding: 16px;
-            background-color: #f1b80d; /* Amber/Yellow submit button from image */
-            border: none;
-            border-radius: 15px;
-            color: #0d1424;
-            font-size: 12pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: background-color 0.2s ease;
-        }
-
-        .btn-submit:hover {
-            background-color: #d9a406;
-        }
-
-        .switch-text {
-            color: #94a3b8;
-            font-size: 9.5pt;
-            margin-top: 25px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .switch-text span {
-            color: #f1b80d;
-            font-weight: bold;
-            cursor: pointer;
-            margin-left: 5px;
-        }
-
-        .switch-text span:hover {
-            text-decoration: underline;
-        }
-
-        /* Error/Success Messages */
-        .message {
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 10pt;
-            margin-bottom: 20px;
-            display: none;
-        }
-        .error-msg {
-            background-color: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-        .success-msg {
-            background-color: rgba(34, 197, 94, 0.15);
-            color: #22c55e;
-            border: 1px solid rgba(34, 197, 94, 0.3);
-        }
-
-        /* Utility classes to toggle screens */
-        .hidden {
-            display: none;
-        }
+        .hidden { display: none !important; }
+        #admin-control-panel { background: #21262d; border: 1px dashed var(--accent-red); padding: 20px; border-radius: 8px; margin-top: 25px; }
+        .btn-admin-action { background: var(--accent-green); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-logout { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+        .btn-logout:hover { color: #fff; border-color: #fff; }
     </style>
 </head>
 <body>
 
-    <div class="auth-container">
-        <!-- Logo Header -->
-        <div class="logo">M<span>NEET</span></div>
-
-        <!-- Global Alert Box -->
-        <div id="alertBox" class="message"></div>
-
-        <!-- ================= SIGN IN FORM ================= -->
-        <form id="signInForm">
-            <div class="form-group">
-                <input type="email" id="loginEmail" placeholder="ENTER YOUR GMAIL" required>
-            </div>
-            <div class="form-group">
-                <input type="password" id="loginPassword" placeholder="ENTER PASSWORD" required>
-            </div>
-            <button type="submit" class="btn-submit">SIGN IN</button>
-            <div class="switch-text">
-                NEW SURGEON? <span id="toSignUp">SIGN UP</span>
-            </div>
-        </form>
-
-        <!-- ================= SIGN UP FORM ================= -->
-        <form id="signUpForm" class="hidden">
-            <div class="form-group">
-                <input type="text" id="regName" placeholder="FULL NAME" required>
-            </div>
-            <div class="form-group">
-                <input type="email" id="regEmail" placeholder="GMAIL ADDRESS" required>
-            </div>
-            <div class="form-group">
-                <input type="tel" id="regPhone" placeholder="PHONE NUMBER" required>
-            </div>
-            <div class="form-group">
-                <input type="text" id="regCity" placeholder="CITY / TOWN" required>
-            </div>
-            <div class="form-group">
-                <input type="password" id="regPassword" placeholder="CREATE PASSWORD" required>
-            </div>
-            <button type="submit" class="btn-submit">CREATE ACCOUNT</button>
-            <div class="switch-text">
-                ALREADY A MEMBER? <span id="toSignIn">SIGN IN</span>
-            </div>
-        </form>
+    <div id="splash-screen" class="screen active">
+        <div style="text-align: center;">
+            <h1 class="glow-text">mNEET</h1>
+            <p style="color: var(--text-muted);">Prepare. Compete. Conquer.</p>
+            <div class="spinner" style="margin: 20px auto 0 auto;"></div>
+        </div>
     </div>
 
-    <!-- Firebase App & Database Implementation Logic -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
-            authDomain: "mneet-spark.firebaseapp.com",
-            databaseURL: "https://mneet-spark-default-rtdb.firebaseio.com",
-            projectId: "mneet-spark",
-            storageBucket: "mneet-spark.firebasestorage.app",
-            messagingSenderId: "252201633700",
-            appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
-        };
-
-        // Initialize App & Services
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getDatabase(app);
-
-        // DOM Elements
-        const signInForm = document.getElementById('signInForm');
-        const signUpForm = document.getElementById('signUpForm');
-        const alertBox = document.getElementById('alertBox');
+    <div id="auth-container" class="screen">
         
-        // Navigation Switches
-        document.getElementById('toSignUp').addEventListener('click', () => {
-            signInForm.classList.add('hidden');
-            signUpForm.classList.remove('hidden');
-            hideAlert();
-        });
+        <div id="signin-card" class="auth-card active">
+            <h2>Welcome Back, Aspirant!</h2>
+            <form id="signin-form">
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <input type="email" id="login-email" required placeholder="Enter your registered email">
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" required placeholder="••••••••">
+                </div>
+                <div class="forgot-link">
+                    <a href="#" id="go-to-forgot">Forgot Password?</a>
+                </div>
+                <button type="submit" class="btn-primary">Sign In</button>
+            </form>
+            <p class="switch-text" style="text-align: center;">New to mNEET? <a href="#" id="go-to-signup">Create Account</a></p>
+        </div>
 
-        document.getElementById('toSignIn').addEventListener('click', () => {
-            signUpForm.classList.add('hidden');
-            signInForm.classList.remove('hidden');
-            hideAlert();
-        });
+        <div id="signup-card" class="auth-card">
+            <h2>Start Your NEET Journey</h2>
+            <form id="signup-form">
+                <div class="input-group">
+                    <label>Full Name</label>
+                    <input type="text" id="reg-name" required placeholder="Enter your name">
+                </div>
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <input type="email" id="reg-email" required placeholder="name@gmail.com">
+                </div>
+                <div class="input-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="reg-phone" required placeholder="10-digit mobile number">
+                </div>
+                <div class="input-group">
+                    <label>City / Town</label>
+                    <input type="text" id="reg-city" required placeholder="Enter your city">
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="reg-password" required placeholder="Minimum 6 characters">
+                </div>
+                <button type="submit" class="btn-primary">Register Now</button>
+            </form>
+            <p class="switch-text" style="text-align: center;">Already have an account? <a href="#" id="go-to-signin">Sign In</a></p>
+        </div>
 
-        function showAlert(msg, isError = true) {
-            alertBox.textContent = msg;
-            alertBox.className = isError ? "message error-msg" : "message success-msg";
-            alertBox.style.display = "block";
-        }
+        <div id="forgot-card" class="auth-card">
+            <h2>Reset Password</h2>
+            <p style="font-size: 0.9rem; color: var(--text-muted); text-align: center; margin-bottom: 20px;">Enter your email and we'll send you a link to reset your password.</p>
+            <form id="forgot-form">
+                <div class="input-group">
+                    <label>Registered Email</label>
+                    <input type="email" id="forgot-email" required placeholder="name@gmail.com">
+                </div>
+                <button type="submit" class="btn-primary">Send Reset Link</button>
+            </form>
+            <p class="switch-text" style="text-align: center;"><a href="#" id="back-to-signin">Back to Sign In</a></p>
+        </div>
 
-        function hideAlert() {
-            alertBox.style.display = "none";
-        }
+    </div>
 
-        // ================= SIGN UP LOGIC =================
-        signUpForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            hideAlert();
-
-            const name = document.getElementById('regName').value.trim();
-            const email = document.getElementById('regEmail').value.trim();
-            const phone = document.getElementById('regPhone').value.trim();
-            const city = document.getElementById('regCity').value.trim();
-            const password = document.getElementById('regPassword').value;
-
-            try {
-                // 1. Create User Authentication account
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const uid = userCredential.user.uid;
-
-                // 2. Save complete user metadata to Realtime Database
-                await set(ref(db, 'users/' + uid), {
-                    name: name,
-                    email: email,
-                    phone: phone,
-                    city: city,
-                    role: 'student',
-                    createdAt: new Date().toISOString()
-                });
-
-                showAlert("Account successfully registered! Switching to Login...", false);
-                signUpForm.reset();
-                setTimeout(() => {
-                    document.getElementById('toSignIn').click();
-                }, 2000);
-
-            } catch (error) {
-                showAlert("Registration Error: " + error.message);
-            }
-        });
-
-        // ================= SIGN IN & AUTO DETECT LOGIC =================
-        signInForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            hideAlert();
-
-            const email = document.getElementById('loginEmail').value.trim();
-            const password = document.getElementById('loginPassword').value;
-
-            try {
-                // 1. Authenticate with Firebase
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                const uid = userCredential.user.uid;
-
-                // 2. Fetch the role from Realtime Database to perform Auto-Detection
-                const snapshot = await get(ref(db, 'users/' + uid));
+    <div id="app-dashboard" class="screen">
+        <header>
+            <div class="user-badge">
+                <span id="nav-user-name" style="font-weight: bold;">Loading...</span>
+                <span id="admin-tag" class="hidden-tag">ADMIN</span>
+            </div>
+            <button id="btn-logout" class="btn-logout">Logout</button>
+        </header>
+        
+        <main id="main-content">
+            <div id="welcome-zone" style="margin-top: 30px;">
+                <h2>Hello <span id="dash-user-name" style="color: var(--accent-blue);">Aspirant</span>!</h2>
+                <p style="color: var(--text-muted);">Your Fresh Setup is running perfectly. Welcome to the dashboard.</p>
                 
-                if (snapshot.exists()) {
-                    const userData = snapshot.val();
-                    const role = userData.role;
+                <div id="admin-control-panel" class="hidden">
+                    <h3 style="color: var(--accent-red); margin-top: 0;">⚡ Admin Control Command Active</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-main);">You have Master Access. You can create/edit Chapters, Topics, and Quizzes from here.</p>
+                    <button class="btn-admin-action">+ Create New Chapter</button>
+                </div>
+            </div>
+        </main>
+    </div>
 
-                    showAlert(`Welcome back, ${userData.name || 'User'}! Redirecting...`, false);
-
-                    // 3. Conditional Auto-Detection Navigation
-                    setTimeout(() => {
-                        if (role === 'admin') {
-                            window.location.href = "admin_dashboard.html";
-                        } else {
-                            window.location.href = "student_dashboard.html";
-                        }
-                    }, 1500);
-                } else {
-                    showAlert("User profile data not found, accessing Student space by default.", false);
-                    setTimeout(() => {
-                        window.location.href = "student_dashboard.html";
-                    }, 1500);
-                }
-
-            } catch (error) {
-                showAlert("Authentication Failed: " + error.message);
-            }
-        });
-    </script>
+    <script type="module" src="js/auth.js"></script>
 </body>
 </html>
