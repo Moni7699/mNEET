@@ -1,8 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// তোমার দেওয়া মডিফাইড mNEET ফায়ারবেস কনফিগারেশন
+// ফায়ারবেস কনফিগারেশন
 const firebaseConfig = {
   apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
   authDomain: "mneet-spark.firebaseapp.com",
@@ -13,117 +13,128 @@ const firebaseConfig = {
   appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
 };
 
-// ইনিশিয়েলাইজেশন
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 👑 এখানে তোমার অ্যাডমিন জিমেইলটি সেট করে দেওয়া হয়েছে
 const ADMIN_EMAIL = "mi4286803@gmail.com";
+let currentUserRole = "student"; 
 
-// DOM সিলেকশন
-const splashScreen = document.getElementById('splash-screen');
+// DOM Elements
 const authContainer = document.getElementById('auth-container');
 const appDashboard = document.getElementById('app-dashboard');
-const signinCard = document.getElementById('signin-card');
-const signupCard = document.getElementById('signup-card');
-const forgotCard = document.getElementById('forgot-card');
+const sidebar = document.getElementById('app-sidebar');
+const overlay = document.getElementById('sb-overlay');
+const dynamicContainer = document.getElementById('dynamic-middle-container');
 
-// রুট বাটন লিসেনার্স
-document.getElementById('go-to-signup').addEventListener('click', () => switchCard(signupCard));
-document.getElementById('go-to-signin').addEventListener('click', () => switchCard(signinCard));
-document.getElementById('go-to-forgot').addEventListener('click', () => switchCard(forgotCard));
-document.getElementById('back-to-signin').addEventListener('click', () => switchCard(signinCard));
+// সাইডবার ওপেন/ক্লোজ মেকানিজম
+document.getElementById('btn-sidebar-open').addEventListener('click', () => { sidebar.classList.add('open'); overlay.classList.add('active'); });
+document.getElementById('btn-sidebar-close').addEventListener('click', closeSidebar);
+overlay.addEventListener('click', closeSidebar);
+function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
 
-function switchCard(targetCard) {
-    [signinCard, signupCard, forgotCard].forEach(card => card.classList.remove('active'));
-    targetCard.classList.add('active');
+// ডার্ক এবং হোয়াইট মোড টগল লজিক
+document.getElementById('btn-theme-toggle').addEventListener('click', () => {
+    document.body.classList.toggle('white-mode');
+    localStorage.setItem('mneet-theme', document.body.classList.contains('white-mode') ? 'light' : 'dark');
+});
+if(localStorage.getItem('mneet-theme') === 'light') document.body.classList.add('white-mode');
+
+// ট্যাব পরিবর্তনের মেকানিজম এবং আলাদা ফাইল কলিং ট্রিপার
+const tabs = document.querySelectorAll('.nav-tab');
+tabs.forEach(tab => {
+    tab.addEventListener('click', (e) => {
+        tabs.forEach(t => t.classList.remove('active-tab'));
+        const targetTab = e.currentTarget;
+        targetTab.classList.add('active-tab');
+        loadTabScreen(targetTab.getAttribute('data-target'));
+    });
+});
+
+// 🔄 আলাদা আলাদা ফাইল থেকে স্ক্রিন ডাটা ইম্পোর্ট করার ডাইনামিক ফাংশন
+async function loadTabScreen(tabName) {
+    dynamicContainer.innerHTML = `<div style="text-align:center; padding:5px;">Loading Grid...</div>`;
+    try {
+        // মডিউলগুলো ডাইনামিকালি আলাদা আলাদা ফাইল থেকে রান হবে
+        const module = await import(`./${tabName}.js`);
+        module.renderScreen(dynamicContainer, currentUserRole === 'admin');
+    } catch (err) {
+        dynamicContainer.innerHTML = `<div style="color:var(--accent-red)">Error loading section: ${err.message}</div>`;
+    }
 }
 
-// 🔄 ইউজার লগইন ট্র্যাকিং (Auth State Observer)
+// 🔄 সেশন অবজার্ভার
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const userDoc = await getDoc(doc(db, "users", user.uid));
-        let userData = userDoc.exists() ? userDoc.data() : { displayName: "Aspirant" };
+        let userData = userDoc.exists() ? userDoc.data() : {};
 
-        document.getElementById('nav-user-name').innerText = userData.displayName;
-        document.getElementById('dash-user-name').innerText = userData.displayName;
+        currentUserRole = (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) ? "admin" : "student";
+        
+        // টপ বার আপডেট
+        document.getElementById('nav-user-name').innerText = userData.displayName || "Aspirant";
+        document.getElementById('user-bp-coins').innerText = userData.bp_coins || 0;
 
-        // 👑 অ্যাডমিন জিমেইল ম্যাচিং লজিক
-        if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-            document.getElementById('admin-tag').classList.add('active-tag');
-            document.getElementById('admin-control-panel').classList.remove('hidden');
+        // সাইডবার প্রোফাইল ফিলআপ
+        document.getElementById('sb-name').value = userData.displayName || "";
+        document.getElementById('sb-phone').value = userData.phone || "";
+        document.getElementById('sb-dream-college').value = userData.dreamCollege || "";
+        document.getElementById('sb-target-date').value = userData.targetDate || "";
+
+        // সোশ্যাল মিডিয়া লিংক অ্যাডমিন হ্যান্ডেল সেটআপ
+        document.getElementById('link-yt').href = "https://youtube.com";
+        document.getElementById('link-insta').href = "https://instagram.com";
+        document.getElementById('link-fb').href = "https://facebook.com";
+        document.getElementById('link-tele').href = "https://t.me";
+
+        // মিরর মোড চেক
+        if (currentUserRole === "admin") {
+            document.getElementById('admin-mirror-tag').style.display = "inline-block";
         } else {
-            document.getElementById('admin-tag').classList.remove('active-tag');
-            document.getElementById('admin-control-panel').classList.add('hidden');
+            document.getElementById('admin-mirror-tag').style.display = "none";
         }
 
-        splashScreen.classList.remove('active');
+        // রিয়েল-টাইম সাইডবার আপডেট সেভ লজিক
+        ['sb-dream-college', 'sb-target-date'].forEach(id => {
+            document.getElementById(id).addEventListener('change', async (e) => {
+                const field = id === 'sb-dream-college' ? 'dreamCollege' : 'targetDate';
+                await updateDoc(doc(db, "users", user.uid), { [field]: e.target.value });
+            });
+        });
+
         authContainer.classList.remove('active');
         appDashboard.classList.add('active');
+        loadTabScreen('home'); // বাই-ডিফল্ট হোম পেজ লোড হবে
     } else {
-        splashScreen.classList.remove('active');
         appDashboard.classList.remove('active');
         authContainer.classList.add('active');
     }
 });
 
-// 📝 সাইন-আপ প্রসেস (ডাটাবেস কালেকশন অটোমেশনসহ)
+// সাইন-আপ, সাইন-ইন ও লগআউট ইভেন্ট লিসেনার
+document.getElementById('go-to-signup').addEventListener('click', () => { document.getElementById('signin-card').classList.remove('active'); document.getElementById('signup-card').classList.add('active'); });
+document.getElementById('go-to-signin').addEventListener('click', () => { document.getElementById('signup-card').classList.remove('active'); document.getElementById('signin-card').classList.add('active'); });
+
+document.getElementById('signin-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value)
+    .catch(err => alert(err.message));
+});
+
 document.getElementById('signup-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = document.getElementById('reg-name').value;
     const email = document.getElementById('reg-email').value;
-    const phone = document.getElementById('reg-phone').value;
-    const city = document.getElementById('reg-city').value;
-    const password = document.getElementById('reg-password').value;
-
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // ফায়ারস্টোরে সম্পূর্ণ প্রোফাইল অটো-সেভ হবে
-        await setDoc(doc(db, "users", user.uid), {
-            uid: user.uid,
-            displayName: name,
-            email: email,
-            phone: phone,
-            city: city,
-            role: email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? "admin" : "student",
-            bp_coins: 100, // ফ্রি সাইনআপ বোনাস কয়েন
-            streak: 1,
-            createdAt: new Date()
+        const cred = await createUserWithEmailAndPassword(auth, email, document.getElementById('reg-password').value);
+        await setDoc(doc(db, "users", cred.user.uid), {
+            uid: cred.user.uid, displayName: name, email: email,
+            phone: document.getElementById('reg-phone').value,
+            city: document.getElementById('reg-city').value,
+            bp_coins: 100, streak: 1, createdAt: new Date()
         });
-        alert("Account Registered successfully inside mNEET!");
-    } catch (error) {
-        alert("Registration Failed: " + error.message);
-    }
+    } catch (err) { alert(err.message); }
 });
 
-// 🔑 সাইন-ইন প্রসেস
-document.getElementById('signin-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-
-    signInWithEmailAndPassword(auth, email, password)
-        .catch(error => alert("Authentication Failed: " + error.message));
-});
-
-// 📨 ফরগট পাসওয়ার্ড প্রসেস
-document.getElementById('forgot-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const email = document.getElementById('forgot-email').value;
-
-    sendPasswordResetEmail(auth, email)
-        .then(() => {
-            alert("A password reset link has been dispatched to your email!");
-            switchCard(signinCard);
-        })
-        .catch(error => alert("Error: " + error.message));
-});
-
-// 🚪 লগআউট প্রসেস
-document.getElementById('btn-logout').addEventListener('click', () => {
-    signOut(auth).catch(error => console.error("Signout Error:", error));
-});
-  
+const logoutHandler = () => signOut(auth).then(() => closeSidebar()).catch(err => console.size(err));
+document.getElementById('btn-sidebar-logout').addEventListener('click', logoutHandler);
