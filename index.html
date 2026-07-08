@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET - Advanced Learning Platform</title>
+    <title>mNEET - Platform</title>
     <style>
         :root {
             --bg-dark: #0d1117;
@@ -38,59 +38,22 @@
         .screen { display: none; height: 100vh; width: 100%; box-sizing: border-box; }
         .screen.active { display: flex; flex-direction: column; }
 
-        /* 🌟 SPLASH SCREEN BACKGROUND */
-        #splash-screen.screen.active {
-            justify-content: center;
-            align-items: center;
-        }
-
-        .glow-text {
-            font-size: 3rem; color: #fff;
-            text-shadow: 0 0 10px var(--accent-blue), 0 0 20px var(--accent-blue);
-            margin-bottom: 5px;
-        }
-
-        .spinner {
-            border: 4px solid rgba(255,255,255,0.1); width: 36px; height: 36px;
-            border-radius: 50%; border-left-color: var(--accent-blue);
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* 🔑 AUTH CONTAINER (CENTER ALIGNED) */
-        #auth-container.screen.active {
-            justify-content: center;
-            align-items: center;
-        }
-
-        .auth-card {
-            display: none; background: var(--card-dark); border: 1px solid var(--border-color);
-            padding: 30px; border-radius: 12px; width: 90%; max-width: 400px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-        }
+        /* 🔒 AUTH CONTAINER CENTRE ALIGN */
+        #auth-container.screen.active { justify-content: center; align-items: center; }
+        .auth-card { display: none; background: var(--card-dark); border: 1px solid var(--border-color); padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
         .auth-card.active { display: block; }
-        h2 { margin-top: 0; color: #fff; text-align: center; }
-
+        h2, h3 { margin-top: 0; color: #fff; text-align: center; }
         .input-group { margin-bottom: 15px; }
         .input-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px; }
-        .input-group input {
-            width: 100%; padding: 12px; border-radius: 6px; border: 1px solid var(--border-color);
-            background: #0d1117; color: #fff; box-sizing: border-box; font-size: 1rem;
-        }
-        .input-group input:focus { border-color: var(--accent-blue); outline: none; }
-
-        .btn-primary {
-            width: 100%; padding: 12px; background: var(--accent-blue); border: none;
-            border-radius: 6px; color: #fff; font-size: 1rem; font-weight: bold; cursor: pointer;
-        }
+        .input-group input { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); background: #0d1117; color: #fff; box-sizing: border-box; }
+        .btn-primary { width: 100%; padding: 12px; background: var(--accent-blue); border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; }
         .forgot-link { text-align: right; margin-bottom: 15px; }
         .forgot-link a, .switch-text a { color: var(--accent-blue); text-decoration: none; font-size: 0.9rem; }
 
         /* ⬆️ CONSTANT TOP ROW */
         .top-row {
             height: 60px; background: var(--card-dark); border-bottom: 1px solid var(--border-color);
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0 15px; box-sizing: border-box; z-index: 10;
+            display: flex; justify-content: space-between; align-items: center; padding: 0 15px; box-sizing: border-box; z-index: 10;
         }
         .top-left, .top-right { display: flex; align-items: center; gap: 12px; }
         .top-center { font-weight: bold; font-size: 1.1rem; color: var(--accent-blue); }
@@ -110,17 +73,15 @@
         .nav-tab.active-tab { color: var(--accent-blue); font-weight: bold; }
         .nav-tab-icon { font-size: 1.3rem; }
 
-        /* 📜 SCROLLABLE MIDDLE SCREEN */
-        .middle-content {
-            flex: 1; overflow-y: auto; overflow-x: hidden; padding: 15px; box-sizing: border-box;
-        }
+        /* 📜 SCROLLABLE MIDDLE ZONE */
+        .middle-content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 15px; box-sizing: border-box; }
+        .tab-view { display: none; width: 100%; }
+        .tab-view.active-view { display: block; }
 
-        /* ☰ SIDEBAR SYSTEM */
+        /* ☰ SIDEBAR STYLE */
         .sidebar {
-            position: fixed; top: 0; right: -280px; width: 280px; height: 100%;
-            background: var(--card-dark); border-left: 1px solid var(--border-color);
-            transition: 0.3s ease; z-index: 100; box-shadow: -5px 0 15px rgba(0,0,0,0.5);
-            display: flex; flex-direction: column; padding: 20px; box-sizing: border-box;
+            position: fixed; top: 0; right: -280px; width: 280px; height: 100%; background: var(--card-dark); border-left: 1px solid var(--border-color);
+            transition: 0.3s ease; z-index: 100; box-shadow: -5px 0 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box;
         }
         .sidebar.open { right: 0; }
         .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 99; display: none; }
@@ -131,101 +92,66 @@
         .sb-input-group input { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-dark); color: var(--text-main); box-sizing: border-box; font-size: 0.85rem; }
         .social-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 15px 0; }
         .social-btn { flex: 1; min-width: 45%; padding: 6px; border: 1px solid var(--border-color); background: #21262d; color: var(--text-main); text-align: center; border-radius: 4px; text-decoration: none; font-size: 0.75rem; }
-        .theme-toggle-btn { background: var(--accent-blue); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-        .sb-logout-btn { background: var(--accent-red); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         
         .hidden { display: none !important; }
-        #admin-control-panel { background: #21262d; border: 1px dashed var(--accent-red); padding: 20px; border-radius: 8px; margin-top: 15px; }
-        .btn-admin-action { background: var(--accent-green); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .admin-block { background: #21262d; border: 1px dashed var(--accent-red); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none; }
     </style>
 </head>
 <body>
 
     <!-- 🌟 SPLASH SCREEN -->
-    <div id="splash-screen" class="screen active">
+    <div id="splash-screen" class="screen active" style="justify-content: center; align-items: center;">
         <div style="text-align: center;">
             <h1 class="glow-text">mNEET</h1>
-            <p style="color: var(--text-muted);">Prepare. Compete. Conquer.</p>
             <div class="spinner" style="margin: 20px auto 0 auto;"></div>
         </div>
     </div>
 
-    <!-- 🔑 AUTHENTICATION CONTAINER (আগের আসল ফর্মগুলো) -->
+    <!-- 🔑 LOGIN / SIGNUP / FORGOT SYSTEM -->
     <div id="auth-container" class="screen">
-        
-        <!-- SIGN IN CARD -->
+        <!-- Sign In -->
         <div id="signin-card" class="auth-card active">
             <h2>Welcome Back, Aspirant!</h2>
             <form id="signin-form">
-                <div class="input-group">
-                    <label>Email Address</label>
-                    <input type="email" id="login-email" required placeholder="Enter your registered email">
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="login-password" required placeholder="••••••••">
-                </div>
-                <div class="forgot-link">
-                    <a href="#" id="go-to-forgot">Forgot Password?</a>
-                </div>
+                <div class="input-group"><label>Email Address</label><input type="email" id="login-email" required></div>
+                <div class="input-group"><label>Password</label><input type="password" id="login-password" required></div>
+                <div class="forgot-link"><a href="#" id="go-to-forgot">Forgot Password?</a></div>
                 <button type="submit" class="btn-primary">Sign In</button>
             </form>
             <p class="switch-text" style="text-align: center;">New to mNEET? <a href="#" id="go-to-signup">Create Account</a></p>
         </div>
-
-        <!-- SIGN UP CARD (তোমার রিকোয়ারমেন্ট অনুযায়ী সব ইনপুট) -->
+        <!-- Sign Up -->
         <div id="signup-card" class="auth-card">
             <h2>Start Your NEET Journey</h2>
             <form id="signup-form">
-                <div class="input-group">
-                    <label>Full Name</label>
-                    <input type="text" id="reg-name" required placeholder="Enter your name">
-                </div>
-                <div class="input-group">
-                    <label>Email Address</label>
-                    <input type="email" id="reg-email" required placeholder="name@gmail.com">
-                </div>
-                <div class="input-group">
-                    <label>Phone Number</label>
-                    <input type="tel" id="reg-phone" required placeholder="10-digit mobile number">
-                </div>
-                <div class="input-group">
-                    <label>City / Town</label>
-                    <input type="text" id="reg-city" required placeholder="Enter your city">
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="reg-password" required placeholder="Minimum 6 characters">
-                </div>
+                <div class="input-group"><label>Full Name</label><input type="text" id="reg-name" required></div>
+                <div class="input-group"><label>Email Address</label><input type="email" id="reg-email" required></div>
+                <div class="input-group"><label>Phone Number</label><input type="tel" id="reg-phone" required></div>
+                <div class="input-group"><label>City / Town</label><input type="text" id="reg-city" required></div>
+                <div class="input-group"><label>Password</label><input type="password" id="reg-password" required></div>
                 <button type="submit" class="btn-primary">Register Now</button>
             </form>
             <p class="switch-text" style="text-align: center;">Already have an account? <a href="#" id="go-to-signin">Sign In</a></p>
         </div>
-
-        <!-- FORGOT PASSWORD CARD -->
+        <!-- Forgot Password -->
         <div id="forgot-card" class="auth-card">
             <h2>Reset Password</h2>
-            <p style="font-size: 0.9rem; color: var(--text-muted); text-align: center; margin-bottom: 20px;">Enter your email and we'll send you a link to reset your password.</p>
             <form id="forgot-form">
-                <div class="input-group">
-                    <label>Registered Email</label>
-                    <input type="email" id="forgot-email" required placeholder="name@gmail.com">
-                </div>
+                <div class="input-group"><label>Registered Email</label><input type="email" id="forgot-email" required></div>
                 <button type="submit" class="btn-primary">Send Reset Link</button>
             </form>
             <p class="switch-text" style="text-align: center;"><a href="#" id="back-to-signin">Back to Sign In</a></p>
         </div>
-
     </div>
 
-    <!-- 🌐 MAIN APP DASHBOARD (লগইন হলে এই উইন্ডোটি খুলবে) -->
+    <!-- 🌐 MAIN APP FRAMEWORK (CONSTANT TOP & BOTTOM BARS) -->
     <div id="app-dashboard" class="screen">
         
         <!-- ⬆️ CONSTANT TOP ROW -->
         <div class="top-row">
             <div class="top-left">
-                <button class="icon-btn" id="btn-notif">🔔</button>
-                <button class="icon-btn" id="btn-challenge">⚔️</button>
+                <button class="icon-btn" id="btn-notif" onclick="alert('Notifications coming soon!')">🔔</button>
+                <button class="icon-btn" id="btn-challenge" onclick="alert('Challenge System coming soon!')">⚔️</button>
                 <span id="admin-mirror-tag">ADMIN MODE</span>
             </div>
             <div class="top-center">
@@ -237,42 +163,87 @@
             </div>
         </div>
 
-        <!-- 📜 SCROLLABLE MIDDLE ZONE (শুধু এই হোম পেজ জোনটিই স্ক্রোল হবে) -->
-        <div class="middle-content" id="dynamic-middle-container">
-            <div id="welcome-zone" style="margin-top: 15px;">
-                <h2>Hello <span id="dash-user-name" style="color: var(--accent-blue);">Aspirant</span>!</h2>
-                <p style="color: var(--text-muted); line-height: 1.5;">This central section is fully scrollable. Here you can read topics and perform regular activities.</p>
+        <!-- 📜 SCROLLABLE MIDDLE ZONE -->
+        <div class="middle-content">
+
+            <!-- 🏠 1. HOME VIEW SCREEN -->
+            <div id="view-home" class="tab-view active-view">
+                <!-- Admin Only Control Panel inside Home -->
+                <div class="admin-block id-admin-panel">
+                    <h4 style="color: var(--accent-red); margin:0 0 10px 0;">⚡ Admin Global Control (Home)</h4>
+                    <button style="background: var(--accent-green); color:#fff; border:none; padding:8px; border-radius:4px; font-weight:bold;">+ Create/Edit Notification Feed</button>
+                </div>
                 
-                <!-- 🛠️ ADMIN MIRROR CONTROL AREA -->
-                <div id="admin-control-panel" class="hidden">
-                    <h3 style="color: var(--accent-red); margin-top: 0;">⚡ Admin Control Command Active</h3>
-                    <p style="font-size: 0.9rem;">You have Master Access. You can create/edit Chapters, Topics, and Quizzes from here.</p>
-                    <button class="btn-admin-action">+ Create New Chapter</button>
+                <div style="background: var(--card-dark); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <h3>Welcome to Home Screen</h3>
+                    <p style="color: var(--text-muted); font-size:0.95rem; line-height:1.5;">This middle section is scrollable. Only when you are on the Home Page, you will see this text and you can scroll down to see more targets.</p>
+                </div>
+                <!-- Extra padding/content to show scrolling behavior -->
+                <div style="height:400px; background:var(--card-dark); margin-top:15px; border-radius:8px; padding:15px; border:1px solid var(--border-color);"><h4>Daily Checklist</h4></div>
+                <div style="height:400px; background:var(--card-dark); margin-top:15px; border-radius:8px; padding:15px; border:1px solid var(--border-color);"><h4>Your Stats</h4></div>
+            </div>
+
+            <!-- 📖 2. STUDY VIEW SCREEN -->
+            <div id="view-study" class="tab-view">
+                <div class="admin-block id-admin-panel">
+                    <h4 style="color: var(--accent-red); margin:0 0 10px 0;">⚡ Admin Study Engine</h4>
+                    <button style="background: var(--accent-green); color:#fff; border:none; padding:8px; border-radius:4px; font-weight:bold;">+ Add Chapter / Topic</button>
+                </div>
+                <div style="background: var(--card-dark); padding: 20px; border-radius: 8px;">
+                    <h3>NCERT Book Reading & Topics</h3>
+                    <p style="color: var(--text-muted);">Study content will be structured here.</p>
                 </div>
             </div>
 
-            <!-- স্ক্রোল টেস্ট করার জন্য দীর্ঘ কন্টেন্ট ব্লক -->
-            <div style="height: 300px; background: var(--card-dark); border: 1px solid var(--border-color); margin-top: 20px; padding: 15px; border-radius: 8px;">
-                <h4>Daily Prep Targets</h4>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Complete today's chapter-wise tracking metrics to score bonus bP Coins.</p>
+            <!-- 🎯 3. TEST VIEW SCREEN -->
+            <div id="view-test" class="tab-view">
+                <div class="admin-block id-admin-panel">
+                    <h4 style="color: var(--accent-red); margin:0 0 10px 0;">⚡ Admin Quiz Panel</h4>
+                    <button style="background: var(--accent-green); color:#fff; border:none; padding:8px; border-radius:4px; font-weight:bold;">+ Upload New PYQ / MCQ</button>
+                </div>
+                <div style="background: var(--card-dark); padding: 20px; border-radius: 8px;">
+                    <h3>Chapter-wise Mock Tests</h3>
+                    <p style="color: var(--text-muted);">Real-time test series engine will render here.</p>
+                </div>
             </div>
-            <div style="height: 300px; background: var(--card-dark); border: 1px solid var(--border-color); margin-top: 20px; padding: 15px; border-radius: 8px;">
-                <h4>NCERT High-Yield Focus Zones</h4>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Review tagged items matching physics & chemistry structures.</p>
+
+            <!-- 💳 4. BUY TEST VIEW SCREEN -->
+            <div id="view-buytest" class="tab-view">
+                <div class="admin-block id-admin-panel">
+                    <h4 style="color: var(--accent-red); margin:0 0 10px 0;">⚡ Admin Store Manager</h4>
+                    <button style="background: var(--accent-green); color:#fff; border:none; padding:8px; border-radius:4px; font-weight:bold;">Configure Prices</button>
+                </div>
+                <div style="background: var(--card-dark); padding: 20px; border-radius: 8px;">
+                    <h3>Buy Premium Test Series</h3>
+                    <p style="color: var(--text-muted);">Payment gateway packages.</p>
+                </div>
             </div>
+
+            <!-- 🏪 5. mSTORE VIEW SCREEN -->
+            <div id="view-mstore" class="tab-view">
+                <div class="admin-block id-admin-panel">
+                    <h4 style="color: var(--accent-red); margin:0 0 10px 0;">⚡ Admin bP Token Control</h4>
+                    <button style="background: var(--accent-green); color:#fff; border:none; padding:8px; border-radius:4px; font-weight:bold;">Manage Coin Rewards</button>
+                </div>
+                <div style="background: var(--card-dark); padding: 20px; border-radius: 8px;">
+                    <h3>mStore - Redeem bP Coins</h3>
+                    <p style="color: var(--text-muted);">Unlock tests for free using your coins.</p>
+                </div>
+            </div>
+
         </div>
 
         <!-- ⬇️ CONSTANT BOTTOM ROW -->
         <div class="bottom-row">
-            <button class="nav-tab active-tab" data-target="home"><span class="nav-tab-icon">🏠</span><span>Home</span></button>
-            <button class="nav-tab" data-target="study"><span class="nav-tab-icon">📖</span><span>Study</span></button>
-            <button class="nav-tab" data-target="test"><span class="nav-tab-icon">🎯</span><span>Test</span></button>
-            <button class="nav-tab" data-target="buytest"><span class="nav-tab-icon">💳</span><span>Buy Test</span></button>
-            <button class="nav-tab" data-target="mstore"><span class="nav-tab-icon">🏪</span><span>mStore</span></button>
+            <button class="nav-tab active-tab" data-screen="home"><span class="nav-tab-icon">🏠</span><span>Home</span></button>
+            <button class="nav-tab" data-screen="study"><span class="nav-tab-icon">📖</span><span>Study</span></button>
+            <button class="nav-tab" data-screen="test"><span class="nav-tab-icon">🎯</span><span>Test</span></button>
+            <button class="nav-tab" data-screen="buytest"><span class="nav-tab-icon">💳</span><span>Buy Test</span></button>
+            <button class="nav-tab" data-screen="mstore"><span class="nav-tab-icon">🏪</span><span>mStore</span></button>
         </div>
     </div>
 
-    <!-- 🧾 SIDEBAR DRAWERS -->
+    <!-- ☰ SIDEBAR GRAPHIC INTERFACE -->
     <div class="sidebar-overlay" id="sb-overlay"></div>
     <div class="sidebar" id="app-sidebar">
         <button class="icon-btn" id="btn-sidebar-close" style="align-self: flex-end;">❌</button>
@@ -284,7 +255,7 @@
             <div class="sb-input-group"><label>Dream College</label><input type="text" id="sb-dream-college" placeholder="e.g. AIIMS Delhi"></div>
             <div class="sb-input-group"><label>Target Exam Date</label><input type="date" id="sb-target-date"></div>
             
-            <p style="font-size:0.8rem; color:var(--text-muted); margin: 15px 0 5px 0;">Official Social Handles</p>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin: 15px 0 5px 0;">Official Handles</p>
             <div class="social-links">
                 <a href="#" id="link-yt" target="_blank" class="social-btn">YouTube</a>
                 <a href="#" id="link-insta" target="_blank" class="social-btn">Instagram</a>
@@ -292,13 +263,13 @@
                 <a href="#" id="link-tele" target="_blank" class="social-btn">Telegram</a>
             </div>
 
-            <button class="theme-toggle-btn" id="btn-theme-toggle" style="width: 100%;">🌓 Switch Light/Dark</button>
-            <button class="sb-logout-btn" id="btn-sidebar-logout" style="width: 100%; margin-top: 10px;">Secure Logout</button>
+            <button class="btn-primary" id="btn-theme-toggle" style="background:#21262d; border:1px solid var(--border-color); width:100%; margin-bottom:10px;">🌓 Switch Theme Mode</button>
+            <button class="btn-primary" id="btn-sidebar-logout" style="background:var(--accent-red); width: 100%;">Secure Logout</button>
         </div>
     </div>
 
-    <!-- Script connection -->
+    <!-- Script Connector -->
     <script type="module" src="js/auth.js"></script>
 </body>
     </html>
-    
+                                                                                                         
