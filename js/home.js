@@ -1,42 +1,63 @@
 /**
- * হোম স্ক্রিন মডিউল - রেন্ডারার
- * @param {HTMLElement} container - মাঝখানের স্ক্রোলযোগ্য ডিভ কনটেইনার
- * @param {Boolean} isAdmin - ইউজার অ্যাডমিন কি না তার স্ট্যাটাস
+ * mNEET প্রফেশনাল হোম স্ক্রিন মডিউল
+ * @param {HTMLElement} container - স্ক্রোলযোগ্য মিডল জোন ডিভ
+ * @param {Boolean} isAdmin - ইউজার অ্যাডমিন কি না
  */
-export function renderScreen(container, isAdmin) {
-    let adminControlHTML = '';
+export function renderHomeScreen(container, isAdmin) {
+    let adminPanelHTML = '';
 
-    // 👑 অ্যাডমিন মিরর স্পেশাল প্যানেল জেনারেটর
+    // 👑 অ্যাডমিন মিরর স্পেশাল প্যানেল
     if (isAdmin) {
-        adminControlHTML = `
-            <div style="background: rgba(218, 54, 55, 0.1); border: 1px dashed var(--accent-red); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <h4 style="color: var(--accent-red); margin: 0 0 10px 0;">⚡ Admin Master Engine Active</h4>
-                <p style="font-size: 0.85rem; margin: 0 0 10px 0;">You can globally manage information on this screen.</p>
-                <button style="background: var(--accent-green); color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer;">+ Configure Live Announcements</button>
+        adminPanelHTML = `
+            <div style="background: rgba(218, 54, 55, 0.08); border: 1px dashed var(--accent-red); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                <h4 style="color: var(--accent-red); margin: 0 0 5px 0; font-size:0.95rem;">⚡ Admin Mirror Panel Active</h4>
+                <p style="font-size: 0.8rem; margin: 0 0 12px 0; color: var(--text-main);">Manage global features, add banners, or edit student targets from here.</p>
+                <div style="display:flex; gap:10px;">
+                    <button style="background: var(--accent-green); color:#fff; border:none; padding:6px 12px; border-radius:4px; font-size:0.8rem; font-weight:bold; cursor:pointer;">+ Create Chapter</button>
+                    <button style="background: var(--accent-blue); color:#fff; border:none; padding:6px 12px; border-radius:4px; font-size:0.8rem; font-weight:bold; cursor:pointer;">Edit Content</button>
+                </div>
             </div>
         `;
     }
 
-    // স্ক্রোলযোগ্য হোম স্ক্রিনের ইন্টারনাল ইন্টারফেস ডিজাইন
+    // প্রফেশনাল ড্যাশবোর্ড কার্ড লেআউট (UI/UX)
     container.innerHTML = `
-        ${adminControlHTML}
+        ${adminPanelHTML}
+
+        <!-- 🚀 প্রফেশনাল মোটিভেশনাল কার্ড -->
+        <div style="background: linear-gradient(135deg, var(--accent-blue), #3a86ff); color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <h3 style="margin: 0 0 5px 0; font-size: 1.3rem;">Target NEET 2026</h3>
+            <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">Consistency beats talent. Keep your daily streak active and earn more bP coins!</p>
+        </div>
+
+        <!-- 🎯 DAILY CHECKLIST ZONES (SCROLLABLE CONTENT) -->
+        <h3 style="font-size: 1rem; color: var(--text-main); margin-bottom: 10px; text-align:left;">Today's Focus Goals</h3>
         
-        <div style="margin-bottom: 20px; background: var(--card-dark); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
-            <h3 style="margin-top: 0;">🔥 Welcome to mNEET Home</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">
-                This middle zone is fully scrollable. Here you will see your regular feed, exam alerts, daily goals, and target metrics.
-            </p>
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 10px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <h4 style="margin: 0 0 4px 0; font-size: 0.95rem;">Biology Revision</h4>
+                <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Cell Cycle and Division • Topic 1</p>
+            </div>
+            <span style="color: var(--accent-blue); font-size: 0.85rem; font-weight: bold;">+10 bP</span>
         </div>
 
-        <div style="height: 300px; background: linear-gradient(180deg, var(--card-dark), transparent); margin-bottom: 15px; border-radius: 8px; padding: 15px; box-sizing: border-box; border: 1px solid var(--border-color);">
-            <h4>Daily Streak Goal</h4>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">Complete 1 topic quiz today to keep your streak alive.</p>
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 10px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <h4 style="margin: 0 0 4px 0; font-size: 0.95rem;">Physics Mock Practice</h4>
+                <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Units and Measurements • PYQ Tagged</p>
+            </div>
+            <span style="color: var(--accent-blue); font-size: 0.85rem; font-weight: bold;">+25 bP</span>
         </div>
 
-        <div style="height: 300px; background: linear-gradient(180deg, var(--card-dark), transparent); border-radius: 8px; padding: 15px; box-sizing: border-box; border: 1px solid var(--border-color);">
-            <h4>Latest NEET Updates</h4>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">Check current updates directly fetched from the official portal.</p>
+        <!-- EXTRA BOXES TO PROVE SCROLLING IN PHONES & LAPTOPS -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 10px; margin-bottom: 12px; opacity:0.6;">
+            <h4 style="margin: 0 0 4px 0; font-size: 0.95rem;">Chemistry High-Yield Lines</h4>
+            <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">NCERT Paragraph Reading</p>
+        </div>
+
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 10px; margin-bottom: 12px; opacity:0.4;">
+            <h4 style="margin: 0 0 4px 0; font-size: 0.95rem;">Weekly Live Challenge</h4>
+            <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Compete with Elite Tier students</p>
         </div>
     `;
 }
-
