@@ -1,26 +1,38 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>mNEET Dashboard - Speed to Success</title>
+    <!-- Tailwind CSS with Dark/Light Support -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <!-- Firebase SDK Modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
+        // Authentic Firebase Configuration
         const firebaseConfig = {
-            projectId: "mneet-spark",
+            apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
             authDomain: "mneet-spark.firebaseapp.com",
-            storageBucket: "mneet-spark.appspot.com"
+            databaseURL: "https://mneet-spark-default-rtdb.firebaseio.com",
+            projectId: "mneet-spark",
+            storageBucket: "mneet-spark.firebasestorage.app",
+            messagingSenderId: "252201633700",
+            appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
         };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Security Check & Dynamic Profile Data Loading
+        // Security Check & Real-time Profile Engine
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -37,34 +49,71 @@
             }
         });
 
-        // Logout Function
+        // Global Theme Switcher Logic
+        window.toggleTheme = function() {
+            const htmlTag = document.documentElement;
+            const themeBtn = document.getElementById('themeBtn');
+            if (htmlTag.classList.contains('dark')) {
+                htmlTag.classList.remove('dark');
+                themeBtn.innerText = "🌙 Dark Mode";
+                localStorage.setItem('theme', 'light');
+            } else {
+                htmlTag.classList.add('dark');
+                themeBtn.innerText = "☀️ Light Mode";
+                localStorage.setItem('theme', 'dark');
+            }
+        };
+
+        // Secure Session Sign Out
         window.handleLogout = function() {
             signOut(auth).then(() => {
                 window.location.href = "index.html";
             });
-        }
+        };
+
+        // Initialize Local Storage Theme Check
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            const htmlTag = document.documentElement;
+            const themeBtn = document.getElementById('themeBtn');
+            if (savedTheme === 'light') {
+                htmlTag.classList.remove('dark');
+                themeBtn.innerText = "🌙 Dark Mode";
+            } else {
+                htmlTag.classList.add('dark');
+                themeBtn.innerText = "☀️ Light Mode";
+            }
+        });
     </script>
 </head>
-<body class="bg-slate-950 min-h-screen text-slate-100 font-sans">
+<body class="bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100 font-sans transition-colors duration-300">
 
     <div id="mainContent" class="hidden">
         <!-- Main Navigation Header -->
-        <nav class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <nav class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors duration-300">
             <div class="flex items-center space-x-3">
-                <span class="text-3xl font-black tracking-wider text-sky-400">mNEET</span>
-                <span class="text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-md">BATTLE READY</span>
+                <span class="text-3xl font-black tracking-wider text-sky-500 dark:text-sky-400">mNEET</span>
+                <span class="text-xs font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-md">BATTLE READY</span>
             </div>
             
-            <!-- Dynamic Gamified Status Engine -->
-            <div class="flex items-center space-x-6 w-full sm:w-auto justify-between sm:justify-end">
-                <div class="flex items-center space-x-2 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 shadow-inner">
-                    <span class="text-amber-400 text-lg">🪙</span>
-                    <span class="text-xs text-slate-400 font-bold">bP Coins:</span>
-                    <span id="coinCount" class="text-amber-400 font-extrabold text-base">---</span>
+            <!-- Gamified Status Bar & Theme Selector -->
+            <div class="flex items-center space-x-4 w-full sm:w-auto justify-between sm:justify-end">
+                <!-- Theme Switcher -->
+                <button id="themeBtn" onclick="toggleTheme()" class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-3.5 py-1.5 rounded-xl text-xs font-bold transition hover:scale-105">
+                    ☀️ Light Mode
+                </button>
+
+                <!-- Coin Display -->
+                <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-950 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner">
+                    <span class="text-amber-500 text-lg">🪙</span>
+                    <span class="text-xs text-slate-500 dark:text-slate-400 font-bold">bP Coins:</span>
+                    <span id="coinCount" class="text-amber-500 dark:text-amber-400 font-extrabold text-base">---</span>
                 </div>
+
+                <!-- User Profile Summary -->
                 <div class="flex items-center space-x-3">
-                    <span class="text-sm text-slate-300 font-medium" id="studentName">Aspirant</span>
-                    <button onclick="handleLogout()" class="text-xs font-bold text-slate-400 hover:text-rose-400 transition">Logout</button>
+                    <span class="text-sm text-slate-700 dark:text-slate-300 font-medium" id="studentName">Aspirant</span>
+                    <button onclick="handleLogout()" class="text-xs font-bold text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition">Logout</button>
                 </div>
             </div>
         </nav>
@@ -74,45 +123,45 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 
                 <!-- 1. Interactive NCERT Module -->
-                <div onclick="window.location.href='student-ncert.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-sky-400 cursor-pointer transition transform hover:-translate-y-1 duration-200">
+                <div onclick="window.location.href='student-ncert.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-sky-500 dark:hover:border-sky-400 cursor-pointer transition transform hover:-translate-y-1 duration-200 shadow-sm dark:shadow-none">
                     <div class="text-3xl mb-4">📖</div>
-                    <h3 class="text-xl font-bold text-slate-100 mb-2">NCERT Interactive Reader</h3>
-                    <p class="text-sm text-slate-400">Read with active voice-guided synthesis, dynamic text highlighting, personalized notes, and interactive PYQ markers.</p>
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">NCERT Interactive Reader</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Read with active voice-guided synthesis, dynamic text highlighting, personalized notes, and interactive PYQ markers.</p>
                 </div>
 
                 <!-- 2. Practice Quizzes -->
-                <div onclick="window.location.href='student-quiz.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-emerald-400 cursor-pointer transition transform hover:-translate-y-1 duration-200">
+                <div onclick="window.location.href='student-quiz.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-emerald-500 dark:hover:border-emerald-400 cursor-pointer transition transform hover:-translate-y-1 duration-200 shadow-sm dark:shadow-none">
                     <div class="text-3xl mb-4">⚡</div>
-                    <h3 class="text-xl font-bold text-slate-100 mb-2">Topic & Chapter Quizzes</h3>
-                    <p class="text-sm text-slate-400">Test accuracy step-by-step. Access instant visual results, performance analytics, and clear solutions.</p>
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Topic & Chapter Quizzes</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Test accuracy step-by-step. Access instant visual results, performance analytics, and clear solutions.</p>
                 </div>
 
                 <!-- 3. Official Mock Tests -->
-                <div onclick="window.location.href='student-mocktest.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-amber-400 cursor-pointer transition transform hover:-translate-y-1 duration-200">
+                <div onclick="window.location.href='student-mocktest.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-amber-500 dark:hover:border-amber-400 cursor-pointer transition transform hover:-translate-y-1 duration-200 shadow-sm dark:shadow-none">
                     <div class="text-3xl mb-4">🏆</div>
-                    <h3 class="text-xl font-bold text-slate-100 mb-2">NTA Pattern Mock Tests</h3>
-                    <p class="text-sm text-slate-400">Simulate the real NEET examination environment. Strict timers, comprehensive papers, and multi-tier analytics.</p>
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">NTA Pattern Mock Tests</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Simulate the real NEET examination environment. Strict timers, comprehensive papers, and multi-tier analytics.</p>
                 </div>
 
                 <!-- 4. Gamified Battle Arena -->
-                <div onclick="window.location.href='student-challenge.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-purple-400 cursor-pointer transition transform hover:-translate-y-1 duration-200">
+                <div onclick="window.location.href='student-challenge.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-purple-500 dark:hover:border-purple-400 cursor-pointer transition transform hover:-translate-y-1 duration-200 shadow-sm dark:shadow-none">
                     <div class="text-3xl mb-4">⚔️</div>
-                    <h3 class="text-xl font-bold text-slate-100 mb-2">1v1 Quiz Challenges</h3>
-                    <p class="text-sm text-slate-400">Invite peers to direct real-time academic battles. Win live duels to secure massive bP Coin multipliers.</p>
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">1v1 Quiz Challenges</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Invite peers to direct real-time academic battles. Win live duels to secure massive bP Coin multipliers.</p>
                 </div>
 
                 <!-- 5. Active Leaderboards -->
-                <div onclick="window.location.href='student-leaderboard.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-indigo-400 cursor-pointer transition transform hover:-translate-y-1 duration-200">
+                <div onclick="window.location.href='student-leaderboard.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-indigo-500 dark:hover:border-indigo-400 cursor-pointer transition transform hover:-translate-y-1 duration-200 shadow-sm dark:shadow-none">
                     <div class="text-3xl mb-4">📊</div>
-                    <h3 class="text-xl font-bold text-slate-100 mb-2">National Leaderboard</h3>
-                    <p class="text-sm text-slate-400">Trace your direct academic rank. Compare accurate metrics against top performers across India.</p>
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">National Leaderboard</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Trace your direct academic rank. Compare accurate metrics against top performers across India.</p>
                 </div>
 
                 <!-- 6. Notifications Hub -->
-                <div onclick="window.location.href='student-notification.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-rose-400 cursor-pointer transition transform hover:-translate-y-1 duration-200">
+                <div onclick="window.location.href='student-notification.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-rose-500 dark:hover:border-rose-400 cursor-pointer transition transform hover:-translate-y-1 duration-200 shadow-sm dark:shadow-none">
                     <div class="text-3xl mb-4">🔔</div>
-                    <h3 class="text-xl font-bold text-slate-100 mb-2">Announcements</h3>
-                    <p class="text-sm text-slate-400">Receive urgent notices, upcoming live exam timelines, and targeted updates directly from mentors.</p>
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Announcements</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Receive urgent notices, upcoming live exam timelines, and targeted updates directly from mentors.</p>
                 </div>
 
             </div>
@@ -120,4 +169,5 @@
     </div>
 
 </body>
-</html>
+    </html>
+    
