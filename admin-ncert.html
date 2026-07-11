@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>mNEET Admin - NCERT Control Hub Pro</title>
+    <!-- Tailwind CSS with Dark/Light Engine -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class' }
     </script>
+    <!-- FontAwesome Pro Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script type="module">
@@ -36,7 +38,7 @@
         ];
         let currentPageIndex = 0;
 
-        // View Router Engine
+        // Global Dynamic View Router
         window.navigateToView = function(viewId) {
             ['view-subject-hub', 'view-chapter-hub', 'view-book-canvas'].forEach(v => {
                 document.getElementById(v).classList.add('hidden');
@@ -51,29 +53,35 @@
             }
         };
 
-        // Persistent Subjects Engine
+        // Subjects Core CRUD Realtime Actions Bound directly to Window
         window.createSubject = async function() {
             const input = document.getElementById('subjectInput');
             const name = input.value.trim();
             if(!name) return;
-            await addDoc(collection(db, "subjects"), { name, createdAt: Date.now(), hidden: false });
-            input.value = "";
+            try {
+                await addDoc(collection(db, "subjects"), { name, createdAt: Date.now(), hidden: false });
+                input.value = "";
+            } catch (err) { alert("Firebase Error: " + err.message); }
         };
 
         window.deleteSubject = async function(id) {
-            if(confirm("Delete this subject permanently?")) await deleteDoc(doc(db, "subjects", id));
+            if(confirm("Delete this subject permanently?")) {
+                try { await deleteDoc(doc(db, "subjects", id)); } catch(e) { alert(e.message); }
+            }
         };
 
         window.toggleHideSubject = async function(id, currentStatus) {
-            await updateDoc(doc(db, "subjects", id), { hidden: !currentStatus });
+            try { await updateDoc(doc(db, "subjects", id), { hidden: !currentStatus }); } catch(e) { alert(e.message); }
         };
 
         window.editSubject = async function(id, oldName) {
             const newName = prompt("Update Subject Title:", oldName);
-            if(newName && newName.trim()) await updateDoc(doc(db, "subjects", id), { name: newName.trim() });
+            if(newName && newName.trim()) {
+                try { await updateDoc(doc(db, "subjects", id), { name: newName.trim() }); } catch(e) { alert(e.message); }
+            }
         };
 
-        // Load Subjects in Realtime from Firestore
+        // Initialize Global Listening Stream
         window.initSubjectsLoad = function() {
             onSnapshot(query(collection(db, "subjects"), orderBy("createdAt", "asc")), (snapshot) => {
                 const container = document.getElementById('subjectListNode');
@@ -85,33 +93,30 @@
                     container.innerHTML += `
                         <div class="bg-white dark:bg-slate-900 border ${s.hidden ? 'opacity-40 border-slate-300' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
                             <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.enterSubject('${id}', '${s.name.replace(/'/g, "\\'")}')">
-                                <i class="fa-solid fa-book text-rose-500"></i>
-                                <span class="font-black text-xs md:text-sm ${s.hidden ? 'line-through' : ''}">${s.name}</span>
+                                <i class="fa-solid fa-book text-rose-500 text-lg"></i>
+                                <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white ${s.hidden ? 'line-through' : ''}">${s.name}</span>
                             </div>
-                            <div class="flex items-center space-x-1">
-                                <button onclick="editSubject('${id}', '${s.name.replace(/'/g, "\\'")}')" class="bg-sky-50 text-sky-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-pen"></i></button>
-                                <button onclick="toggleHideSubject('${id}', ${s.hidden})" class="bg-amber-50 text-amber-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-eye-slash"></i></button>
-                                <button onclick="deleteSubject('${id}')" class="bg-rose-50 text-rose-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
+                            <div class="flex items-center space-x-2 flex-shrink-0">
+                                <button onclick="window.editSubject('${id}', '${s.name.replace(/'/g, "\\'")}')" class="bg-sky-50 text-sky-500 p-2 rounded-xl text-xs hover:bg-sky-500 hover:text-white transition"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="window.toggleHideSubject('${id}', ${s.hidden})" class="bg-amber-50 text-amber-500 p-2 rounded-xl text-xs hover:bg-amber-500 hover:text-white transition"><i class="fa-solid fa-eye-slash"></i></button>
+                                <button onclick="window.deleteSubject('${id}')" class="bg-rose-50 text-rose-500 p-2 rounded-xl text-xs hover:bg-rose-500 hover:text-white transition"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </div>
                     `;
                 });
-            });
+            }, (error) => { console.error("Snapshot error: ", error); });
         };
-
-        window.addEventListener('DOMContentLoaded', () => {
-            window.initSubjectsLoad();
-        });
-                // Chapters Core CRUD Realtime Engine
+                // Chapters Core CRUD Realtime Actions
         window.enterSubject = function(subId, subName) {
             activeSubjectId = subId;
             document.getElementById('currentSubjectTitle').innerText = subName;
-            navigateToView('view-chapter-hub');
+            window.navigateToView('view-chapter-hub');
             
             if(currentChaptersUnsubscribe) currentChaptersUnsubscribe();
             
             currentChaptersUnsubscribe = onSnapshot(query(collection(db, `subjects/${subId}/chapters`), orderBy("createdAt", "asc")), (snapshot) => {
                 const container = document.getElementById('chapterListNode');
+                if(!container) return;
                 container.innerHTML = "";
                 snapshot.forEach(docSnap => {
                     const c = docSnap.data();
@@ -119,13 +124,13 @@
                     container.innerHTML += `
                         <div class="bg-white dark:bg-slate-900 border ${c.hidden ? 'opacity-40 border-slate-300' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
                             <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.openBookCanvas('${id}')">
-                                <i class="fa-solid fa-file-lines text-purple-500"></i>
-                                <span class="font-black text-xs md:text-sm ${c.hidden ? 'line-through' : ''}">${c.name}</span>
+                                <i class="fa-solid fa-file-lines text-purple-500 text-lg"></i>
+                                <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white ${c.hidden ? 'line-through' : ''}">${c.name}</span>
                             </div>
-                            <div class="flex items-center space-x-1">
-                                <button onclick="editChapter('${id}', '${c.name.replace(/'/g, "\\'")}')" class="bg-sky-50 text-sky-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-pen"></i></button>
-                                <button onclick="toggleHideChapter('${id}', ${c.hidden})" class="bg-amber-50 text-amber-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-eye-slash"></i></button>
-                                <button onclick="deleteChapter('${id}')" class="bg-rose-50 text-rose-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
+                            <div class="flex items-center space-x-2 flex-shrink-0">
+                                <button onclick="window.editChapter('${id}', '${c.name.replace(/'/g, "\\'")}')" class="bg-sky-50 text-sky-500 p-2 rounded-xl text-xs hover:bg-sky-500 hover:text-white transition"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="window.toggleHideChapter('${id}', ${c.hidden})" class="bg-amber-50 text-amber-500 p-2 rounded-xl text-xs hover:bg-amber-500 hover:text-white transition"><i class="fa-solid fa-eye-slash"></i></button>
+                                <button onclick="window.deleteChapter('${id}')" class="bg-rose-50 text-rose-500 p-2 rounded-xl text-xs hover:bg-rose-500 hover:text-white transition"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </div>
                     `;
@@ -137,28 +142,34 @@
             const input = document.getElementById('chapterInput');
             const name = input.value.trim();
             if(!name || !activeSubjectId) return;
-            await addDoc(collection(db, `subjects/${activeSubjectId}/chapters`), { name, createdAt: Date.now(), hidden: false });
-            input.value = "";
+            try {
+                await addDoc(collection(db, `subjects/${activeSubjectId}/chapters`), { name, createdAt: Date.now(), hidden: false });
+                input.value = "";
+            } catch(e) { alert(e.message); }
         };
 
         window.deleteChapter = async function(chapId) {
-            if(confirm("Delete this chapter permanently?")) await deleteDoc(doc(db, `subjects/${activeSubjectId}/chapters`, chapId));
+            if(confirm("Delete this chapter permanently?")) {
+                try { await deleteDoc(doc(db, `subjects/${activeSubjectId}/chapters`, chapId)); } catch(e) { alert(e.message); }
+            }
         };
 
         window.toggleHideChapter = async function(chapId, currentStatus) {
-            await updateDoc(doc(db, `subjects/${activeSubjectId}/chapters`, chapId), { hidden: !currentStatus });
+            try { await updateDoc(doc(db, `subjects/${activeSubjectId}/chapters`, chapId), { hidden: !currentStatus }); } catch(e) { alert(e.message); }
         };
 
         window.editChapter = async function(chapId, oldName) {
             const newName = prompt("Edit Chapter Name:", oldName);
-            if(newName && newName.trim()) await updateDoc(doc(db, `subjects/${activeSubjectId}/chapters`, chapId), { name: newName.trim() });
+            if(newName && newName.trim()) {
+                try { await updateDoc(doc(db, `subjects/${activeSubjectId}/chapters`, chapId), { name: newName.trim() }); } catch(e) { alert(e.message); }
+            }
         };
 
-        // Full Screen A4 Portrait Canvas Engine
+        // Full Screen A4 Portrait Canvas Mechanics
         window.openBookCanvas = function(chapId) {
-            navigateToView('view-book-canvas');
+            window.navigateToView('view-book-canvas');
             currentPageIndex = 0;
-            renderBookPage();
+            window.renderBookPage();
         };
 
         window.renderBookPage = function() {
@@ -166,14 +177,14 @@
             const body = document.getElementById('bookPageContent');
             body.innerHTML = mockBookPages[currentPageIndex].split('. ').map(s => {
                 if(!s.trim()) return '';
-                return `<span onclick="openMcqModal('${s.replace(/'/g, "\\'")}')" class="hover:bg-amber-200/60 cursor-pointer p-1.5 rounded transition block mb-2 border-b border-dashed border-amber-900/10 text-slate-800 font-serif leading-relaxed text-sm md:text-base">${s}.</span>`;
+                return `<span onclick="window.openMcqModal('${s.replace(/'/g, "\\'")}')" class="hover:bg-amber-200/60 cursor-pointer p-1.5 rounded transition block mb-2 border-b border-dashed border-amber-900/10 text-slate-800 font-serif leading-relaxed text-sm md:text-base">${s}.</span>`;
             }).join('');
         };
 
         window.flipPage = function(dir) {
             if(dir === 'next' && currentPageIndex < mockBookPages.length - 1) currentPageIndex++;
             else if(dir === 'prev' && currentPageIndex > 0) currentPageIndex--;
-            renderBookPage();
+            window.renderBookPage();
         };
 
         window.openMcqModal = function(sentence) {
@@ -186,6 +197,13 @@
         };
 
         window.toggleTheme = () => document.documentElement.classList.toggle('dark');
+
+        // Core Load Strategy Trigger
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => window.initSubjectsLoad());
+        } else {
+            window.initSubjectsLoad();
+        }
     </script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
@@ -196,12 +214,12 @@
             <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
                 <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 p-2"><i class="fa-solid fa-house-medical text-base"></i></button>
                 <h2 class="font-black text-sm mx-auto">All Subject</h2>
-                <button onclick="toggleTheme()" class="text-slate-400 p-2"><i class="fa-solid fa-circle-half-stroke"></i></button>
+                <button onclick="window.toggleTheme()" class="text-slate-400 p-2"><i class="fa-solid fa-circle-half-stroke"></i></button>
             </header>
             <div class="w-full px-4 md:px-6 py-6 space-y-6 flex-1 max-w-5xl mx-auto">
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex items-center gap-3 shadow-sm">
                     <input type="text" id="subjectInput" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black focus:outline-none text-slate-800 dark:text-white" placeholder="Create Subject Name...">
-                    <button onclick="createSubject()" class="bg-rose-500 text-white font-black text-xs px-6 py-3 rounded-xl whitespace-nowrap">Create Subject</button>
+                    <button onclick="window.createSubject()" class="bg-rose-500 text-white font-black text-xs px-6 py-3 rounded-xl whitespace-nowrap active:scale-95 transition">Create Subject</button>
                 </div>
                 <div class="space-y-3 w-full" id="subjectListNode"></div>
             </div>
@@ -210,7 +228,7 @@
         <!-- VIEW 2: CHAPTER NAMES HUB -->
         <div id="view-chapter-hub" class="w-full flex-1 flex flex-col hidden">
             <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
-                <button onclick="navigateToView('view-subject-hub')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-base"></i></button>
+                <button onclick="window.navigateToView('view-subject-hub')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-base"></i></button>
                 <h2 id="currentSubjectTitle" class="font-black text-sm mx-auto">Chapter names</h2>
                 <div class="w-8"></div>
             </header>
@@ -219,7 +237,7 @@
                     <input type="text" id="chapterInput" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black focus:outline-none text-slate-800 dark:text-white" placeholder="Enter Chapter Title...">
                     <div class="flex gap-3 w-full items-center">
                         <input type="file" accept=".pdf" class="w-full bg-slate-100 dark:bg-slate-950 border rounded-xl p-2 text-xs font-bold text-slate-400">
-                        <button onclick="createChapter()" class="bg-rose-500 text-white font-black text-xs px-6 py-3 rounded-xl whitespace-nowrap">Create Chapter</button>
+                        <button onclick="window.createChapter()" class="bg-rose-500 text-white font-black text-xs px-6 py-3 rounded-xl whitespace-nowrap active:scale-95 transition">Create Chapter</button>
                     </div>
                 </div>
                 <div class="space-y-3 w-full" id="chapterListNode"></div>
@@ -229,7 +247,7 @@
         <!-- VIEW 3: 100% ACCURATE FULL SCREEN ADAPTIVE A4 PORTRAIT CANVASES -->
         <div id="view-book-canvas" class="fixed inset-0 bg-slate-900 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
             <header class="bg-slate-950 text-white px-4 py-3 flex justify-between items-center border-b border-slate-800 w-full h-12 flex-shrink-0">
-                <button onclick="navigateToView('view-chapter-hub')" class="text-slate-400 font-bold text-xs"><i class="fa-solid fa-chevron-left"></i> Back</button>
+                <button onclick="window.navigateToView('view-chapter-hub')" class="text-slate-400 font-bold text-xs"><i class="fa-solid fa-chevron-left"></i> Back</button>
                 <h2 class="text-xs font-black uppercase tracking-wider text-slate-400">NCERT Digital Book Editor</h2>
                 <div class="w-8"></div>
             </header>
@@ -239,9 +257,9 @@
                     <div id="bookPageContent" class="overflow-y-auto pr-1 select-text flex-1"></div>
                     
                     <div class="border-t border-amber-950/10 pt-3 flex justify-between items-center text-xs font-mono font-bold text-slate-400 bg-transparent flex-shrink-0">
-                        <button onclick="flipPage('prev')" class="hover:text-slate-900 p-2"><i class="fa-solid fa-arrow-left"></i> Prev</button>
+                        <button onclick="window.flipPage('prev')" class="hover:text-slate-900 p-2"><i class="fa-solid fa-arrow-left"></i> Prev</button>
                         <span id="pageIndicator" class="text-slate-500">Page 1 of 3</span>
-                        <button onclick="flipPage('next')" class="hover:text-slate-900 p-2">Next <i class="fa-solid fa-arrow-right"></i></button>
+                        <button onclick="window.flipPage('next')" class="hover:text-slate-900 p-2">Next <i class="fa-solid fa-arrow-right"></i></button>
                     </div>
                 </div>
             </div>
@@ -251,7 +269,7 @@
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto text-xs font-bold text-slate-700 dark:text-slate-300 shadow-2xl">
                     <div class="flex justify-between items-center border-b pb-2">
                         <span class="text-rose-500 font-black uppercase tracking-widest text-[9px]"><i class="fa-solid fa-tags mr-1"></i> Tag PYQ MCQ Platform Editor</span>
-                        <button onclick="closeMcqModal()" class="text-slate-400 text-lg"><i class="fa-solid fa-xmark"></i></button>
+                        <button onclick="window.closeMcqModal()" class="text-slate-400 text-lg"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                     <p id="targetSentenceDisplay" class="italic text-slate-400 font-serif bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-dashed"></p>
                     <textarea id="pyqQuestionArea" rows="2" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-slate-900 dark:text-white" placeholder="Type MCQ Question Content..."></textarea>
@@ -263,7 +281,7 @@
                         <input type="text" class="bg-slate-50 dark:bg-slate-950 border p-2 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option D">
                     </div>
                     <input type="text" class="w-full bg-slate-50 dark:bg-slate-950 border p-2 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Solution Explanation...">
-                    <button onclick="alert('🚀 MCQ Embedded Successfully!'); closeMcqModal();" class="w-full bg-rose-500 text-white py-2.5 rounded-xl font-black shadow">Deploy MCQ Question</button>
+                    <button onclick="alert('🚀 MCQ Embedded Successfully!'); window.closeMcqModal();" class="w-full bg-rose-500 text-white py-2.5 rounded-xl font-black shadow">Deploy MCQ Question</button>
                 </div>
             </div>
         </div>
@@ -271,7 +289,7 @@
         <!-- BOTTOM NAV STRAP -->
         <nav id="adminBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3.5 flex justify-around items-center shadow-2xl lg:pl-80 w-full box-border">
             <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
-            <button onclick="navigateToView('view-subject-hub')" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
+            <button onclick="window.navigateToView('view-subject-hub')" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
             <button onclick="window.location.href='admin-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
             <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
             <button onclick="window.location.href='admin-students.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Students</span></button>
@@ -279,4 +297,4 @@
     </div>
 </body>
 </html>
-    
+                        
