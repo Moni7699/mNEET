@@ -2,9 +2,14 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET Admin - NCERT Studio Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>mNEET Admin - NCERT Control Hub</title>
+    <!-- Tailwind CSS with Dark/Light Engine -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- FontAwesome Pro Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script type="module">
@@ -24,112 +29,262 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Subjects CRUD
-        window.createSubject = async () => {
-            const name = document.getElementById('subjectInput').value.trim();
-            if(!name) return;
-            await addDoc(collection(db, "subjects"), { name, createdAt: Date.now(), hidden: false });
-            document.getElementById('subjectInput').value = "";
+        let activeSubjectId = "";
+        let currentChaptersUnsubscribe = null;
+        let bookPages = [
+            "Biodiversity represents the massive pool of living variations existing on Earth.",
+            "To map them precisely, taxonomy processes rules to define scientific nomenclature benchmarks.",
+            "Cell is the basic structural unit of life. Membranes balance electrochemical potentials dynamically."
+        ];
+        let currentPage = 0;
+
+        // Global Navigation Router Matrix
+        window.navigateToView = function(viewId) {
+            ['view-subject-hub', 'view-chapter-hub', 'view-book-canvas'].forEach(v => {
+                document.getElementById(v).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+
+            const bottomNav = document.getElementById('adminBottomNav');
+            if(viewId === 'view-book-canvas') {
+                bottomNav.style.display = 'none';
+            } else {
+                bottomNav.style.display = 'flex';
+            }
         };
 
-        onSnapshot(query(collection(db, "subjects"), orderBy("createdAt", "desc")), (snapshot) => {
+        // Subjects Core CRUD Realtime Engine
+        window.createSubject = async function() {
+            const input = document.getElementById('subjectInput');
+            const name = input.value.trim();
+            if(!name) return;
+            await addDoc(collection(db, "subjects"), { name, createdAt: Date.now(), hidden: false });
+            input.value = "";
+        };
+
+        window.deleteSubject = async function(id) {
+            if(confirm("Are you sure to delete this subject?")) await deleteDoc(doc(db, "subjects", id));
+        };
+
+        window.toggleHideSubject = async function(id, currentStatus) {
+            await updateDoc(doc(db, "subjects", id), { hidden: !currentStatus });
+        };
+
+        window.editSubject = async function(id, oldName) {
+            const newName = prompt("Edit Subject Name:", oldName);
+            if(newName && newName.trim()) await updateDoc(doc(db, "subjects", id), { name: newName.trim() });
+        };
+
+        // Load Realtime Subjects
+        onSnapshot(query(collection(db, "subjects"), orderBy("createdAt", "asc")), (snapshot) => {
             const container = document.getElementById('subjectListNode');
             container.innerHTML = "";
-            snapshot.forEach(doc => {
-                const s = doc.data();
+            snapshot.forEach(docSnap => {
+                const s = docSnap.data();
+                const id = docSnap.id;
                 container.innerHTML += `
-                    <div class="bg-white dark:bg-slate-900 border ${s.hidden ? 'opacity-40' : ''} border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm">
-                        <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="loadChapters('${doc.id}', '${s.name}')">
-                            <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white">${s.name}</span>
+                    <div draggable="true" ondragstart="onDragStartNode(event)" ondragover="onDragOverNode(event)" ondrop="onDropNode(event)" class="grab-card bg-white dark:bg-slate-900 border ${s.hidden ? 'opacity-40 border-slate-300' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
+                        <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.enterSubject('${id}', '${s.name.replace(/'/g, "\\'")}')">
+                            <i class="fa-solid fa-grip-vertical text-slate-400"></i>
+                            <span class="font-black text-xs md:text-sm ${s.hidden ? 'line-through' : ''}">${s.name}</span>
                         </div>
                         <div class="flex items-center space-x-1">
-                            <button onclick="deleteDoc(doc(db, 'subjects', '${doc.id}'))" class="bg-rose-500 text-white p-2 rounded-xl text-[10px]"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="editSubject('${id}', '${s.name.replace(/'/g, "\\'")}')" class="bg-sky-50 text-sky-500 p-2 rounded-xl text-xs hover:bg-sky-500 hover:text-white transition"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="toggleHideSubject('${id}', ${s.hidden})" class="bg-amber-50 text-amber-500 p-2 rounded-xl text-xs hover:bg-amber-500 hover:text-white transition"><i class="fa-solid fa-eye-slash"></i></button>
+                            <button onclick="deleteSubject('${id}')" class="bg-rose-50 text-rose-500 p-2 rounded-xl text-xs hover:bg-rose-500 hover:text-white transition"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
                 `;
             });
         });
-
-        // Navigation Controllers
-        window.loadChapters = (subId, subName) => {
+                // Chapters Core CRUD Realtime Engine
+        window.enterSubject = function(subId, subName) {
+            activeSubjectId = subId;
             document.getElementById('currentSubjectTitle').innerText = subName;
-            document.getElementById('activeSubId').value = subId;
             navigateToView('view-chapter-hub');
+            
+            if(currentChaptersUnsubscribe) currentChaptersUnsubscribe();
+            
+            currentChaptersUnsubscribe = onSnapshot(query(collection(db, `subjects/${subId}/chapters`), orderBy("createdAt", "asc")), (snapshot) => {
+                const container = document.getElementById('chapterListNode');
+                container.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const c = docSnap.data();
+                    const id = docSnap.id;
+                    container.innerHTML += `
+                        <div draggable="true" ondragstart="onDragStartNode(event)" ondragover="onDragOverNode(event)" ondrop="onDropNode(event)" class="grab-card bg-white dark:bg-slate-900 border ${c.hidden ? 'opacity-40 border-slate-300' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
+                            <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.openBookCanvas('${id}')">
+                                <i class="fa-solid fa-grip-vertical text-slate-400"></i>
+                                <span class="font-black text-xs md:text-sm ${c.hidden ? 'line-through' : ''}">${c.name}</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <button onclick="editChapter('${id}', '${c.name.replace(/'/g, "\\'")}')" class="bg-sky-50 text-sky-500 p-2 rounded-xl text-xs hover:bg-sky-500 hover:text-white transition"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="toggleHideChapter('${id}', ${c.hidden})" class="bg-amber-50 text-amber-500 p-2 rounded-xl text-xs hover:bg-amber-500 hover:text-white transition"><i class="fa-solid fa-eye-slash"></i></button>
+                                <button onclick="deleteChapter('${id}')" class="bg-rose-50 text-rose-500 p-2 rounded-xl text-xs hover:bg-rose-500 hover:text-white transition"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
         };
 
-        window.navigateToView = (viewId) => {
-            ['view-subject-hub', 'view-chapter-hub', 'view-book-canvas'].forEach(v => document.getElementById(v).classList.add('hidden'));
-            document.getElementById(viewId).classList.remove('hidden');
+        window.createChapter = async function() {
+            const input = document.getElementById('chapterInput');
+            const name = input.value.trim();
+            if(!name || !activeSubjectId) return;
+            await addDoc(collection(db, `subjects/${activeSubjectId}/chapters`), { name, createdAt: Date.now(), hidden: false });
+            input.value = "";
         };
+
+        window.deleteChapter = async function(chapId) {
+            if(confirm("Delete this chapter?")) await deleteDoc(doc(db, `subjects/${activeSubjectId}/chapters`, chapId));
+        };
+
+        window.toggleHideChapter = async function(chapId, currentStatus) {
+            await updateDoc(doc(db, `subjects/${activeSubjectId}/chapters`, chapId), { hidden: !currentStatus });
+        };
+
+        window.editChapter = async function(chapId, oldName) {
+            const newName = prompt("Edit Chapter Name:", oldName);
+            if(newName && newName.trim()) await updateDoc(doc(db, `subjects/${activeSubjectId}/chapters`, chapId), { name: newName.trim() });
+        };
+
+        // Book Canvas rendering mechanics
+        window.openBookCanvas = function(chapId) {
+            navigateToView('view-book-canvas');
+            currentPage = 0;
+            renderBookPage();
+        };
+
+        window.renderBookPage = function() {
+            document.getElementById('pageIndicator').innerText = `Page ${currentPage + 1} of ${bookPages.length}`;
+            const body = document.getElementById('bookPageContent');
+            body.innerHTML = bookPages[currentPage].split('. ').map(s => {
+                if(!s.trim()) return '';
+                return `<span onclick="openMcqModal('${s.replace(/'/g, "\\'")}')" class="hover:bg-amber-200/60 cursor-pointer p-1 rounded transition block mb-2 border-b border-dashed border-amber-900/10 text-slate-800 font-serif leading-relaxed text-sm">${s}.</span>`;
+            }).join('');
+        };
+
+        window.flipPage = function(dir) {
+            if(dir === 'next' && currentPage < bookPages.length - 1) currentPage++;
+            else if(dir === 'prev' && currentPage > 0) currentPage--;
+            renderBookPage();
+        };
+
+        window.openMcqModal = function(sentence) {
+            document.getElementById('targetSentenceDisplay').innerText = `"${sentence}."`;
+            document.getElementById('mcqModal').style.display = 'flex';
+        };
+
+        window.closeMcqModal = function() {
+            document.getElementById('mcqModal').style.display = 'none';
+        };
+
+        // Drag & Drop sequencing mockups
+        let draggedItem = null;
+        window.onDragStartNode = function(e) { draggedItem = e.currentTarget; };
+        window.onDragOverNode = function(e) { e.preventDefault(); };
+        window.onDropNode = function(e) {
+            e.preventDefault();
+            if(draggedItem !== e.currentTarget) {
+                const parent = e.currentTarget.parentNode;
+                parent.insertBefore(draggedItem, e.currentTarget);
+            }
+        };
+
+        window.toggleTheme = () => document.documentElement.classList.toggle('dark');
     </script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen">
-    <div id="adminNcertPortal" class="min-h-screen flex flex-col">
-        <!-- VIEW 1: SUBJECT HUB -->
-        <div id="view-subject-hub" class="w-full flex-1 p-4 md:p-6 space-y-6">
-            <header class="flex justify-between items-center mb-6">
-                <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 p-2"><i class="fa-solid fa-arrow-left"></i></button>
-                <h2 class="font-black text-sm">All Subjects</h2>
-                <div class="w-8"></div>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300 select-none">
+    <div id="adminNcertPortal" class="hidden min-h-screen flex flex-col justify-between overflow-x-hidden">
+        
+        <!-- VIEW 1: ALL SUBJECTS VIEW -->
+        <div id="view-subject-hub" class="w-full flex-1 flex flex-col">
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
+                <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 p-2"><i class="fa-solid fa-house-medical text-lg"></i></button>
+                <h2 class="font-black text-sm mx-auto">All Subject</h2>
+                <button onclick="toggleTheme()" class="text-slate-400 p-2"><i class="fa-solid fa-circle-half-stroke"></i></button>
             </header>
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex gap-3">
-                <input type="text" id="subjectInput" class="w-full bg-slate-100 dark:bg-slate-950 rounded-xl px-4 py-3 text-xs font-bold outline-none" placeholder="Enter Subject...">
-                <button onclick="createSubject()" class="bg-rose-500 text-white font-black text-xs px-6 py-3 rounded-xl">Create</button>
-            </div>
-            <div id="subjectListNode" class="space-y-3"></div>
-        </div>
-                <!-- VIEW 2: CHAPTER HUB -->
-        <div id="view-chapter-hub" class="w-full flex-1 p-4 md:p-6 space-y-6 hidden">
-            <input type="hidden" id="activeSubId">
-            <header class="flex justify-between items-center mb-6">
-                <button onclick="navigateToView('view-subject-hub')" class="text-slate-400 p-2"><i class="fa-solid fa-arrow-left"></i></button>
-                <h2 id="currentSubjectTitle" class="font-black text-sm">Chapter names</h2>
-                <div class="w-8"></div>
-            </header>
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl space-y-3">
-                <input type="text" id="chapterInput" class="w-full bg-slate-100 dark:bg-slate-950 rounded-xl px-4 py-3 text-xs font-bold outline-none" placeholder="Chapter Name...">
-                <button onclick="alert('Chapter created!')" class="w-full bg-rose-500 text-white font-black text-xs py-3 rounded-xl">Create Chapter</button>
-            </div>
-            <div id="chapterListNode" class="space-y-3">
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex justify-between items-center" onclick="navigateToView('view-book-canvas')">
-                    <span class="text-xs font-black">Chapter 1: The Living World</span>
-                    <button class="bg-sky-500 text-white p-2 rounded-xl text-[10px]"><i class="fa-solid fa-pen"></i></button>
+            <div class="w-full px-4 md:px-6 py-6 space-y-6 flex-1 max-w-5xl mx-auto">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex items-center gap-3 shadow-sm">
+                    <input type="text" id="subjectInput" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black focus:outline-none text-slate-800 dark:text-white" placeholder="Create Subject Name...">
+                    <button onclick="createSubject()" class="bg-rose-500 text-white font-black text-xs px-6 py-3 rounded-xl whitespace-nowrap">Create Subject</button>
                 </div>
+                <div class="space-y-3 w-full" id="subjectListNode"></div>
             </div>
         </div>
 
-        <!-- VIEW 3: FULL SCREEN PDF CANVAS -->
-        <div id="view-book-canvas" class="fixed inset-0 bg-black z-50 hidden flex flex-col">
-            <header class="bg-slate-900 text-white px-4 py-3 flex justify-between items-center">
-                <button onclick="navigateToView('view-chapter-hub')" class="text-slate-400"><i class="fa-solid fa-chevron-left"></i> Back</button>
-                <h2 class="text-xs font-black">Book View</h2>
+        <!-- VIEW 2: CHAPTER NAMES HUB -->
+        <div id="view-chapter-hub" class="w-full flex-1 flex flex-col hidden">
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
+                <button onclick="navigateToView('view-subject-hub')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+                <h2 id="currentSubjectTitle" class="font-black text-sm mx-auto">Chapter names</h2>
+                <div class="w-8"></div>
+            </header>
+            <div class="w-full px-4 md:px-6 py-6 space-y-6 flex-1 max-w-5xl mx-auto">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex flex-col gap-3 shadow-sm">
+                    <input type="text" id="chapterInput" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black focus:outline-none text-slate-800 dark:text-white" placeholder="Enter Chapter Title...">
+                    <div class="flex gap-3 w-full items-center">
+                        <input type="file" accept=".pdf" class="w-full bg-slate-100 dark:bg-slate-950 border rounded-xl p-2 text-xs font-bold text-slate-400">
+                        <button onclick="createChapter()" class="bg-rose-500 text-white font-black text-xs px-6 py-3 rounded-xl whitespace-nowrap">Create Chapter</button>
+                    </div>
+                </div>
+                <div class="space-y-3 w-full" id="chapterListNode"></div>
+            </div>
+        </div>
+
+        <!-- VIEW 3: FULL SCREEN ACCURATE PORTRAIT A4 PDF CONTAINER -->
+        <div id="view-book-canvas" class="fixed inset-0 bg-slate-900 z-50 hidden flex flex-col">
+            <header class="bg-slate-950 text-white px-4 py-3 flex justify-between items-center border-b border-slate-800">
+                <button onclick="navigateToView('view-chapter-hub')" class="text-slate-400 font-bold text-xs"><i class="fa-solid fa-chevron-left"></i> Back</button>
+                <h2 class="text-xs font-black uppercase tracking-wider text-slate-400">NCERT Digital Book</h2>
                 <div class="w-8"></div>
             </header>
             
-            <!-- Full Screen PDF Container -->
-            <div class="flex-1 w-full bg-slate-100 flex items-center justify-center p-2">
-                <div class="w-full max-w-2xl h-full bg-white shadow-xl flex flex-col">
-                    <div class="flex-1 w-full h-full flex items-center justify-center text-slate-400">
-                        <!-- PDF RENDER AREA: Uses responsive embed -->
-                        <iframe src="https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" class="w-full h-full border-0"></iframe>
+            <!-- Mobile Adaptive Full Page A4 Dimension Viewport Layer -->
+            <div class="flex-1 w-full bg-slate-800 flex items-center justify-center p-3 overflow-hidden">
+                <div class="bg-[#fdfbf7] shadow-2xl rounded-2xl w-full max-w-md h-full max-h-[78vh] aspect-[1/1.414] p-6 flex flex-col justify-between box-border">
+                    <div id="bookPageContent" class="overflow-y-auto pr-1 select-text"></div>
+                    
+                    <div class="border-t border-amber-950/10 pt-3 flex justify-between items-center text-xs font-mono font-bold text-slate-400 bg-transparent">
+                        <button onclick="flipPage('prev')" class="hover:text-slate-900 p-2"><i class="fa-solid fa-arrow-left"></i> Prev</button>
+                        <span id="pageIndicator" class="text-slate-500">Page 1 of 3</span>
+                        <button onclick="flipPage('next')" class="hover:text-slate-900 p-2">Next <i class="fa-solid fa-arrow-right"></i></button>
                     </div>
                 </div>
             </div>
-            
-            <!-- MCQ Injection floating panel -->
-            <div class="bg-white p-4">
-                 <button onclick="alert('MCQ Editor Opened!')" class="w-full bg-rose-500 text-white text-xs font-black py-3 rounded-xl">Add MCQ to this page</button>
+
+            <!-- MODAL POP-UP DIALOG INJECTED ON THE SELECTED SENTENCE -->
+            <div id="mcqModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4" style="display:none;">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[80vh] overflow-y-auto text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <span class="text-rose-500 font-black uppercase tracking-widest text-[9px]"><i class="fa-solid fa-tags mr-1"></i> Tag PYQ MCQ Workspace</span>
+                        <button onclick="closeMcqModal()" class="text-slate-400 text-lg"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <p id="targetSentenceDisplay" class="italic text-slate-400 font-serif bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-dashed"></p>
+                    <textarea id="pyqQuestionArea" rows="2" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none text-slate-900 dark:text-white font-bold" placeholder="Type Question parameter..."></textarea>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" class="bg-slate-50 dark:bg-slate-950 border p-2 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option A">
+                        <input type="text" class="bg-slate-50 dark:bg-slate-950 border p-2 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option B">
+                        <input type="text" class="bg-slate-50 dark:bg-slate-950 border p-2 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option C">
+                        <input type="text" class="bg-slate-50 dark:bg-slate-950 border p-2 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option D">
+                    </div>
+                    <input type="text" class="w-full bg-slate-50 dark:bg-slate-950 border p-2 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Solution Explanation...">
+                    <button onclick="alert('🚀 MCQ Embedded Successfully!'); closeMcqModal();" class="w-full bg-rose-500 text-white py-2.5 rounded-xl font-black">Deploy MCQ Question</button>
+                </div>
             </div>
         </div>
 
-        <!-- BOTTOM NAV -->
-        <nav id="adminBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t p-3 flex justify-around">
-            <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 text-xs"><i class="fa-solid fa-house"></i></button>
-            <button onclick="navigateToView('view-subject-hub')" class="text-rose-500 text-xs"><i class="fa-solid fa-book"></i></button>
-            <button onclick="window.location.href='admin-quiz.html'" class="text-slate-400 text-xs"><i class="fa-solid fa-vial"></i></button>
-            <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 text-xs"><i class="fa-solid fa-stopwatch"></i></button>
+        <!-- BOTTOM NAV STRAP -->
+        <nav id="adminBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3.5 flex justify-around items-center shadow-2xl lg:pl-80 w-full box-border">
+            <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
+            <button onclick="navigateToView('view-subject-hub')" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
+            <button onclick="window.location.href='admin-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
+            <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
+            <button onclick="window.location.href='admin-students.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Students</span></button>
         </nav>
     </div>
 </body>
-            </html>
+</html>
     
