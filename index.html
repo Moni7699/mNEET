@@ -3,263 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET Platform</title>
-    <style>
-        :root {
-            --bg-main: #0d1117;
-            --bg-card: #161b22;
-            --border-color: #30363d;
-            --text-main: #c9d1d9;
-            --text-muted: #8b949e;
-            --accent-blue: #58a6ff;
-            --accent-green: #2ea44f;
-            --accent-red: #da3637;
-            --coin-gold: #f1c40f;
+    <title>mNEET - Authentication Arena</title>
+    <!-- Tailwind CSS for Modern UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase App and Auth SDKs (Modular v9) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // Firebase Configuration using your project ID
+        const firebaseConfig = {
+            projectId: "mneet-spark",
+            authDomain: "mneet-spark.firebaseapp.com",
+            storageBucket: "mneet-spark.appspot.com"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Dom Elements
+        const authForm = document.getElementById('authForm');
+        const nameGroup = document.getElementById('nameGroup');
+        const roleGroup = document.getElementById('roleGroup');
+        const submitBtn = document.getElementById('submitBtn');
+        const toggleLink = document.getElementById('toggleLink');
+        const formTitle = document.getElementById('form-title');
+        const errorMessage = document.getElementById('errorMessage');
+
+        let isSignUp = false;
+
+        // Toggle Login / Signup Mode
+        window.toggleMode = function(e) {
+            e.preventDefault();
+            isSignUp = !isSignUp;
+            errorMessage.innerText = "";
+            
+            if (isSignUp) {
+                nameGroup.classList.remove('hidden');
+                roleGroup.classList.remove('hidden');
+                formTitle.innerText = "Join the NEET Arena";
+                submitBtn.innerText = "Create Account";
+                toggleLink.innerHTML = 'Already have an account? <span class="text-sky-400 font-bold cursor-pointer hover:underline">Log In</span>';
+            } else {
+                nameGroup.classList.add('hidden');
+                roleGroup.classList.add('hidden');
+                formTitle.innerText = "Crack NEET with Gamified Learning";
+                submitBtn.innerText = "Log In";
+                toggleLink.innerHTML = 'Don\'t have an account? <span class="text-sky-400 font-bold cursor-pointer hover:underline">Sign Up</span>';
+            }
+        };
+
+        // Handle Authentication Logic
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMessage.innerText = "";
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            
+            try {
+                if (isSignUp) {
+                    const fullName = document.getElementById('fullName').value.trim();
+                    const role = document.getElementById('role').value;
+                    
+                    if (!fullName) {
+                        errorMessage.innerText = "Please enter your full name.";
+                        return;
+                    }
+
+                    // 1. Create user in Firebase Auth
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    // 2. Save Additional Info in Firestore
+                    await setDoc(doc(db, "users", user.uid), {
+                        uid: user.uid,
+                        name: fullName,
+                        email: email,
+                        role: role,
+                        bpCoins: role === 'student' ? 100 : 0, // Gift 100 bP Coins to new students
+                        createdAt: new Date().toISOString()
+                    });
+
+                    alert("Account Created Successfully!");
+                    redirectUser(role);
+
+                } else {
+                    // 1. Log In User
+                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                    const user = userCredential.user;
+
+                    // 2. Fetch User Role from Firestore
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        redirectUser(userData.role);
+                    } else {
+                        errorMessage.innerText = "User data not found in database.";
+                    }
+                }
+            } catch (error) {
+                console.error(error);
+                // Human-readable error messages
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage.innerText = "This email is already registered.";
+                } else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+                    errorMessage.innerText = "Invalid Email or Password.";
+                } else {
+                    errorMessage.innerText = error.message;
+                }
+            }
+        });
+
+        // Smart Redirection Matrix
+        function redirectUser(role) {
+            if (role === 'admin') {
+                window.location.href = "admin-dashboard.html";
+            } else {
+                window.location.href = "student-dashboard.html";
+            }
         }
-
-        body.white-mode {
-            --bg-main: #f8f9fa;
-            --bg-card: #ffffff;
-            --border-color: #e1e4e8;
-            --text-main: #24292e;
-            --text-muted: #586069;
-            --accent-blue: #0366d6;
-            --accent-green: #28a745;
-            --accent-red: #d73a49;
-        }
-
-        body {
-            background-color: var(--bg-main); color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0; padding: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column;
-        }
-
-        .app-container { width: 100%; max-width: 100%; height: 100vh; margin: 0 auto; display: flex; flex-direction: column; background: var(--bg-main); }
-        @media (min-width: 768px) {
-            .app-container { max-width: 450px; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); box-shadow: 0 0 20px rgba(0,0,0,0.3); }
-            body { background-color: #010409; } body.white-mode { background-color: #e1e4e8; }
-        }
-
-        .screen { display: none; height: 100%; width: 100%; box-sizing: border-box; flex-direction: column; }
-        .screen.active { display: flex; }
-        
-        #auth-container { justify-content: center; align-items: center; }
-        .auth-card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 25px; border-radius: 12px; width: 85%; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-        .auth-card.active { display: block; }
-        h2, h3, h4 { margin-top: 0; text-align: center; color: var(--text-main); }
-        
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; }
-        .input-group input, .input-group select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-main); color: var(--text-main); box-sizing: border-box; }
-        .btn-primary { width: 100%; padding: 12px; background: var(--accent-blue); border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; font-size: 1rem; }
-
-        /* ⬆️ FIXED TOP ROW */
-        .top-row {
-            height: 65px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);
-            display: flex; justify-content: space-between; align-items: center; padding: 0 10px; z-index: 10;
-        }
-        .top-left, .top-right { display: flex; align-items: center; gap: 8px; }
-        .top-center { display: flex; flex-direction: column; align-items: center; text-align: center; flex: 1; max-width: 180px; }
-        .student-name-text { font-weight: bold; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
-        .student-college-text { font-size: 0.75rem; color: var(--accent-blue); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
-        .icon-btn { background: transparent; border: none; color: var(--text-main); font-size: 1.15rem; cursor: pointer; padding: 4px; }
-        .coin-badge { background: var(--bg-main); border: 1px solid var(--coin-gold); color: var(--coin-gold); padding: 4px 8px; border-radius: 15px; font-size: 0.75rem; font-weight: bold; }
-
-        /* ⬇️ FIXED BOTTOM ROW */
-        .bottom-row { height: 65px; background: var(--bg-card); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; align-items: center; z-index: 10; }
-        .nav-tab { background: transparent; border: none; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; cursor: pointer; gap: 4px; }
-        .nav-tab.active-tab { color: var(--accent-blue); font-weight: bold; }
-
-        /* 📜 SCROLLABLE CONTAINER & VIEWS */
-        .middle-content { flex: 1; overflow-y: auto; padding: 12px; box-sizing: border-box; }
-        .tab-view { display: none; width: 100%; }
-        .tab-view.active-view { display: block; }
-
-        /* ☰ SIDEBAR & PHOTO UPLOAD */
-        .sidebar { position: fixed; top: 0; right: -280px; width: 280px; height: 100%; background: var(--bg-card); border-left: 1px solid var(--border-color); transition: 0.3s ease; z-index: 100; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
-        .sidebar.open { right: 0; }
-        .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; }
-        .sidebar-overlay.active { display: block; }
-        
-        .profile-upload-container { position: relative; width: 75px; height: 75px; margin: 0 auto 15px auto; }
-        .sb-profile-img { width: 100%; height: 100%; border-radius: 50%; background: #30363d; border: 2px solid var(--accent-blue); object-fit: cover; }
-        .upload-icon-badge { position: absolute; bottom: 0; right: 0; background: var(--accent-blue); color: white; width: 22px; height: 22px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 0.7rem; cursor: pointer; }
-        
-        .sb-input-group { margin-bottom: 12px; }
-        .sb-input-group label { display: block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 3px; }
-        .sb-input-group input { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-main); color: var(--text-main); box-sizing: border-box; font-size: 0.85rem; }
-        .social-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 15px 0; }
-        .social-btn { flex: 1; min-width: 45%; padding: 6px; border: 1px solid var(--border-color); background: var(--bg-main); color: var(--text-main); text-align: center; border-radius: 4px; text-decoration: none; font-size: 0.75rem; }
-        .admin-block { background: rgba(218,54,55,0.08); border: 1px dashed var(--accent-red); padding: 12px; border-radius: 8px; margin-bottom: 15px; display: none; }
-    </style>
+    </script>
 </head>
-<body>
+<body class="bg-slate-950 min-h-screen flex items-center justify-center p-4">
 
-    <div class="app-container">
-        <!-- SPLASH SCREEN -->
-        <div id="splash-screen" class="screen active" style="justify-content: center; align-items: center;">
-            <h1 style="color: #fff; text-shadow: 0 0 10px var(--accent-blue);">mNEET</h1>
+    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-8 transform transition-all duration-300">
+        <!-- Logo and Brand -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-black tracking-wider text-sky-400 drop-shadow">mNEET</h1>
+            <p id="form-title" class="text-slate-400 text-sm mt-2 transition-all">Crack NEET with Gamified Learning</p>
         </div>
 
-        <!-- AUTH SCREEN -->
-        <div id="auth-container" class="screen">
-            <!-- Login Card -->
-            <div id="signin-card" class="auth-card active">
-                <h2>Aspirant Sign In</h2>
-                <form id="signin-form">
-                    <div class="input-group"><label>Email Address</label><input type="email" id="login-email" required></div>
-                    <div class="input-group"><label>Password</label><input type="password" id="login-password" required></div>
-                    <button type="submit" class="btn-primary">Sign In</button>
-                </form>
-                <p style="text-align: center; font-size: 0.9rem; margin-top:15px;">New to mNEET? <a href="#" id="go-to-signup" style="color: var(--accent-blue);">Create Account</a></p>
-            </div>
-            <!-- Signup Card -->
-            <div id="signup-card" class="auth-card">
-                <h2>Create Account</h2>
-                <form id="signup-form">
-                    <div class="input-group"><label>Full Name</label><input type="text" id="reg-name" required></div>
-                    <div class="input-group"><label>Email Address</label><input type="email" id="reg-email" required></div>
-                    <div class="input-group"><label>Phone Number</label><input type="tel" id="reg-phone" required></div>
-                    <div class="input-group"><label>City / Town</label><input type="text" id="reg-city" required></div>
-                    <div class="input-group"><label>Password</label><input type="password" id="reg-password" required></div>
-                    <button type="submit" class="btn-primary">Register</button>
-                </form>
-                <p style="text-align: center; font-size: 0.9rem; margin-top:15px;">Have account? <a href="#" id="go-to-signin" style="color: var(--accent-blue);">Sign In</a></p>
-            </div>
-        </div>
+        <!-- Error Notification Panel -->
+        <div id="errorMessage" class="text-rose-500 text-sm text-center font-medium mb-4 transition-all"></div>
 
-        <!-- CORE APP DASHBOARD -->
-        <div id="app-dashboard" class="screen">
-            <!-- TOP ROW -->
-            <div class="top-row">
-                <div class="top-left">
-                    <button class="icon-btn" onclick="alert('No notifications')">🔔</button>
-                    <button class="icon-btn" onclick="alert('Challenge systems coming soon')">⚔️</button>
-                </div>
-                <div class="top-center">
-                    <span class="student-name-text" id="nav-user-name">Student Name</span>
-                    <span class="student-college-text" id="nav-user-college">No Dream College Set</span>
-                </div>
-                <div class="top-right">
-                    <div class="coin-badge">🟡 <span id="user-bp-coins">0</span></div>
-                    <button class="icon-btn" id="btn-sidebar-open">☰</button>
-                </div>
+        <!-- Authentication Form -->
+        <form id="authForm" class="space-y-5">
+            <!-- Full Name (Hidden in Login Mode) -->
+            <div id="nameGroup" class="space-y-2 hidden transition-all">
+                <label class="text-sm font-semibold text-slate-400 block">Full Name</label>
+                <input type="text" id="fullName" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition" placeholder="Dr. Rahul Sharma">
             </div>
 
-            <!-- SCROLLABLE CONTENT AREA -->
-            <div class="middle-content">
-                
-                <!-- 🏠 HOME TAB VIEW -->
-                <div id="view-home" class="tab-view active-view">
-                    <!-- Admin Panel inside Home -->
-                    <div class="admin-block id-admin-panel">
-                        <h5 style="color:var(--accent-red); margin:0 0 5px 0;">⚡ Admin Global Control Panel</h5>
-                        <button style="background:var(--accent-green); color:#fff; border:none; padding:6px 10px; border-radius:4px; font-size:0.75rem; font-weight:bold; cursor:pointer;">+ Upload Daily Motivation</button>
-                    </div>
-
-                    <!-- 📦 PACKAGE SELECTION BAR -->
-                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
-                        <span style="font-size: 0.8rem; font-weight: bold; color: var(--text-muted);">Active Package:</span>
-                        <select id="package-selector">
-                            <option value="free">Free Practice Account</option>
-                            <option value="premium_spark">mNEET Spark Premium Test</option>
-                        </select>
-                    </div>
-
-                    <!-- ⏰ COUNTDOWN CLOCK -->
-                    <div style="background: linear-gradient(135deg, #1f2937, #111827); border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: center;">
-                        <span style="font-size: 0.75rem; color: var(--accent-blue); font-weight: bold; text-transform: uppercase;">Countdown to Target Exam</span>
-                        <div id="countdown-clock" style="display: flex; justify-content: center; gap: 10px; margin-top: 8px; font-family: monospace; font-size: 1.1rem; font-weight: bold; color: #fff;">
-                            <!-- Dynamically loaded via js -->
-                        </div>
-                    </div>
-
-                    <!-- 🎥 DAILY MOTIVATION HUB -->
-                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 12px; border-radius: 10px; margin-bottom: 15px;">
-                        <h4 style="margin:0 0 4px 0; font-size:0.85rem; color:var(--coin-gold); text-align:left;">✨ Daily Mentor Feed</h4>
-                        <p id="motivation-text" style="margin:0; font-size:0.8rem; line-height:1.4;">"Consistency beats talent. Keep pushing forward."</p>
-                    </div>
-
-                    <!-- 🎯 LIVE & UPLOADED TEST TRACKS -->
-                    <h4 style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 8px 0; text-transform: uppercase; text-align:left;">Live & Upcoming Tests</h4>
-                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-left: 4px solid var(--accent-red); padding: 12px; border-radius: 8px; margin-bottom: 15px; display:flex; justify-content: space-between; align-items: center;">
-                        <div style="text-align:left;">
-                            <span style="background:var(--accent-red); color:white; font-size:0.6rem; font-weight:bold; padding:2px 5px; border-radius:3px;">LIVE NOW</span>
-                            <h5 style="margin:4px 0 2px 0; font-size:0.85rem;">Full Syllabus Biology Mock-03</h5>
-                            <p style="margin:0; font-size:0.75rem; color:var(--text-muted);">Duration: 180 Mins • 90 MCQs</p>
-                        </div>
-                        <button style="background:var(--accent-blue); color:#fff; border:none; padding:6px 12px; border-radius:4px; font-size:0.75rem; font-weight:bold; cursor:pointer;">Attend</button>
-                    </div>
-
-                    <!-- 📊 PROGRESS TRACKER -->
-                    <h4 style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 8px 0; text-transform: uppercase; text-align:left;">Analytics & Tracking</h4>
-                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; text-align:left;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
-                            <div style="background:var(--bg-main); padding:10px; border-radius:6px; text-align:center;">
-                                <span style="font-size:1.1rem; font-weight:bold; color:var(--accent-green);" id="dash-tests">0</span>
-                                <span style="font-size:0.65rem; display:block; color:var(--text-muted);">Tests Attended</span>
-                            </div>
-                            <div style="background:var(--bg-main); padding:10px; border-radius:6px; text-align:center;">
-                                <span style="font-size:1.1rem; font-weight:bold; color:var(--accent-blue);" id="dash-questions">0</span>
-                                <span style="font-size:0.65rem; display:block; color:var(--text-muted);">MCQs Solved</span>
-                            </div>
-                        </div>
-                        <div style="margin-bottom: 12px; font-size:0.8rem; display:flex; justify-content:space-between;">
-                            <span style="color:var(--text-muted);">Predicted AIR Rank:</span>
-                            <span style="font-weight:bold; color:var(--coin-gold);" id="dash-air">#99,999</span>
-                        </div>
-                        <span style="font-size:0.75rem; font-weight:bold; display:block; margin-bottom:8px;">Accuracy Comparison against Topper</span>
-                        <div style="margin-bottom: 8px;">
-                            <div style="display:flex; justify-content:space-between; font-size:0.7rem; margin-bottom:2px;"><span style="color:var(--accent-blue);">Your Accuracy</span><span id="dash-accuracy-text">0%</span></div>
-                            <div style="background:var(--bg-main); height:6px; border-radius:3px;"><div id="dash-accuracy-bar" style="background:var(--accent-blue); width:0%; height:100%; border-radius:3px;"></div></div>
-                        </div>
-                        <div>
-                            <div style="display:flex; justify-content:space-between; font-size:0.7rem; margin-bottom:2px;"><span style="color:var(--coin-gold);">AIR 1 Topper</span><span>98%</span></div>
-                            <div style="background:var(--bg-main); height:6px; border-radius:3px;"><div style="background:var(--coin-gold); width:98%; height:100%; border-radius:3px;"></div></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 📖 STUDY VIEW -->
-                <div id="view-study" class="tab-view"><div style="background: var(--bg-card); padding: 20px; border-radius: 8px;"><h3>📖 Study Zone</h3><p>NCERT Syllabus mapping and topics loader module.</p></div></div>
-                <!-- 🎯 TEST VIEW -->
-                <div id="view-test" class="tab-view"><div style="background: var(--bg-card); padding: 20px; border-radius: 8px;"><h3>🎯 Mock Test Hub</h3><p>Chapter-wise test layouts.</p></div></div>
-                <!-- 💳 BUY TEST VIEW -->
-                <div id="view-buytest" class="tab-view"><div style="background: var(--bg-card); padding: 20px; border-radius: 8px;"><h3>💳 Buy Packages</h3><p>Premium test items.</p></div></div>
-                <!-- 🏪 mSTORE VIEW -->
-                <div id="view-mstore" class="tab-view"><div style="background: var(--bg-card); padding: 20px; border-radius: 8px;"><h3>🏪 mStore Tokens</h3><p>Redeem coins for content.</p></div></div>
-
+            <!-- Email Input -->
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-slate-400 block">Email Address</label>
+                <input type="email" id="email" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition" placeholder="yourname@gmail.com">
             </div>
 
-            <!-- BOTTOM NAVIGATION BAR -->
-            <div class="bottom-row">
-                <button class="nav-tab active-tab" data-target="home"><span>🏠</span><span style="font-size: 0.7rem;">Home</span></button>
-                <button class="nav-tab" data-target="study"><span>📖</span><span style="font-size: 0.7rem;">Study</span></button>
-                <button class="nav-tab" data-target="test"><span>🎯</span><span style="font-size: 0.7rem;">Test</span></button>
-                <button class="nav-tab" data-target="buytest"><span>💳</span><span style="font-size: 0.7rem;">Buy Test</span></button>
-                <button class="nav-tab" data-target="mstore"><span>🏪</span><span style="font-size: 0.7rem;">mStore</span></button>
+            <!-- Password Input -->
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-slate-400 block">Password</label>
+                <input type="password" id="password" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition" placeholder="••••••••">
             </div>
+
+            <!-- User Role (Hidden in Login Mode) -->
+            <div id="roleGroup" class="space-y-2 hidden transition-all">
+                <label class="text-sm font-semibold text-slate-400 block">Register As</label>
+                <select id="role" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition">
+                    <option value="student">NEET Aspirant (Student)</option>
+                    <option value="admin">Platform Mentor (Admin)</option>
+                </select>
+            </div>
+
+            <!-- Submit Action -->
+            <button type="submit" id="submitBtn" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-3.5 px-4 rounded-xl shadow-lg transition duration-200 transform hover:-translate-y-0.5 active:translate-y-0">
+                Log In
+            </button>
+        </form>
+
+        <!-- Toggle View Matrix -->
+        <div class="text-center mt-6 text-sm text-slate-400" id="toggleLink" onclick="toggleMode(event)">
+            Don't have an account? <span class="text-sky-400 font-bold cursor-pointer hover:underline">Sign Up</span>
         </div>
     </div>
 
-    <!-- SIDEBAR -->
-    <div class="sidebar-overlay" id="sb-overlay"></div>
-    <div class="sidebar" id="app-sidebar">
-        <button class="icon-btn" id="btn-sidebar-close" style="align-self: flex-end;">❌</button>
-        <div style="overflow-y: auto; flex: 1;">
-            <div class="profile-upload-container">
-                <img src="" class="sb-profile-img" id="user-avatar" alt="Avatar">
-                <label for="avatar-input" class="upload-icon-badge">📷</label>
-                <input type="file" id="avatar-input" accept="image/*" style="display:none;">
-            </div>
-            <div class="sb-input-group"><label>Full Name</label><input type="text" id="sb-name" readonly></div>
-            <div class="sb-input-group"><label>Phone Number</label><input type="text" id="sb-phone" readonly></div>
-            <div class="sb-input-group"><label>Dream College</label><input type="text" id="sb-dream-college" placeholder="e.g. AIIMS Delhi"></div>
-            <div class="sb-input-group"><label>Target Exam Date</label><input type="date" id="sb-target-date"></div>
-            
-            <p style="font-size:0.75rem; color:var(--text-muted); margin: 15px 0 5px 0; font-weight:bold; text-align:left;">Official Handles</p>
-            <div class="social-links">
-                <a href="https://youtube.com" target="_blank" class="social-btn" style="color:#ff0000;">YouTube</a>
-                <a href="https://instagram.com" target="_blank" class="social-btn" style="color:#e1306c;">Instagram</a>
-                <a href="https://facebook.com" target="_blank" class="social-btn" style="color:#4267b2;">Facebook</a>
-                <a href="https://t.me" target="_blank" class="social-btn" style="color:#0088cc
+</body>
+</html>
