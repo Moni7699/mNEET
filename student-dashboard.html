@@ -3,21 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET Dashboard - Speed to Success</title>
-    <!-- Tailwind CSS with Dark/Light Support -->
+    <title>mNEET Dashboard - Pro Edition</title>
+    <!-- Tailwind CSS for Advanced Responsive UI -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
         }
     </script>
+    <!-- FontAwesome for Pro App Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <!-- Firebase SDK Modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-        // Authentic Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
             authDomain: "mneet-spark.firebaseapp.com",
@@ -32,16 +34,40 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Security Check & Real-time Profile Engine
+        let currentUser = null;
+        let timerInterval = null;
+
+        // Security Lock & Data Orchestrator
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                currentUser = user;
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists() && userDoc.data().role === 'student') {
-                    document.getElementById('studentName').innerText = userDoc.data().name;
-                    document.getElementById('coinCount').innerText = userDoc.data().bpCoins || 0;
+                    const data = userDoc.data();
+                    
+                    // Populate data perfectly across UI
+                    document.getElementById('sbName').innerText = data.name || "Aspirant";
+                    document.getElementById('sbEmail').innerText = data.email || "";
+                    document.getElementById('sbPhone').innerText = data.phone || "No Phone";
+                    document.getElementById('headerName').innerText = data.name || "Aspirant";
+                    document.getElementById('coinCount').innerText = data.bpCoins || 0;
+                    
+                    // Dream College & Target Date Sync
+                    const dc = data.dreamCollege || "Not Set Yet";
+                    document.getElementById('sbDreamCollegeInput').value = data.dreamCollege || "";
+                    document.getElementById('headerDreamCollege').innerText = dc;
+                    document.getElementById('targetDateInput').value = data.targetDate || "";
+                    
+                    if(data.profilePic) {
+                        document.getElementById('profileImg').src = data.profilePic;
+                    }
+
+                    if(data.targetDate) {
+                        startCountdown(data.targetDate);
+                    }
+
                     document.getElementById('mainContent').classList.remove('hidden');
                 } else {
-                    alert("Access restricted. Please log in with a valid student account.");
                     window.location.href = "index.html";
                 }
             } else {
@@ -49,125 +75,263 @@
             }
         });
 
-        // Global Theme Switcher Logic
+        // Save Meta Features (Dream College & Target Date)
+        window.saveMetaData = async function() {
+            if(!currentUser) return;
+            const dcValue = document.getElementById('sbDreamCollegeInput').value.trim();
+            const tdValue = document.getElementById('targetDateInput').value;
+
+            try {
+                await updateDoc(doc(db, "users", currentUser.uid), {
+                    dreamCollege: dcValue,
+                    targetDate: tdValue
+                });
+                document.getElementById('headerDreamCollege').innerText = dcValue || "Not Set Yet";
+                if(tdValue) startCountdown(tdValue);
+                alert("Profile targets updated successfully!");
+            } catch(e) {
+                alert("Error saving profiles.");
+            }
+        };
+
+        // Live Dynamic Countdown Clock Engine
+        function startCountdown(targetDateStr) {
+            if(timerInterval) clearInterval(timerInterval);
+            const target = new Date(targetDateStr).getTime();
+            
+            timerInterval = setInterval(() => {
+                const now = new Date().getTime();
+                const diff = target - now;
+
+                if(diff <= 0) {
+                    document.getElementById('countdownClock').innerHTML = "EXAM ARENA LIVE!";
+                    clearInterval(timerInterval);
+                    return;
+                }
+
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+                document.getElementById('timerDays').innerText = String(days).padStart(2, '0');
+                document.getElementById('timerHours').innerText = String(hours).padStart(2, '0');
+                document.getElementById('timerMins').innerText = String(mins).padStart(2, '0');
+                document.getElementById('timerSecs').innerText = String(secs).padStart(2, '0');
+            }, 1000);
+        }
+
+        // Direct Profile Photo Upload to Base64 (Gallery Bypass)
+        window.triggerPhotoUpload = function() {
+            document.getElementById('galleryInput').click();
+        };
+
+        window.uploadPhoto = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onloadend = async function() {
+                const base64String = reader.result;
+                document.getElementById('profileImg').src = base64String;
+                if(currentUser) {
+                    await updateDoc(doc(db, "users", currentUser.uid), {
+                        profilePic: base64String
+                    });
+                }
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // Theme Switcher Sync Engine
         window.toggleTheme = function() {
             const htmlTag = document.documentElement;
-            const themeBtn = document.getElementById('themeBtn');
+            const themeBtnText = document.getElementById('themeBtnText');
             if (htmlTag.classList.contains('dark')) {
                 htmlTag.classList.remove('dark');
-                themeBtn.innerText = "🌙 Dark Mode";
+                themeBtnText.innerText = "Dark Mode";
                 localStorage.setItem('theme', 'light');
             } else {
                 htmlTag.classList.add('dark');
-                themeBtn.innerText = "☀️ Light Mode";
+                themeBtnText.innerText = "Light Mode";
                 localStorage.setItem('theme', 'dark');
             }
         };
 
-        // Secure Session Sign Out
-        window.handleLogout = function() {
-            signOut(auth).then(() => {
-                window.location.href = "index.html";
-            });
+        // UI Controls for Pro Sidebar Toggle
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('appSidebar');
+            sidebar.classList.toggle('-translate-x-full');
         };
 
-        // Initialize Local Storage Theme Check
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            const htmlTag = document.documentElement;
-            const themeBtn = document.getElementById('themeBtn');
-            if (savedTheme === 'light') {
-                htmlTag.classList.remove('dark');
-                themeBtn.innerText = "🌙 Dark Mode";
-            } else {
-                htmlTag.classList.add('dark');
-                themeBtn.innerText = "☀️ Light Mode";
-            }
-        });
-    </script>
-</head>
-<body class="bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100 font-sans transition-colors duration-300">
+        // Session Log Out
+        window.handleLogout = function() {
+            signOut(auth).then(() => { window.location.href = "index.html"; });
+        };
 
-    <div id="mainContent" class="hidden">
-        <!-- Main Navigation Header -->
-        <nav class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors duration-300">
-            <div class="flex items-center space-x-3">
-                <span class="text-3xl font-black tracking-wider text-sky-500 dark:text-sky-400">mNEET</span>
-                <span class="text-xs font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-md">BATTLE READY</span>
-            </div>
+        // Bottom Bar Hide/Show on Scroll End Logic
+        let isScrolling;
+        window.addEventListener('scroll', () => {
+            const bBar = document.getElementById('bottomNav');
+            bBar.style.transform = "translateY(100%)"; // Hide completely on scroll
             
-            <!-- Gamified Status Bar & Theme Selector -->
-            <div class="flex items-center space-x-4 w-full sm:w-auto justify-between sm:justify-end">
-                <!-- Theme Switcher -->
-                <button id="themeBtn" onclick="toggleTheme()" class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-3.5 py-1.5 rounded-xl text-xs font-bold transition hover:scale-105">
-                    ☀️ Light Mode
+            clearTimeout(isScrolling);
+            isScrolling = setTimeout(() => {
+                bBar.style.transform = "translateY(0)"; // Bring back on scroll stop
+            }, 250);
+        });
+
+        // Module Navigation Router Matrix
+        window.switchScreen = function(target) {
+            alert(`Navigating to ${target} Screen. \n(Coming Up in next steps!)`);
+        };
+    </script>
+    <style>
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen font-sans antialiased transition-colors duration-300">
+
+    <div id="mainContent" class="hidden flex min-h-screen relative overflow-x-hidden">
+
+        <!-- ============================================ -->
+        <!-- 1. LEFT SIDEBAR SCREEN PERFECTION            -->
+        <!-- ============================================ -->
+        <aside id="appSidebar" class="fixed top-0 bottom-0 left-0 z-50 w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col justify-between shadow-2xl lg:shadow-none">
+            
+            <!-- Top Controls Matrix inside Sidebar -->
+            <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                <button onclick="toggleTheme()" class="flex items-center space-x-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-sky-500">
+                    <i class="fa-solid var(--tw-brightness) fa-moon text-base"></i>
+                    <span id="themeBtnText">Light Mode</span>
                 </button>
+                <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
 
-                <!-- Coin Display -->
-                <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-950 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner">
-                    <span class="text-amber-500 text-lg">🪙</span>
-                    <span class="text-xs text-slate-500 dark:text-slate-400 font-bold">bP Coins:</span>
-                    <span id="coinCount" class="text-amber-500 dark:text-amber-400 font-extrabold text-base">---</span>
+            <!-- Profile & Configuration Area (Scrollable) -->
+            <div class="flex-1 overflow-y-auto custom-scroll p-6 space-y-6">
+                <!-- Profile Image Engine -->
+                <div class="text-center space-y-3 relative group">
+                    <div class="w-24 h-24 mx-auto rounded-full overflow-hidden border-2 border-sky-400 shadow-md relative">
+                        <img id="profileImg" src="https://api.dicebear.com/7.x/adventurer/svg?seed=Felix" alt="Avatar" class="w-full h-full object-cover">
+                    </div>
+                    <input type="file" id="galleryInput" accept="image/*" class="hidden" onchange="uploadPhoto(event)">
+                    <button onclick="triggerPhotoUpload()" class="text-xs font-bold text-sky-500 hover:underline block mx-auto"><i class="fa-solid fa-camera mr-1"></i> Upload Photo</button>
+                    
+                    <h3 id="sbName" class="text-lg font-black tracking-wide">Aspirant Name</h3>
+                    <p id="sbEmail" class="text-xs text-slate-400 -mt-2">email@gmail.com</p>
+                    <p id="sbPhone" class="text-xs text-slate-500 -mt-2">Phone</p>
                 </div>
 
-                <!-- User Profile Summary -->
+                <hr class="border-slate-200 dark:border-slate-800">
+
+                <!-- Target Updates Input Block -->
+                <div class="space-y-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Dream Medical College</label>
+                        <input type="text" id="sbDreamCollegeInput" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-sky-500" placeholder="AIIMS, New Delhi">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black tracking-widest text-slate-400 uppercase">NEET Target Exam Date</label>
+                        <input type="date" id="targetDateInput" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-sky-500">
+                    </div>
+                    <button onclick="saveMetaData()" class="w-full bg-sky-500 text-white dark:text-slate-950 font-bold text-xs py-2.5 rounded-xl hover:bg-sky-400 transition">💾 Save Core Targets</button>
+                </div>
+
+                <hr class="border-slate-200 dark:border-slate-800">
+
+                <!-- Admin Social Integrations Matrix -->
+                <div class="space-y-3">
+                    <span class="text-[10px] font-black tracking-widest text-slate-400 uppercase block">Official Hub Communities</span>
+                    <a href="#" class="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-red-500"><i class="fa-brands fa-youtube w-6 text-base"></i> YouTube Channel</a>
+                    <a href="#" class="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-blue-500"><i class="fa-brands fa-facebook w-6 text-base"></i> Facebook Page</a>
+                    <a href="#" class="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-pink-500"><i class="fa-brands fa-instagram w-6 text-base"></i> Instagram Feed</a>
+                    <a href="#" class="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-sky-400"><i class="fa-brands fa-telegram w-6 text-base"></i> Telegram Channel</a>
+                </div>
+
+                <hr class="border-slate-200 dark:border-slate-800">
+
+                <a href="#" class="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:underline"><i class="fa-solid fa-circle-info w-6"></i> About mNEET App</a>
+            </div>
+
+            <!-- Absolute Bottom Action -->
+            <div class="p-4 border-t border-slate-200 dark:border-slate-800">
+                <button onclick="handleLogout()" class="w-full bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 dark:hover:bg-rose-900/40 text-rose-500 font-bold py-2.5 rounded-xl transition text-sm">
+                    <i class="fa-solid fa-power-off mr-2"></i> Log Out Account
+                </button>
+            </div>
+        </aside>
+
+        <!-- ============================================ -->
+        <!-- MAIN WORKSPACE ARENA COMPONENT               -->
+        <!-- ============================================ -->
+        <main class="flex-1 lg:pl-80 pb-24 transition-all duration-300">
+            
+            <!-- 2 & 3. DYNAMIC TOP MATRIX STRAP -->
+            <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-6 py-4 sticky top-0 z-40 flex justify-between items-center transition-colors">
+                <!-- Hamburger Trigger & Context Identity -->
                 <div class="flex items-center space-x-3">
-                    <span class="text-sm text-slate-700 dark:text-slate-300 font-medium" id="studentName">Aspirant</span>
-                    <button onclick="handleLogout()" class="text-xs font-bold text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition">Logout</button>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Arena Selector Grid -->
-        <div class="max-w-6xl mx-auto p-6 md:p-8">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                
-                <!-- 1. Interactive NCERT Module -->
-                <div onclick="window.location.href='student-ncert.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-sky-500 dark:hover:border-sky-400 cursor-pointer transition transform hover:-translate-y-1 duration-200 shadow-sm dark:shadow-none">
-                    <div class="text-3xl mb-4">📖</div>
-                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">NCERT Interactive Reader</h3>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Read with active voice-guided synthesis, dynamic text highlighting, personalized notes, and interactive PYQ markers.</p>
+                    <button onclick="toggleSidebar()" class="lg:hidden text-slate-500 text-xl"><i class="fa-solid fa-bars"></i></button>
+                    <div class="flex flex-col">
+                        <h2 id="headerName" class="text-lg font-black tracking-wide text-slate-900 dark:text-white">Aspirant</h2>
+                        <p id="headerDreamCollege" class="text-xs font-bold text-sky-500 dark:text-sky-400 -mt-0.5">Targeting: Not Set Yet</p>
+                    </div>
                 </div>
 
-                <!-- 2. Practice Quizzes -->
-                <div onclick="window.location.href='student-quiz.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-emerald-500 dark:hover:border-emerald-400 cursor-pointer transition transform hover:-translate-y-1 duration-200 shadow-sm dark:shadow-none">
-                    <div class="text-3xl mb-4">⚡</div>
-                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Topic & Chapter Quizzes</h3>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Test accuracy step-by-step. Access instant visual results, performance analytics, and clear solutions.</p>
+                <!-- Three Direct Interaction Grid Widgets -->
+                <div class="flex items-center space-x-3 md:space-x-4">
+                    <!-- Notification Trigger -->
+                    <button onclick="switchScreen('Notifications')" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-sky-400 transition relative">
+                        <i class="fa-solid fa-bell text-slate-500 dark:text-slate-400"></i>
+                        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"></span>
+                    </button>
+                    <!-- Challenge Action -->
+                    <button onclick="switchScreen('Challenges')" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-purple-400 transition flex items-center space-x-1">
+                        <i class="fa-solid fa-swords text-purple-400"></i>
+                        <span class="hidden md:inline text-xs font-black uppercase text-purple-400 tracking-wider">Battle</span>
+                    </button>
+                    <!-- bP Coin Display / Leaderboard Launcher -->
+                    <div onclick="switchScreen('Leaderboard')" class="flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-xl cursor-pointer hover:scale-105 transition">
+                        <span class="text-amber-500 text-sm">🪙</span>
+                        <span id="coinCount" class="text-amber-500 font-black text-sm">0</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- CANVAS SCREEN PORTAL CONTENT CONTAINER -->
+            <div class="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
+
+                <!-- COURSE SELECTION MATRIX BAR -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="flex items-center space-x-3 w-full md:w-auto">
+                        <i class="fa-solid fa-graduation-cap text-sky-400 text-xl"></i>
+                        <select class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm font-bold rounded-xl px-4 py-2 text-slate-700 dark:text-slate-300 focus:outline-none w-full md:w-64">
+                            <option>mNEET Ultimate 2026 Batch</option>
+                            <option>Crash Course Express</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Dynamic Countdown UI Target Block -->
+                    <div id="countdownClock" class="flex items-center space-x-2 text-slate-600 dark:text-slate-400 font-mono text-sm font-bold bg-slate-100 dark:bg-slate-950 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <span>⏳ Time to Arena:</span>
+                        <span id="timerDays" class="text-sky-500 font-extrabold">00</span><span>d</span>
+                        <span id="timerHours" class="text-sky-500 font-extrabold">00</span><span>h</span>
+                        <span id="timerMins" class="text-sky-500 font-extrabold">00</span><span>m</span>
+                        <span id="timerSecs" class="text-sky-500 font-extrabold">00</span><span>s</span>
+                    </div>
                 </div>
 
-                <!-- 3. Official Mock Tests -->
-                <div onclick="window.location.href='student-mocktest.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-amber-500 dark:hover:border-amber-400 cursor-pointer transition transform hover:-translate-y-1 duration-200 shadow-sm dark:shadow-none">
-                    <div class="text-3xl mb-4">🏆</div>
-                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">NTA Pattern Mock Tests</h3>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Simulate the real NEET examination environment. Strict timers, comprehensive papers, and multi-tier analytics.</p>
+                <!-- DYNAMIC AD-ADMIN MOTIVATION BANNER MODULE -->
+                <div class="bg-gradient-to-r from-sky-500/10 via-purple-500/5 to-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
+                    <div class="absolute right-0 top-0 bottom-0 opacity-10 pointer-events-none transition group-hover:scale-110"><i class="fa-solid fa-dna text-[120px] p-4 text-sky-400"></i></div>
+                    <div class="max-w-xl space-y-2">
+                        <span class="bg-sky-500 text-slate-950 text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full">Arena Motivation</span>
+                        <h3 class="text-xl font-extrabold tracking-wide dark:text-white text-slate-800">"Success isn't given. It's earned in the arena of consistency."</h3>
+                        <p class="text-xs text-slate-400">Admin Live Broadcast Post • Updated Today</p>
+                    </div>
                 </div>
 
-                <!-- 4. Gamified Battle Arena -->
-                <div onclick="window.location.href='student-challenge.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-purple-500 dark:hover:border-purple-400 cursor-pointer transition transform hover:-translate-y-1 duration-200 shadow-sm dark:shadow-none">
-                    <div class="text-3xl mb-4">⚔️</div>
-                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">1v1 Quiz Challenges</h3>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Invite peers to direct real-time academic battles. Win live duels to secure massive bP Coin multipliers.</p>
-                </div>
-
-                <!-- 5. Active Leaderboards -->
-                <div onclick="window.location.href='student-leaderboard.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-indigo-500 dark:hover:border-indigo-400 cursor-pointer transition transform hover:-translate-y-1 duration-200 shadow-sm dark:shadow-none">
-                    <div class="text-3xl mb-4">📊</div>
-                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">National Leaderboard</h3>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Trace your direct academic rank. Compare accurate metrics against top performers across India.</p>
-                </div>
-
-                <!-- 6. Notifications Hub -->
-                <div onclick="window.location.href='student-notification.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-rose-500 dark:hover:border-rose-400 cursor-pointer transition transform hover:-translate-y-1 duration-200 shadow-sm dark:shadow-none">
-                    <div class="text-3xl mb-4">🔔</div>
-                    <h3 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Announcements</h3>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">Receive urgent notices, upcoming live exam timelines, and targeted updates directly from mentors.</p>
-                </div>
-
-            </div>
-        </div>
-    </div>
-
-</body>
-    </html>
-    
+                <!-- ADVANCED STUDENT METRIC PROGRESS COMPARISON MATRIX -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+                    <h3 class="text-xs font-black tracking-widest uppercase 
