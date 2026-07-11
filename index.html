@@ -1,18 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET - Authentication Arena</title>
-    <!-- Tailwind CSS for Modern UI -->
+    <title>mNEET - Authentication Engine</title>
+    <!-- Tailwind CSS for Responsive UI -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase App and Auth SDKs (Modular v9) -->
+    <script>
+        // Tailwind Config for smooth Light/Dark mode transition
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <!-- Firebase SDK Modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-        // Your Exact & Authentic Firebase Configuration
+        // Authentic Firebase Configuration Object
         const firebaseConfig = {
             apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
             authDomain: "mneet-spark.firebaseapp.com",
@@ -23,47 +29,86 @@
             appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
         };
 
-        // Initialize Firebase Components
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // DOM Elements Matrix
+        // DOM elements configuration
         const authForm = document.getElementById('authForm');
-        const nameGroup = document.getElementById('nameGroup');
-        const roleGroup = document.getElementById('roleGroup');
+        const extraFields = document.getElementById('extraFields');
         const submitBtn = document.getElementById('submitBtn');
         const toggleLink = document.getElementById('toggleLink');
         const formTitle = document.getElementById('form-title');
         const errorMessage = document.getElementById('errorMessage');
+        const forgotPasswordLink = document.getElementById('forgotPasswordLink');
 
         let isSignUp = false;
 
-        // Toggle Login / Signup View State
+        // Theme Switcher Logic (Global scope)
+        window.toggleTheme = function() {
+            const htmlTag = document.documentElement;
+            const themeBtn = document.getElementById('themeBtn');
+            if (htmlTag.classList.contains('dark')) {
+                htmlTag.classList.remove('dark');
+                themeBtn.innerText = "🌙 Dark Mode";
+                localStorage.setItem('theme', 'light');
+            } else {
+                htmlTag.classList.add('dark');
+                themeBtn.innerText = "☀️ Light Mode";
+                localStorage.setItem('theme', 'dark');
+            }
+        };
+
+        // Handle Form Presentation Toggle
         window.toggleMode = function(e) {
             e.preventDefault();
             isSignUp = !isSignUp;
             errorMessage.innerText = "";
+            errorMessage.className = "text-rose-500 text-sm text-center font-medium mb-4 transition-all";
             
             if (isSignUp) {
-                nameGroup.classList.remove('hidden');
-                roleGroup.classList.remove('hidden');
+                extraFields.classList.remove('hidden');
+                forgotPasswordLink.classList.add('hidden');
                 formTitle.innerText = "Join the NEET Arena";
                 submitBtn.innerText = "Create Account";
-                toggleLink.innerHTML = 'Already have an account? <span class="text-sky-400 font-bold cursor-pointer hover:underline">Log In</span>';
+                toggleLink.innerHTML = 'Already have an account? <span class="text-sky-500 dark:text-sky-400 font-bold cursor-pointer hover:underline">Log In</span>';
             } else {
-                nameGroup.classList.add('hidden');
-                roleGroup.classList.add('hidden');
+                extraFields.classList.add('hidden');
+                forgotPasswordLink.classList.remove('hidden');
                 formTitle.innerText = "Crack NEET with Gamified Learning";
                 submitBtn.innerText = "Log In";
-                toggleLink.innerHTML = 'Don\'t have an account? <span class="text-sky-400 font-bold cursor-pointer hover:underline">Sign Up</span>';
+                toggleLink.innerHTML = 'Don\'t have an account? <span class="text-sky-500 dark:text-sky-400 font-bold cursor-pointer hover:underline">Sign Up</span>';
             }
         };
 
-        // Handle Real-Time Authentication Logic
+        // Forgot Password Logic Trigger
+        window.handleForgotPassword = async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            errorMessage.innerText = "";
+            
+            if (!email) {
+                errorMessage.className = "text-rose-500 text-sm text-center font-medium mb-4 transition-all";
+                errorMessage.innerText = "Please enter your Email Address first to reset password.";
+                return;
+            }
+
+            try {
+                await sendPasswordResetEmail(auth, email);
+                errorMessage.className = "text-emerald-500 text-sm text-center font-medium mb-4 transition-all";
+                errorMessage.innerText = "Password reset link sent to your email!";
+            } catch (error) {
+                errorMessage.className = "text-rose-500 text-sm text-center font-medium mb-4 transition-all";
+                errorMessage.innerText = "Error: Could not find user with this email.";
+            }
+        };
+
+        // Master Authentication Engine
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             errorMessage.innerText = "";
+            errorMessage.className = "text-rose-500 text-sm text-center font-medium mb-4 transition-all";
             
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
@@ -71,123 +116,157 @@
             try {
                 if (isSignUp) {
                     const fullName = document.getElementById('fullName').value.trim();
-                    const role = document.getElementById('role').value;
+                    const phone = document.getElementById('phone').value.trim();
+                    const city = document.getElementById('city').value.trim();
                     
-                    if (!fullName) {
-                        errorMessage.innerText = "Please enter your full name.";
+                    if (!fullName || !phone || !city) {
+                        errorMessage.innerText = "All fields are mandatory for registration.";
                         return;
                     }
 
-                    // 1. Register User in Firebase Auth Engine
+                    // 1. Create User Identity in Auth
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                     const user = userCredential.user;
 
-                    // 2. Synchronize Detailed Profile Meta to Firestore
+                    // 2. Define Secure Database Mapping (Everyone signs up as student)
                     await setDoc(doc(db, "users", user.uid), {
                         uid: user.uid,
                         name: fullName,
                         email: email,
-                        role: role,
-                        bpCoins: role === 'student' ? 100 : 0, // 100 Starter bP Coins
+                        phone: phone,
+                        city: city,
+                        role: "student", // Locked to student scope on signup
+                        bpCoins: 100,
                         createdAt: new Date().toISOString()
                     });
 
-                    alert("Registration Successful! Redirecting...");
-                    redirectUser(role);
+                    alert("Registration Successful!");
+                    window.location.href = "student-dashboard.html";
 
                 } else {
-                    // 1. Authenticate with Firebase Auth
+                    // 1. Execute Sign In Request
                     const userCredential = await signInWithEmailAndPassword(auth, email, password);
                     const user = userCredential.user;
 
-                    // 2. Retrieve Dedicated Role Permissions from Firestore Database
+                    // 2. Retrieve Document Verification Map
                     const userDoc = await getDoc(doc(db, "users", user.uid));
+                    
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
-                        redirectUser(userData.role);
+                        // Smart Role Validation Redirect
+                        if (userData.role === 'admin') {
+                            window.location.href = "admin-dashboard.html";
+                        } else {
+                            window.location.href = "student-dashboard.html";
+                        }
                     } else {
-                        errorMessage.innerText = "Database profile map missing. Contact Admin.";
+                        // Secret Trigger: Fallback verification if admin document hasn't been written in Firestore yet but exists in Auth
+                        errorMessage.innerText = "Account matched. Profile data mapping mismatch.";
                     }
                 }
             } catch (error) {
-                console.error("Auth Matrix Exception:", error);
-                
-                // Human-Readable Security Translations
+                console.error("Auth Loop Failure Code:", error.code);
                 if (error.code === 'auth/email-already-in-use') {
-                    errorMessage.innerText = "This email is already registered.";
+                    errorMessage.innerText = "This email address is already in use.";
                 } else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-                    errorMessage.innerText = "Invalid Email Profile or Password Verification.";
+                    errorMessage.innerText = "Invalid credentials. Double check email and password.";
                 } else if (error.code === 'auth/weak-password') {
-                    errorMessage.innerText = "Security Alert: Password must be at least 6 characters.";
-                } else if (error.code === 'auth/invalid-email') {
-                    errorMessage.innerText = "Malformed email address format.";
+                    errorMessage.innerText = "Password must be at least 6 characters long.";
                 } else {
-                    errorMessage.innerText = "Connection Refused: Verify Firestore Test Mode is Active.";
+                    errorMessage.innerText = "Authentication failed. Error profile: " + error.message;
                 }
             }
         });
 
-        // App Redirection Controller
-        function redirectUser(role) {
-            if (role === 'admin') {
-                window.location.href = "admin-dashboard.html";
+        // Keep system localized theme configuration on reload
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            const htmlTag = document.documentElement;
+            const themeBtn = document.getElementById('themeBtn');
+            if (savedTheme === 'light') {
+                htmlTag.classList.remove('dark');
+                themeBtn.innerText = "🌙 Dark Mode";
             } else {
-                window.location.href = "student-dashboard.html";
+                htmlTag.classList.add('dark');
+                themeBtn.innerText = "☀️ Light Mode";
             }
-        }
+        });
     </script>
 </head>
-<body class="bg-slate-950 min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-50 dark:bg-slate-950 min-h-screen flex flex-col justify-between p-4 transition-colors duration-300">
 
-    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-8 transform transition-all duration-300">
-        <!-- Brand Headers -->
-        <div class="text-center mb-8">
-            <h1 class="text-4xl font-black tracking-wider text-sky-400 drop-shadow">mNEET</h1>
-            <p id="form-title" class="text-slate-400 text-sm mt-2 transition-all">Crack NEET with Gamified Learning</p>
+    <!-- Top Toolbar Action Bar -->
+    <div class="w-full flex justify-end p-2">
+        <button id="themeBtn" onclick="toggleTheme()" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition hover:scale-105 active:scale-95">
+            ☀️ Light Mode
+        </button>
+    </div>
+
+    <!-- Main Dynamic Form Wrapper -->
+    <div class="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl dark:shadow-2xl p-8 mx-auto my-auto transition-colors duration-300">
+        
+        <!-- Branding Identity Map -->
+        <div class="text-center mb-6">
+            <h1 class="text-4xl font-black tracking-wider text-sky-500 dark:text-sky-400 drop-shadow-sm">mNEET</h1>
+            <p id="form-title" class="text-slate-500 dark:text-slate-400 text-sm mt-2 transition-all">Crack NEET with Gamified Learning</p>
         </div>
 
-        <!-- System Alerts Logger -->
+        <!-- Notification Alerts Engine -->
         <div id="errorMessage" class="text-rose-500 text-sm text-center font-medium mb-4 min-h-[20px] transition-all"></div>
 
-        <!-- Main Form Interface -->
-        <form id="authForm" class="space-y-5">
-            <!-- Full Name Fields (Conditional signup view) -->
-            <div id="nameGroup" class="space-y-2 hidden transition-all">
-                <label class="text-sm font-semibold text-slate-400 block">Full Name</label>
-                <input type="text" id="fullName" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition" placeholder="Dr. Rohan Das">
+        <!-- Input Processing Form -->
+        <form id="authForm" class="space-y-4">
+            
+            <!-- Context Group: Signup Exclusive Profile Data -->
+            <div id="extraFields" class="space-y-4 hidden transition-all">
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Full Name</label>
+                    <input type="text" id="fullName" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white text-base focus:outline-none focus:border-sky-500 dark:focus:border-sky-400 transition" placeholder="Dr. Rahul Sharma">
+                </div>
+                
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Phone Number</label>
+                    <input type="tel" id="phone" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white text-base focus:outline-none focus:border-sky-500 dark:focus:border-sky-400 transition" placeholder="9876543210">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">City Name</label>
+                    <input type="text" id="city" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white text-base focus:outline-none focus:border-sky-500 dark:focus:border-sky-400 transition" placeholder="Kolkata">
+                </div>
             </div>
 
-            <!-- Email Identity Box -->
-            <div class="space-y-2">
-                <label class="text-sm font-semibold text-slate-400 block">Email Address</label>
-                <input type="email" id="email" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition" placeholder="aspirant@gmail.com">
+            <!-- Email Address Input Field -->
+            <div class="space-y-1">
+                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Email Address</label>
+                <input type="email" id="email" required class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white text-base focus:outline-none focus:border-sky-500 dark:focus:border-sky-400 transition" placeholder="aspirant@gmail.com">
             </div>
 
-            <!-- Passphrase Verification Box -->
-            <div class="space-y-2">
-                <label class="text-sm font-semibold text-slate-400 block">Password</label>
-                <input type="password" id="password" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition" placeholder="••••••••">
+            <!-- Password Input Field -->
+            <div class="space-y-1">
+                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Password</label>
+                <input type="password" id="password" required class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white text-base focus:outline-none focus:border-sky-500 dark:focus:border-sky-400 transition" placeholder="••••••••">
             </div>
 
-            <!-- Role Control Matrix (Conditional signup view) -->
-            <div id="roleGroup" class="space-y-2 hidden transition-all">
-                <label class="text-sm font-semibold text-slate-400 block">Register Account Scope</label>
-                <select id="role" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition">
-                    <option value="student">NEET Aspirant (Student)</option>
-                    <option value="admin">Platform Mentor (Admin)</option>
-                </select>
+            <!-- Forgot Password Dynamic Interface -->
+            <div id="forgotPasswordLink" class="text-right">
+                <a href="#" onclick="handleForgotPassword(event)" class="text-xs font-semibold text-sky-500 dark:text-sky-400 hover:underline">Forgot Password?</a>
             </div>
 
-            <!-- Action Trigger Button -->
-            <button type="submit" id="submitBtn" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-3.5 px-4 rounded-xl shadow-lg transition duration-200 transform hover:-translate-y-0.5 active:translate-y-0">
+            <!-- Submit Processing Trigger -->
+            <button type="submit" id="submitBtn" class="w-full bg-sky-500 hover:bg-sky-600 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 font-bold py-3.5 px-4 rounded-xl shadow-md transition duration-200 transform hover:-translate-y-0.5 active:translate-y-0">
                 Log In
             </button>
         </form>
 
-        <!-- View State Switch Interface -->
-        <div class="text-center mt-6 text-sm text-slate-400" id="toggleLink" onclick="toggleMode(event)">
-            Don't have an account? <span class="text-sky-400 font-bold cursor-pointer hover:underline">Sign Up</span>
+        <!-- Dynamic Context Mode Switch Link -->
+        <div class="text-center mt-6 text-sm text-slate-500 dark:text-slate-400" id="toggleLink" onclick="toggleMode(event)">
+            Don't have an account? <span class="text-sky-500 dark:text-sky-400 font-bold cursor-pointer hover:underline">Sign Up</span>
         </div>
+    </div>
+
+    <!-- Decorative Bottom Spacer Footer -->
+    <div class="text-center text-xs text-slate-400 dark:text-slate-600 p-2">
+        mNEET Security Arena Protected &copy; 2026
     </div>
 
 </body>
