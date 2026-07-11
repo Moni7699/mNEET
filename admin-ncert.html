@@ -74,28 +74,35 @@
         };
 
         // Load Subjects in Realtime from Firestore
-        onSnapshot(query(collection(db, "subjects"), orderBy("createdAt", "asc")), (snapshot) => {
-            const container = document.getElementById('subjectListNode');
-            container.innerHTML = "";
-            snapshot.forEach(docSnap => {
-                const s = docSnap.data();
-                const id = docSnap.id;
-                container.innerHTML += `
-                    <div draggable="true" ondragstart="onDragStartNode(event)" ondragover="onDragOverNode(event)" ondrop="onDropNode(event)" class="grab-card bg-white dark:bg-slate-900 border ${s.hidden ? 'opacity-40 border-slate-300' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
-                        <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.enterSubject('${id}', '${s.name.replace(/'/g, "\\'")}')">
-                            <i class="fa-solid fa-grip-vertical text-slate-400"></i>
-                            <span class="font-black text-xs md:text-sm ${s.hidden ? 'line-through' : ''}">${s.name}</span>
+        window.initSubjectsLoad = function() {
+            onSnapshot(query(collection(db, "subjects"), orderBy("createdAt", "asc")), (snapshot) => {
+                const container = document.getElementById('subjectListNode');
+                if(!container) return;
+                container.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const s = docSnap.data();
+                    const id = docSnap.id;
+                    container.innerHTML += `
+                        <div class="bg-white dark:bg-slate-900 border ${s.hidden ? 'opacity-40 border-slate-300' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
+                            <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.enterSubject('${id}', '${s.name.replace(/'/g, "\\'")}')">
+                                <i class="fa-solid fa-book text-rose-500"></i>
+                                <span class="font-black text-xs md:text-sm ${s.hidden ? 'line-through' : ''}">${s.name}</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <button onclick="editSubject('${id}', '${s.name.replace(/'/g, "\\'")}')" class="bg-sky-50 text-sky-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="toggleHideSubject('${id}', ${s.hidden})" class="bg-amber-50 text-amber-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-eye-slash"></i></button>
+                                <button onclick="deleteSubject('${id}')" class="bg-rose-50 text-rose-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
+                            </div>
                         </div>
-                        <div class="flex items-center space-x-1">
-                            <button onclick="editSubject('${id}', '${s.name.replace(/'/g, "\\'")}')" class="bg-sky-50 text-sky-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="toggleHideSubject('${id}', ${s.hidden})" class="bg-amber-50 text-amber-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-eye-slash"></i></button>
-                            <button onclick="deleteSubject('${id}')" class="bg-rose-50 text-rose-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    </div>
-                `;
+                    `;
+                });
             });
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            window.initSubjectsLoad();
         });
-                // Persistent Chapters Engine
+                // Chapters Core CRUD Realtime Engine
         window.enterSubject = function(subId, subName) {
             activeSubjectId = subId;
             document.getElementById('currentSubjectTitle').innerText = subName;
@@ -110,9 +117,9 @@
                     const c = docSnap.data();
                     const id = docSnap.id;
                     container.innerHTML += `
-                        <div draggable="true" ondragstart="onDragStartNode(event)" ondragover="onDragOverNode(event)" ondrop="onDropNode(event)" class="grab-card bg-white dark:bg-slate-900 border ${c.hidden ? 'opacity-40 border-slate-300' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
+                        <div class="bg-white dark:bg-slate-900 border ${c.hidden ? 'opacity-40 border-slate-300' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
                             <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.openBookCanvas('${id}')">
-                                <i class="fa-solid fa-grip-vertical text-slate-400"></i>
+                                <i class="fa-solid fa-file-lines text-purple-500"></i>
                                 <span class="font-black text-xs md:text-sm ${c.hidden ? 'line-through' : ''}">${c.name}</span>
                             </div>
                             <div class="flex items-center space-x-1">
@@ -150,12 +157,12 @@
         // Full Screen A4 Portrait Canvas Engine
         window.openBookCanvas = function(chapId) {
             navigateToView('view-book-canvas');
-            currentPagePageIndex = 0;
+            currentPageIndex = 0;
             renderBookPage();
         };
 
         window.renderBookPage = function() {
-            document.getElementById('pageIndicator').innerText = `Page ${currentPagePageIndex + 1} of ${mockBookPages.length}`;
+            document.getElementById('pageIndicator').innerText = `Page ${currentPageIndex + 1} of ${mockBookPages.length}`;
             const body = document.getElementById('bookPageContent');
             body.innerHTML = mockBookPages[currentPageIndex].split('. ').map(s => {
                 if(!s.trim()) return '';
@@ -164,8 +171,8 @@
         };
 
         window.flipPage = function(dir) {
-            if(dir === 'next' && currentPagePageIndex < mockBookPages.length - 1) currentPagePageIndex++;
-            else if(dir === 'prev' && currentPagePageIndex > 0) currentPagePageIndex--;
+            if(dir === 'next' && currentPageIndex < mockBookPages.length - 1) currentPageIndex++;
+            else if(dir === 'prev' && currentPageIndex > 0) currentPageIndex--;
             renderBookPage();
         };
 
@@ -178,27 +185,11 @@
             document.getElementById('mcqModal').style.display = 'none';
         };
 
-        // Draggable Nodes Setup
-        let draggedItem = null;
-        window.onDragStartNode = function(e) { draggedItem = e.currentTarget; };
-        window.onDragOverNode = function(e) { e.preventDefault(); };
-        window.onDropNode = function(e) {
-            e.preventDefault();
-            if(draggedItem !== e.currentTarget) {
-                const parent = e.currentTarget.parentNode;
-                parent.insertBefore(draggedItem, e.currentTarget);
-            }
-        };
-
         window.toggleTheme = () => document.documentElement.classList.toggle('dark');
     </script>
-    <style>
-        .grab-card { cursor: grab; }
-        .grab-card:active { cursor: grabbing; }
-    </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
-    <div id="adminNcertPortal" class="hidden min-h-screen flex flex-col justify-between overflow-x-hidden">
+    <div id="adminNcertPortal" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
         
         <!-- VIEW 1: ALL SUBJECTS VIEW -->
         <div id="view-subject-hub" class="w-full flex-1 flex flex-col">
@@ -237,14 +228,12 @@
 
         <!-- VIEW 3: 100% ACCURATE FULL SCREEN ADAPTIVE A4 PORTRAIT CANVASES -->
         <div id="view-book-canvas" class="fixed inset-0 bg-slate-900 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
-            <!-- Full Screen Dedicated Top Header Layout -->
             <header class="bg-slate-950 text-white px-4 py-3 flex justify-between items-center border-b border-slate-800 w-full h-12 flex-shrink-0">
                 <button onclick="navigateToView('view-chapter-hub')" class="text-slate-400 font-bold text-xs"><i class="fa-solid fa-chevron-left"></i> Back</button>
                 <h2 class="text-xs font-black uppercase tracking-wider text-slate-400">NCERT Digital Book Editor</h2>
                 <div class="w-8"></div>
             </header>
             
-            <!-- A4 Adaptive Page Workspace (Calculated Viewport bounds) -->
             <div class="flex-1 w-full bg-slate-800 flex items-center justify-center p-3 overflow-hidden box-border h-[calc(100vh-3rem)]">
                 <div class="bg-[#fdfbf7] shadow-2xl rounded-2xl w-full max-w-md h-full max-h-[90%] aspect-[1/1.414] p-6 flex flex-col justify-between box-border overflow-hidden">
                     <div id="bookPageContent" class="overflow-y-auto pr-1 select-text flex-1"></div>
@@ -257,7 +246,7 @@
                 </div>
             </div>
 
-            <!-- DYNAMIC POPUP MODAL ON SENTENCE INTERACTION -->
+            <!-- MODAL POPUP -->
             <div id="mcqModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4" style="display:none;">
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[85vh] overflow-y-auto text-xs font-bold text-slate-700 dark:text-slate-300 shadow-2xl">
                     <div class="flex justify-between items-center border-b pb-2">
@@ -265,15 +254,8 @@
                         <button onclick="closeMcqModal()" class="text-slate-400 text-lg"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                     <p id="targetSentenceDisplay" class="italic text-slate-400 font-serif bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-dashed"></p>
-                    
                     <textarea id="pyqQuestionArea" rows="2" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-slate-900 dark:text-white" placeholder="Type MCQ Question Content..."></textarea>
                     
-                    <div class="w-full">
-                        <button onclick="document.getElementById('imgField').click()" class="bg-slate-100 dark:bg-slate-950 w-full p-2 rounded-xl text-center text-slate-400"><i class="fa-solid fa-image mr-1"></i> Add Question Image File</button>
-                        <input type="file" id="imgField" accept="image/*" class="hidden" onchange="const r=new FileReader();r.onload=()=>{const i=document.getElementById('modalImgPre');i.src=r.result;i.classList.remove('hidden')};if(this.files[0])r.readAsDataURL(this.files[0])">
-                        <img id="modalImgPre" class="hidden w-full h-20 object-contain mt-2 border rounded-xl">
-                    </div>
-
                     <div class="grid grid-cols-2 gap-2">
                         <input type="text" class="bg-slate-50 dark:bg-slate-950 border p-2 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option A">
                         <input type="text" class="bg-slate-50 dark:bg-slate-950 border p-2 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option B">
