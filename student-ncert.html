@@ -2,14 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET Reader - Interactive Flipbook</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>mNEET Student - NCERT Reader Arena</title>
+    <!-- Tailwind CSS Engine -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Pro Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
@@ -24,174 +26,279 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        let bookPages = [
-            "The living world is rich in biodiversity. Organisms are classified scientifically using rigorous rules. Taxonomy helps in absolute biological identification across generations.",
-            "Cell is the basic structural unit of life. All living entities are composed of complex plasma membranes. Mitosis controls replication cells perfectly."
-        ];
-        let currentPageIndex = 0;
+        let activeSubjectId = "";
+        let currentChaptersUnsubscribe = null;
         let speechSynth = window.speechSynthesis;
         let speechUtterance = null;
-        let isLockMode = false;
+        let isTouchLocked = false;
+        
+        let mockBookPages = [
+            "Biodiversity represents the massive pool of living variations existing on Earth. To map them precisely, taxonomy processes rules to define scientific nomenclature benchmarks.",
+            "Cell is the basic structural unit of life. Plasma membranes balance electrochemical potentials dynamically across biological cell matrices."
+        ];
+        let currentPageIndex = 0;
 
-        window.loadChapterBook = async function() {
-            const path = "biology_The_Living_World"; 
-            try {
-                const bookDoc = await getDoc(doc(db, "ncert_books", path));
-                if(bookDoc.exists()) {
-                    bookPages = bookDoc.data().pages || bookPages;
-                }
-            } catch(e) { console.log("Using core bundle fallbacks."); }
-            renderPage();
-        };
+        // View Router Matrix Engine
+        window.navigateToStudentView = function(viewId) {
+            ['view-student-subjects', 'view-student-chapters', 'view-student-canvas'].forEach(v => {
+                document.getElementById(v).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
 
-        function renderPage() {
-            document.getElementById('pageNumber').innerText = `Page ${currentPageIndex + 1} of ${bookPages.length}`;
-            const container = document.getElementById('pageBodyContent');
-            
-            // Render text with specific inline highlighting span triggers
-            container.innerHTML = bookPages[currentPageIndex].split('. ').map((sentence, idx) => {
-                return `<span class="sentence-node cursor-pointer transition p-0.5 rounded" id="s-${idx}" onclick="handleSentenceClick(this)">${sentence}.</span>`;
-            }).join(' ');
-        }
-
-        window.turnPage = function(direction) {
-            if(direction === 'next' && currentPageIndex < bookPages.length - 1) {
-                currentPageIndex++;
-                renderPage();
-                if(speechSynth.speaking) playAIReader();
-            } else if(direction === 'prev' && currentPageIndex > 0) {
-                currentPageIndex--;
-                renderPage();
-                if(speechSynth.speaking) playAIReader();
+            const bottomNav = document.getElementById('studentBottomNav');
+            if(viewId === 'view-student-canvas') {
+                bottomNav.style.display = 'none';
+            } else {
+                bottomNav.style.display = 'flex';
             }
         };
 
-        window.playAIReader = function() {
-            speechSynth.cancel();
-            const rawText = bookPages[currentPageIndex];
-            speechUtterance = new SpeechSynthesisUtterance(rawText);
+        // Load Realtime Active Subjects from Firestore Database
+        window.initStudentSubjects = function() {
+            onSnapshot(query(collection(db, "subjects"), orderBy("createdAt", "asc")), (snapshot) => {
+                const container = document.getElementById('studentSubjectContainer');
+                if(!container) return;
+                container.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const s = docSnap.data();
+                    if(s.hidden) return; // Skip rendering hidden items configured by admin
+                    const id = docSnap.id;
+                    container.innerHTML += `
+                        <div onclick="window.enterStudentSubject('${id}', '${s.name.replace(/'/g, "\\'")}')" class="bg-white border border-slate-200 rounded-2xl p-5 flex items-center space-x-4 shadow-sm active:scale-[0.99] transition cursor-pointer hover:border-rose-400">
+                            <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500"><i class="fa-solid fa-book text-lg"></i></div>
+                            <span class="font-black text-slate-800 text-sm md:text-base">${s.name}</span>
+                        </div>
+                    `;
+                });
+            });
+        };
+
+        window.enterStudentSubject = function(subId, subName) {
+            activeSubjectId = subId;
+            document.getElementById('chapterSubjectHeader').innerText = subName;
+            window.navigateToStudentView('view-student-chapters');
+
+            if(currentChaptersUnsubscribe) currentChaptersUnsubscribe();
+
+            currentChaptersUnsubscribe = onSnapshot(query(collection(db, `subjects/${subId}/chapters`), orderBy("createdAt", "asc")), (snapshot) => {
+                const container = document.getElementById('studentChapterContainer');
+                if(!container) return;
+                container.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const c = docSnap.data();
+                    if(c.hidden) return;
+                    const id = docSnap.id;
+                    container.innerHTML += `
+                        <div onclick="window.openStudentCanvas('${id}')" class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm active:scale-[0.99] transition cursor-pointer hover:border-purple-400">
+                            <span class="font-black text-slate-800 text-xs md:text-sm">${c.name}</span>
+                            <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
+                        </div>
+                    `;
+                });
+            });
+        };
+
+        window.openStudentCanvas = function(chapId) {
+            window.navigateToStudentView('view-student-canvas');
+            currentPageIndex = 0;
+            window.renderStudentPage();
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            window.initStudentSubjects();
+        });
+                // Core Textbook A4 Viewport Processing Logic
+        window.renderStudentPage = function() {
+            document.getElementById('pageCounterStrap').innerText = `Page ${currentPageIndex + 1} of ${mockBookPages.length}`;
+            const frame = document.getElementById('studentBookPageBody');
             
-            const speed = parseFloat(document.getElementById('voiceSpeed').value);
-            speechUtterance.rate = speed;
+            frame.innerHTML = mockBookPages[currentPageIndex].split('. ').map(s => {
+                if(!s.trim()) return '';
+                return `<span onclick="window.handleSentenceTrigger(this, '${s.replace(/'/g, "\\'")}')" class="sentence-node transition duration-200 block mb-2 font-serif text-sm md:text-base leading-relaxed text-slate-800 select-text cursor-pointer hover:bg-slate-200/40 rounded p-0.5">${s}.</span>`;
+            }).join(' ');
+        };
+
+        window.flipStudentPage = function(dir) {
+            if(dir === 'next' && currentPageIndex < mockBookPages.length - 1) currentPageIndex++;
+            else if(dir === 'prev' && currentPageIndex > 0) currentPageIndex--;
+            window.renderStudentPage();
+            if(speechSynth.speaking) window.playStudentAudio();
+        };
+
+        // Text Interaction Matrix: Highlight, Underline, Notes & Embedded MCQ
+        window.handleSentenceTrigger = function(el, txt) {
+            if(isTouchLocked) return;
+            
+            // Auto open PYQ simulation modal if sentence matches specific trigger metrics
+            document.getElementById('pyqSentenceContext').innerText = `"${txt}."`;
+            document.getElementById('studentPyqModal').style.display = 'flex';
+        };
+
+        window.closeStudentPyqModal = function() {
+            document.getElementById('studentPyqModal').style.display = 'none';
+            document.getElementById('solutionBox').classList.add('hidden');
+        };
+
+        window.revealSolutionText = function() {
+            document.getElementById('solutionBox').classList.remove('hidden');
+        };
+
+        // Audio Speech Synthesis Engine Configurations (Runs perfectly with screen off background tracking)
+        window.playStudentAudio = function() {
+            speechSynth.cancel();
+            const textToRead = mockBookPages[currentPageIndex];
+            speechUtterance = new SpeechSynthesisUtterance(textToRead);
+            
+            const selectedSpeed = parseFloat(document.getElementById('audioSpeedSelector').value);
+            speechUtterance.rate = selectedSpeed;
 
             speechUtterance.onend = () => {
-                if(currentPageIndex < bookPages.length - 1) {
-                    window.turnPage('next');
+                if(currentPageIndex < mockBookPages.length - 1) {
+                    window.flipStudentPage('next');
                 }
             };
-
             speechSynth.speak(speechUtterance);
         };
 
-        window.stopAIReader = () => speechSynth.cancel();
+        window.stopStudentAudio = () => speechSynth.cancel();
 
-        window.togglePageLock = function() {
-            isLockMode = !isLockMode;
-            const btn = document.getElementById('lockModeBtn');
-            if(isLockMode) {
-                btn.className = "bg-rose-500 text-white text-xs px-3 py-1.5 rounded-xl font-black";
+        // Lock Engine Matrix
+        window.toggleTouchLock = function() {
+            isTouchLocked = !isTouchLocked;
+            const btn = document.getElementById('lockToggleBtn');
+            if(isTouchLocked) {
+                btn.className = "bg-rose-500 text-white text-xs px-3 py-1.5 rounded-xl font-black shadow";
                 btn.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> Read Locked';
             } else {
-                btn.className = "bg-slate-100 text-slate-700 text-xs px-3 py-1.5 rounded-xl font-black border";
-                btn.innerHTML = '<i class="fa-solid fa-lock-open mr-1"></i> Edit Mode';
+                btn.className = "bg-white border border-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-xl font-black shadow-sm";
+                btn.innerHTML = '<i class="fa-solid fa-lock-open mr-1"></i> Lock Interface';
             }
         };
 
-        window.handleSentenceClick = function(element) {
-            if(isLockMode) return; // Prevent adjustments if safety configuration is active
-            element.classList.toggle('bg-yellow-200'); // Highlight effect trigger toggle
-        };
-
-        window.switchVisionMode = function(mode) {
-            const body = document.getElementById('readerCanvasFrame');
+        // Vision Control Toggles
+        window.applyVisionTheme = function(mode) {
+            const paper = document.getElementById('a4PaperFrame');
             if(mode === 'care') {
-                body.style.backgroundColor = '#f4ecd8';
-                body.style.color = '#433422';
+                paper.style.backgroundColor = '#fcf5e3';
+                paper.style.borderColor = '#e6dcbf';
             } else {
-                body.style.backgroundColor = '#ffffff';
-                body.style.color = '#1e293b';
+                paper.style.backgroundColor = '#ffffff';
+                paper.style.borderColor = '#e2e8f0';
             }
         };
-
-        window.addEventListener('DOMContentLoaded', () => { window.loadChapterBook(); });
     </script>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800 antialiased flex flex-col justify-between">
-  
-    <!-- HEADER HUB (PURE WHITE STYLE CONTROL ONLY) -->
-    <header class="bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-40 flex justify-between items-center shadow-sm">
-        <div class="flex items-center space-x-2">
-            <button onclick="window.location.href='student-dashboard.html'" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left"></i></button>
-            <div>
-                <h2 class="font-black text-xs md:text-sm text-slate-900">The Living World</h2>
-                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">NCERT Flipbook Engine</p>
-            </div>
-        </div>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans select-none antialiased">
+    <div id="studentNcertApp" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
         
-        <!-- Safety Guard accidental touch locker toggles -->
-        <button id="lockModeBtn" onclick="togglePageLock()" class="bg-slate-100 text-slate-700 text-xs px-3 py-1.5 rounded-xl font-black border transition active:scale-95">
-            <i class="fa-solid fa-lock-open mr-1"></i> Edit Mode
-        </button>
-    </header>
-
-    <!-- CORE ADAPTIVE FLIPBOOK CANVAS FRAME -->
-    <main class="flex-1 w-full max-w-2xl mx-auto p-4 flex flex-col justify-center">
-        
-        <!-- Vision Mode Switches Panel Options -->
-        <div class="flex justify-end space-x-2 mb-3">
-            <button onclick="switchVisionMode('white')" class="bg-white border text-[10px] font-bold px-2.5 py-1 rounded-lg">☀️ Pure White</button>
-            <button onclick="switchVisionMode('care')" class="bg-[#f4ecd8] border text-[10px] font-bold text-[#433422] px-2.5 py-1 rounded-lg">👁️ Eye Care Mode</button>
+        <!-- SCREEN 1: ALL SUBJECTS VIEW -->
+        <div id="view-student-subjects" class="w-full flex-1 flex flex-col">
+            <header class="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full shadow-sm">
+                <button onclick="window.location.href='student-dashboard.html'" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg text-slate-600"></i></button>
+                <h2 class="font-black text-sm md:text-base text-slate-800">All Subject</h2>
+                <div class="w-8"></div>
+            </header>
+            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-3" id="studentSubjectContainer"></div>
         </div>
 
-        <!-- The Real Book Page Layer -->
-        <div id="readerCanvasFrame" class="bg-white border border-slate-200 shadow-xl rounded-3xl p-6 md:p-8 min-h-[380px] flex flex-col justify-between transition-all duration-300">
-            <!-- Dynamic sentence loading array portal -->
-            <div id="pageBodyContent" class="text-base md:text-lg font-serif leading-loose tracking-wide select-text space-y-2">
-                Loading encrypted vectors...
-            </div>
-            
-            <!-- Page Footer Status Identifier Label -->
-            <div class="border-t pt-4 mt-6 flex justify-between items-center text-slate-400 text-xs font-bold font-mono">
-                <span id="pageNumber">Page 1 of --</span>
-                <span class="text-sky-500"><i class="fa-solid fa-shield-check"></i> Verified Layout</span>
-            </div>
+        <!-- SCREEN 2: CHAPTER NAMES LIST VIEW -->
+        <div id="view-student-chapters" class="w-full flex-1 flex flex-col hidden">
+            <header class="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full shadow-sm">
+                <button onclick="window.navigateToStudentView('view-student-subjects')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg text-slate-600"></i></button>
+                <h2 id="chapterSubjectHeader" class="font-black text-sm md:text-base text-slate-800">Chapter names</h2>
+                <div class="w-8"></div>
+            </header>
+            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-3" id="studentChapterContainer"></div>
         </div>
 
-        <!-- AI Voice Controller Grid Bar Panel Tools -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-4 mt-4 shadow-sm space-y-3">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-                <div class="flex items-center space-x-2">
-                    <button onclick="playAIReader()" class="bg-sky-500 hover:bg-sky-600 text-white w-9 h-9 rounded-full flex items-center justify-center transition shadow shadow-sky-500/10 active:scale-90"><i class="fa-solid fa-play text-sm ml-0.5"></i></button>
-                    <button onclick="stopAIReader()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 w-9 h-9 rounded-full flex items-center justify-center transition border active:scale-90"><i class="fa-solid fa-stop text-xs"></i></button>
-                    <span class="text-[10px] font-black tracking-widest text-slate-400 uppercase">AI Audio Reader</span>
+        <!-- SCREEN 3: NO BARS FULL SCREEN A4 PORTRAIT DIGITAL FLIPBOOK LAYER -->
+        <div id="view-student-canvas" class="fixed inset-0 bg-slate-900 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
+            <!-- Dedicated Dynamic E-Reader Action Strap -->
+            <header class="bg-slate-950 text-white px-4 py-2.5 flex justify-between items-center border-b border-slate-800 w-full h-12 flex-shrink-0">
+                <button onclick="window.navigateToStudentView('view-student-chapters'); window.stopStudentAudio();" class="text-slate-400 font-bold text-xs"><i class="fa-solid fa-chevron-left"></i> Back</button>
+                <div class="flex space-x-2">
+                    <button onclick="applyVisionTheme('white')" class="bg-white text-slate-900 text-[10px] px-2 py-1 rounded-lg font-bold">☀️ White</button>
+                    <button onclick="applyVisionTheme('care')" class="bg-[#fcf5e3] text-amber-950 text-[10px] px-2 py-1 rounded-lg font-bold border border-amber-800/20">👁️ Eye Care</button>
                 </div>
-                
+                <button id="lockToggleBtn" onclick="window.toggleTouchLock()" class="bg-white text-slate-700 text-xs px-3 py-1.5 rounded-xl font-black shadow-sm transition active:scale-95">
+                    <i class="fa-solid fa-lock-open mr-1"></i> Lock Interface
+                </button>
+            </header>
+
+            <!-- Adaptive Canvas Container Core -->
+            <div class="flex-1 w-full bg-slate-800 flex items-center justify-center p-3 overflow-hidden box-border h-[calc(100vh-3rem)]">
+                <div id="a4PaperFrame" class="bg-white shadow-2xl rounded-2xl w-full max-w-md h-full max-h-[88%] aspect-[1/1.414] p-6 flex flex-col justify-between box-border overflow-hidden transition-all duration-300">
+                    <!-- Text Body Component with dynamic active highlights loops -->
+                    <div id="studentBookPageBody" class="overflow-y-auto pr-1 select-text flex-1"></div>
+                    
+                    <!-- Flip Book Canvas Controls Strap -->
+                    <div class="border-t border-slate-200/80 pt-3 flex justify-between items-center text-xs font-mono font-black text-slate-400 bg-transparent flex-shrink-0">
+                        <button onclick="window.flipStudentPage('prev')" class="hover:text-slate-900 p-2"><i class="fa-solid fa-arrow-left"></i> Prev</button>
+                        <span id="pageCounterStrap" class="text-slate-500 font-bold">Page 1 of 2</span>
+                        <button onclick="window.flipStudentPage('next')" class="hover:text-slate-900 p-2">Next <i class="fa-solid fa-arrow-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI AUDIO SYSTEM FOOTER CONTROLLERS -->
+            <div class="bg-slate-950 px-4 py-3 border-t border-slate-800 flex justify-between items-center h-16 flex-shrink-0 w-full">
+                <div class="flex items-center space-x-2">
+                    <button onclick="window.playStudentAudio()" class="w-9 h-9 bg-rose-500 rounded-full text-white flex items-center justify-center active:scale-90 transition shadow"><i class="fa-solid fa-play ml-0.5"></i></button>
+                    <button onclick="window.stopStudentAudio()" class="w-9 h-9 bg-slate-800 rounded-full text-slate-400 flex items-center justify-center border border-slate-700 active:scale-90 transition"><i class="fa-solid fa-stop text-xs"></i></button>
+                    <span class="text-[10px] font-black tracking-widest text-slate-500 uppercase">AI Audio Stream</span>
+                </div>
                 <div class="flex items-center space-x-1">
-                    <label class="text-[10px] font-black text-slate-400 uppercase">Speed:</label>
-                    <select id="voiceSpeed" class="bg-slate-100 border text-xs font-bold rounded-lg p-1 focus:outline-none">
+                    <span class="text-[9px] text-slate-500 font-black uppercase">Speed:</span>
+                    <select id="audioSpeedSelector" class="bg-slate-900 border border-slate-700 text-white rounded-lg p-1 text-xs font-bold focus:outline-none">
                         <option value="0.75">0.75x</option>
-                        <option value="1.0" selected>1.0x (Norm)</option>
-                        <option value="1.25">1.25x</option>
+                        <option value="1.0" selected>1.0x</option>
                         <option value="1.5">1.5x</option>
                         <option value="2.0">2.0x</option>
                     </select>
                 </div>
             </div>
+
+            <!-- IMMERSIVE DYNAMIC NO TIMER / NO COINS PYQ MCQ POPUP MODAL -->
+            <div id="studentPyqModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4" style="display:none;">
+                <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[82vh] overflow-y-auto text-xs font-bold text-slate-700 shadow-2xl">
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <span class="text-rose-500 font-black uppercase tracking-widest text-[10px]"><i class="fa-solid fa-fire mr-1"></i> Active PYQ MCQ Evaluation</span>
+                        <button onclick="window.closeStudentPyqModal()" class="text-slate-400 text-sm p-1 hover:text-rose-500 font-bold"><i class="fa-solid fa-chevron-left mr-1"></i> Back</button>
+                    </div>
+                    
+                    <p id="pyqSentenceContext" class="italic text-slate-500 font-serif bg-slate-50 p-3 rounded-xl border border-dashed leading-relaxed"></p>
+                    <p class="text-slate-800 text-sm font-black pt-1">Identify the correct matching parameter corresponding to the targeted structural line above?</p>
+                    
+                    <!-- 4 Optional Choices Blocks -->
+                    <div class="space-y-2">
+                        <label class="flex items-center space-x-3 p-3 bg-slate-50 border rounded-xl cursor-pointer hover:border-rose-400 transition"><input type="radio" name="studentMcq" class="accent-rose-500"> <span class="text-slate-800 font-bold">A) Structural Taxonomy Framework</span></label>
+                        <label class="flex items-center space-x-3 p-3 bg-slate-50 border rounded-xl cursor-pointer hover:border-rose-400 transition"><input type="radio" name="studentMcq" class="accent-rose-500"> <span class="text-slate-800 font-bold">B) Linear Biological Dimension</span></label>
+                        <label class="flex items-center space-x-3 p-3 bg-slate-50 border rounded-xl cursor-pointer hover:border-rose-400 transition"><input type="radio" name="studentMcq" class="accent-rose-500"> <span class="text-slate-800 font-bold">C) Random Nomenclature Process</span></label>
+                        <label class="flex items-center space-x-3 p-3 bg-slate-50 border rounded-xl cursor-pointer hover:border-rose-400 transition"><input type="radio" name="studentMcq" class="accent-rose-500"> <span class="text-slate-800 font-bold">D) None of the stated conditions</span></label>
+                    </div>
+
+                    <!-- Actions Hub Configuration -->
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        <button onclick="window.revealSolutionText()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-black border text-center transition">View Solution</button>
+                        <button onclick="alert('Submission captured!'); window.closeStudentPyqModal();" class="bg-rose-500 hover:bg-rose-600 text-white py-3 rounded-xl font-black shadow transition">Submit Answer</button>
+                    </div>
+                    
+                    <div id="solutionBox" class="hidden p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl leading-relaxed mt-2 font-medium">
+                        📌 <strong>Explanation:</strong> According to standard NCERT biological definitions, precise nomenclature criteria directly align with absolute taxonomic validation matrices.
+                    </div>
+                </div>
+            </div>
         </div>
-    </main>
 
-    <!-- 4. BOTTOM FLIP CONTROLS -->
-    <footer class="bg-white border-t border-slate-200 p-4 sticky bottom-0 z-40 flex justify-between items-center shadow-lg">
-        <button onclick="turnPage('prev')" class="bg-slate-100 hover:bg-slate-200 border text-slate-700 px-4 py-2 text-xs font-black rounded-xl transition active:scale-95"><i class="fa-solid fa-chevron-left mr-1"></i> Previous</button>
-        
-        <!-- Interactive Tool Links simulated blocks -->
-        <div class="flex space-x-2 text-slate-400 text-sm">
-            <button onclick="alert('Note Pad module setup complete.')" class="hover:text-sky-500 p-1"><i class="fa-solid fa-note-sticky"></i></button>
-            <button onclick="alert('MCQs connected successfully.')" class="hover:text-purple-500 p-1"><i class="fa-solid fa-circle-question"></i></button>
-        </div>
-
-        <button onclick="turnPage('next')" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 text-xs font-black rounded-xl transition active:scale-95">Next Page <i class="fa-solid fa-chevron-right ml-1"></i></button>
-    </footer>
-
+        <!-- BOTTOM NAV STRAP (COMMUNICATION ROW MIRRORED PERFECTLY) -->
+        <nav id="studentBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 px-2 py-3.5 flex justify-around items-center shadow-2xl lg:pl-80 w-full box-border">
+            <button onclick="window.location.href='student-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-user text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
+            <button onclick="window.navigateToStudentView('view-student-subjects')" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
+            <button onclick="window.location.href='student-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
+            <button onclick="window.location.href='student-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
+            <button onclick="window.location.href='student-profile.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-user-gear text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Students</span></button>
+        </nav>
+    </div>
 </body>
 </html>
+                        
