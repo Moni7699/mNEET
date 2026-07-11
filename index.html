@@ -12,19 +12,23 @@
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-        // Firebase Configuration using your project ID
+        // Your Exact & Authentic Firebase Configuration
         const firebaseConfig = {
-            projectId: "mneet-spark",
+            apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
             authDomain: "mneet-spark.firebaseapp.com",
-            storageBucket: "mneet-spark.appspot.com"
+            databaseURL: "https://mneet-spark-default-rtdb.firebaseio.com",
+            projectId: "mneet-spark",
+            storageBucket: "mneet-spark.firebasestorage.app",
+            messagingSenderId: "252201633700",
+            appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
         };
 
-        // Initialize Firebase
+        // Initialize Firebase Components
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Dom Elements
+        // DOM Elements Matrix
         const authForm = document.getElementById('authForm');
         const nameGroup = document.getElementById('nameGroup');
         const roleGroup = document.getElementById('roleGroup');
@@ -35,7 +39,7 @@
 
         let isSignUp = false;
 
-        // Toggle Login / Signup Mode
+        // Toggle Login / Signup View State
         window.toggleMode = function(e) {
             e.preventDefault();
             isSignUp = !isSignUp;
@@ -56,7 +60,7 @@
             }
         };
 
-        // Handle Authentication Logic
+        // Handle Real-Time Authentication Logic
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             errorMessage.innerText = "";
@@ -74,51 +78,56 @@
                         return;
                     }
 
-                    // 1. Create user in Firebase Auth
+                    // 1. Register User in Firebase Auth Engine
                     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                     const user = userCredential.user;
 
-                    // 2. Save Additional Info in Firestore
+                    // 2. Synchronize Detailed Profile Meta to Firestore
                     await setDoc(doc(db, "users", user.uid), {
                         uid: user.uid,
                         name: fullName,
                         email: email,
                         role: role,
-                        bpCoins: role === 'student' ? 100 : 0, // Gift 100 bP Coins to new students
+                        bpCoins: role === 'student' ? 100 : 0, // 100 Starter bP Coins
                         createdAt: new Date().toISOString()
                     });
 
-                    alert("Account Created Successfully!");
+                    alert("Registration Successful! Redirecting...");
                     redirectUser(role);
 
                 } else {
-                    // 1. Log In User
+                    // 1. Authenticate with Firebase Auth
                     const userCredential = await signInWithEmailAndPassword(auth, email, password);
                     const user = userCredential.user;
 
-                    // 2. Fetch User Role from Firestore
+                    // 2. Retrieve Dedicated Role Permissions from Firestore Database
                     const userDoc = await getDoc(doc(db, "users", user.uid));
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
                         redirectUser(userData.role);
                     } else {
-                        errorMessage.innerText = "User data not found in database.";
+                        errorMessage.innerText = "Database profile map missing. Contact Admin.";
                     }
                 }
             } catch (error) {
-                console.error(error);
-                // Human-readable error messages
+                console.error("Auth Matrix Exception:", error);
+                
+                // Human-Readable Security Translations
                 if (error.code === 'auth/email-already-in-use') {
                     errorMessage.innerText = "This email is already registered.";
                 } else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-                    errorMessage.innerText = "Invalid Email or Password.";
+                    errorMessage.innerText = "Invalid Email Profile or Password Verification.";
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage.innerText = "Security Alert: Password must be at least 6 characters.";
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage.innerText = "Malformed email address format.";
                 } else {
-                    errorMessage.innerText = error.message;
+                    errorMessage.innerText = "Connection Refused: Verify Firestore Test Mode is Active.";
                 }
             }
         });
 
-        // Smart Redirection Matrix
+        // App Redirection Controller
         function redirectUser(role) {
             if (role === 'admin') {
                 window.location.href = "admin-dashboard.html";
@@ -131,51 +140,51 @@
 <body class="bg-slate-950 min-h-screen flex items-center justify-center p-4">
 
     <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-8 transform transition-all duration-300">
-        <!-- Logo and Brand -->
+        <!-- Brand Headers -->
         <div class="text-center mb-8">
             <h1 class="text-4xl font-black tracking-wider text-sky-400 drop-shadow">mNEET</h1>
             <p id="form-title" class="text-slate-400 text-sm mt-2 transition-all">Crack NEET with Gamified Learning</p>
         </div>
 
-        <!-- Error Notification Panel -->
-        <div id="errorMessage" class="text-rose-500 text-sm text-center font-medium mb-4 transition-all"></div>
+        <!-- System Alerts Logger -->
+        <div id="errorMessage" class="text-rose-500 text-sm text-center font-medium mb-4 min-h-[20px] transition-all"></div>
 
-        <!-- Authentication Form -->
+        <!-- Main Form Interface -->
         <form id="authForm" class="space-y-5">
-            <!-- Full Name (Hidden in Login Mode) -->
+            <!-- Full Name Fields (Conditional signup view) -->
             <div id="nameGroup" class="space-y-2 hidden transition-all">
                 <label class="text-sm font-semibold text-slate-400 block">Full Name</label>
-                <input type="text" id="fullName" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition" placeholder="Dr. Rahul Sharma">
+                <input type="text" id="fullName" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition" placeholder="Dr. Rohan Das">
             </div>
 
-            <!-- Email Input -->
+            <!-- Email Identity Box -->
             <div class="space-y-2">
                 <label class="text-sm font-semibold text-slate-400 block">Email Address</label>
-                <input type="email" id="email" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition" placeholder="yourname@gmail.com">
+                <input type="email" id="email" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition" placeholder="aspirant@gmail.com">
             </div>
 
-            <!-- Password Input -->
+            <!-- Passphrase Verification Box -->
             <div class="space-y-2">
                 <label class="text-sm font-semibold text-slate-400 block">Password</label>
                 <input type="password" id="password" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition" placeholder="••••••••">
             </div>
 
-            <!-- User Role (Hidden in Login Mode) -->
+            <!-- Role Control Matrix (Conditional signup view) -->
             <div id="roleGroup" class="space-y-2 hidden transition-all">
-                <label class="text-sm font-semibold text-slate-400 block">Register As</label>
+                <label class="text-sm font-semibold text-slate-400 block">Register Account Scope</label>
                 <select id="role" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-sky-400 transition">
                     <option value="student">NEET Aspirant (Student)</option>
                     <option value="admin">Platform Mentor (Admin)</option>
                 </select>
             </div>
 
-            <!-- Submit Action -->
+            <!-- Action Trigger Button -->
             <button type="submit" id="submitBtn" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-3.5 px-4 rounded-xl shadow-lg transition duration-200 transform hover:-translate-y-0.5 active:translate-y-0">
                 Log In
             </button>
         </form>
 
-        <!-- Toggle View Matrix -->
+        <!-- View State Switch Interface -->
         <div class="text-center mt-6 text-sm text-slate-400" id="toggleLink" onclick="toggleMode(event)">
             Don't have an account? <span class="text-sky-400 font-bold cursor-pointer hover:underline">Sign Up</span>
         </div>
