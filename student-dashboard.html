@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET - Student Dashboard Arena</title>
+    <title>mNEET - Ultimate Student Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -56,7 +56,7 @@
                 await updateDoc(doc(db, "users", currentUser.uid), { dreamCollege: dc, targetDate: td });
                 document.getElementById('midCollege').innerText = dc || "Set Dream College";
                 if(td) startTimer(td);
-                alert("Targets Locked Successfully! 🎯");
+                alert("Targets Locked!");
             }
         };
 
@@ -65,10 +65,10 @@
             timer = setInterval(() => {
                 const diff = new Date(dateStr).getTime() - new Date().getTime();
                 if(diff <= 0) { clearInterval(timer); return; }
-                document.getElementById('tDays').innerText = String(Math.floor(diff / (1000*60*60*24))).padStart(2, '0');
-                document.getElementById('tHrs').innerText = String(Math.floor((diff % (1000*60*60*24)) / (1000*60*60))).padStart(2, '0');
-                document.getElementById('tMin').innerText = String(Math.floor((diff % (1000*60*60)) / (1000*60))).padStart(2, '0');
-                document.getElementById('tSec').innerText = String(Math.floor((diff % (1000*60)) / 1000)).padStart(2, '0');
+                document.getElementById('tDays').innerText = Math.floor(diff / (1000*60*60*24));
+                document.getElementById('tHrs').innerText = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
+                document.getElementById('tMin').innerText = Math.floor((diff % (1000*60*60)) / (1000*60));
+                document.getElementById('tSec').innerText = Math.floor((diff % (1000*60)) / 1000);
             }, 1000);
         }
 
@@ -103,143 +103,148 @@
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
     <div id="appArea" class="hidden min-h-screen flex relative">
         
-        <!-- SIDEBAR CONTAINER -->
+        <!-- 1. SIDEBAR (TOP LEFT CONTAINS THE LOGOUT AND MODE SWITCH) -->
         <aside id="sidebar" class="fixed top-0 bottom-0 left-0 z-50 w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col justify-between shadow-2xl">
-            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                <button onclick="toggleTheme()" class="bg-slate-100 dark:bg-slate-950 px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold flex items-center space-x-2"><i class="fa-solid fa-moon"></i> <span>Toggle Theme</span></button>
+            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-100/30 dark:bg-slate-950/20">
+                <button onclick="toggleTheme()" class="bg-slate-200 dark:bg-slate-950 px-4 py-2 border border-slate-300 dark:border-slate-800 rounded-xl text-xs font-black flex items-center space-x-2 shadow-sm transition active:scale-95 text-slate-700 dark:text-slate-300"><i class="fa-solid fa-circle-half-stroke text-sky-500"></i> <span>Theme Mode</span></button>
                 <button onclick="closeSidebar()" class="lg:hidden text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
+            
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                <div class="text-center space-y-2">
-                    <div onclick="triggerPhoto()" class="w-20 h-20 mx-auto rounded-full overflow-hidden border-2 border-sky-500 cursor-pointer relative group shadow-lg">
+                <!-- Profile Base Card & Avatar Mode -->
+                <div class="text-center space-y-3">
+                    <div onclick="triggerPhoto()" class="w-24 h-24 mx-auto rounded-full overflow-hidden border-4 border-sky-400 cursor-pointer relative group shadow-lg">
                         <img id="profileImg" src="https://api.dicebear.com/7.x/adventurer/svg" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-camera text-white"></i></div>
                     </div>
                     <input type="file" id="photoInput" class="hidden" onchange="uploadPhoto(event)">
-                    <h3 id="sbName" class="font-black text-slate-900 dark:text-white">Name</h3>
-                    <p id="sbEmail" class="text-xs text-slate-400">Email</p>
-                    <p id="sbPhone" class="text-xs text-slate-500">Phone</p>
+                    
+                    <h3 id="sbName" class="font-black text-lg">Name</h3>
+                    <p id="sbEmail" class="text-xs text-slate-400 -mt-1 font-bold">Gmail</p>
+                    <p id="sbPhone" class="text-xs text-slate-500 -mt-1 font-bold">Phone No</p>
                 </div>
-                <div class="space-y-3 bg-slate-100 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+
+                <!-- Setup Fields Block -->
+                <div class="space-y-3 bg-slate-100 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
                     <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Dream Medical College</label>
-                        <input type="text" id="sbDreamCollegeInput" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 text-xs focus:outline-none focus:border-sky-500" placeholder="Dream College">
+                        <label class="text-[10px] font-black tracking-widest text-slate-400 uppercase block mb-1">Dream Medical College</label>
+                        <input type="text" id="sbDreamCollegeInput" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none" placeholder="AIIMS, New Delhi">
                     </div>
                     <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase">Target Exam Date</label>
-                        <input type="date" id="targetDateInput" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 text-xs focus:outline-none focus:border-sky-500">
+                        <label class="text-[10px] font-black tracking-widest text-slate-400 uppercase block mb-1">Exam Target Date</label>
+                        <input type="date" id="targetDateInput" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none">
                     </div>
-                    <button onclick="saveMetaData()" class="w-full bg-sky-500 text-white font-bold text-xs py-2 rounded-lg shadow-md hover:bg-sky-600 transition">Save Targets</button>
+                    <button onclick="saveMetaData()" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-black text-xs py-2.5 rounded-xl transition shadow shadow-sky-500/20">Lock Targets</button>
                 </div>
-                <div class="space-y-2.5 font-bold text-sm">
-                    <a href="https://youtube.com" target="_blank" class="flex items-center p-2.5 rounded-xl bg-red-500/10 text-red-500 border border-red-500/10 hover:bg-red-500/20 transition"><i class="fa-brands fa-youtube mr-3 text-lg"></i>YouTube Channel</a>
-                    <a href="https://facebook.com" target="_blank" class="flex items-center p-2.5 rounded-xl bg-blue-600/10 text-blue-600 border border-blue-600/10 hover:bg-blue-600/20 transition"><i class="fa-brands fa-facebook mr-3 text-lg"></i>Facebook Page</a>
-                    <a href="https://instagram.com" target="_blank" class="flex items-center p-2.5 rounded-xl bg-pink-500/10 text-pink-500 border border-pink-500/10 hover:bg-pink-500/20 transition"><i class="fa-brands fa-instagram mr-3 text-lg"></i>Instagram Feed</a>
-                    <a href="https://telegram.org" target="_blank" class="flex items-center p-2.5 rounded-xl bg-sky-500/10 text-sky-500 border border-sky-500/10 hover:bg-sky-500/20 transition"><i class="fa-brands fa-telegram mr-3 text-lg"></i>Telegram Hub</a>
-                    <a href="#" class="flex items-center p-2.5 text-slate-400 text-xs font-semibold"><i class="fa-solid fa-info-circle mr-3 text-base"></i>About mNEET App</a>
+
+                <!-- Admin Communities Link Map -->
+                <div class="space-y-2 font-bold text-sm">
+                    <span class="text-[10px] font-black tracking-widest text-slate-400 uppercase block px-2 mb-1">Official Hub Channels</span>
+                    <a href="https://youtube.com" target="_blank" class="flex items-center p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 transition"><i class="fa-brands fa-youtube mr-3 text-lg"></i>YouTube Channel</a>
+                    <a href="https://facebook.com" target="_blank" class="flex items-center p-3 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-500 border border-blue-600/20 transition"><i class="fa-brands fa-facebook mr-3 text-lg"></i>Facebook Page</a>
+                    <a href="https://instagram.com" target="_blank" class="flex items-center p-3 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-500 border border-pink-500/20 transition"><i class="fa-brands fa-instagram mr-3 text-lg"></i>Instagram Feed</a>
+                    <a href="https://telegram.org" target="_blank" class="flex items-center p-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-500 border border-sky-500/20 transition"><i class="fa-brands fa-telegram mr-3 text-lg"></i>Telegram Channel</a>
+                    <a href="#" class="flex items-center p-3 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs"><i class="fa-solid fa-circle-info mr-3 text-sm"></i>About mNEET App</a>
                 </div>
             </div>
-            <div class="p-4 border-t border-slate-200 dark:border-slate-800"><button onclick="handleLogout()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-2.5 rounded-xl transition text-sm flex items-center justify-center space-x-2"><i class="fa-solid fa-power-off"></i> <span>Logout Account</span></button></div>
+
+            <!-- Sidebar Bottom Logout -->
+            <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-100/30 dark:bg-slate-950/20">
+                <button onclick="handleLogout()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black py-2.5 rounded-xl transition text-sm flex items-center justify-center space-x-2"><i class="fa-solid fa-power-off"></i> <span>Log Out Account</span></button>
+            </div>
         </aside>
 
-        <!-- MAIN APP INTERFACE -->
-        <main class="flex-1 lg:pl-80 pb-24 min-w-0">
+        <!-- MAIN PLATFORM HUB -->
+        <main class="flex-1 lg:pl-80 pb-24">
             
-            <!-- ADJUSTED HEADER - FIXED TO TWO PERFECT LINES -->
-            <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 py-3.5 sticky top-0 z-40 flex justify-between items-center transition-all">
-                <div class="flex items-center space-x-3 min-w-0">
-                    <button onclick="openSidebar()" class="lg:hidden p-1.5 text-slate-500 text-xl"><i class="fa-solid fa-bars"></i></button>
-                    <div class="truncate flex flex-col justify-center">
-                        <h2 id="midName" class="font-black text-base md:text-lg text-slate-900 dark:text-white leading-tight truncate">Aspirant Name</h2>
-                        <p id="midCollege" class="text-xs text-sky-500 font-extrabold tracking-wide leading-tight truncate">Set Dream College</p>
+            <!-- 3. TOP ROW BRAND BLOCK MATRIX -->
+            <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-6 py-4 sticky top-0 z-40 flex justify-between items-center transition-colors">
+                <div class="flex items-center space-x-3">
+                    <button onclick="openSidebar()" class="lg:hidden text-slate-500 text-xl"><i class="fa-solid fa-bars"></i></button>
+                    <div>
+                        <h2 id="midName" class="text-lg font-black text-slate-900 dark:text-white tracking-wide">Aspirant</h2>
+                        <p id="midCollege" class="text-xs font-black text-sky-500 dark:text-sky-400 tracking-wide">Dream College</p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-2.5 shrink-0">
-                    <button onclick="window.location.href='student-notification.html'" class="p-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 dark:text-slate-400 hover:border-sky-500 transition"><i class="fa-solid fa-bell"></i></button>
-                    <!-- UPDATED TO CHALLENGE BUTTON -->
-                    <button onclick="window.location.href='student-challenge.html'" class="px-3.5 py-2.5 bg-purple-600 text-white font-black text-xs rounded-xl uppercase tracking-wider shadow-md hover:bg-purple-700 transition">Challenge</button>
-                    <div onclick="window.location.href='student-leaderboard.html'" class="flex items-center space-x-1.5 bg-amber-500/10 border border-amber-500/30 px-3 py-2 rounded-xl cursor-pointer hover:scale-105 transition"><span class="text-base">🪙</span><span id="coinCount" class="text-amber-500 font-black text-xs md:text-sm">100</span></div>
+                
+                <!-- 2. TOP RIGHT TRIO CORNER GRID OPTIONS -->
+                <div class="flex items-center space-x-3">
+                    <button onclick="window.location.href='student-notification.html'" class="p-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 hover:border-sky-400 transition"><i class="fa-solid fa-bell"></i></button>
+                    <button onclick="window.location.href='student-challenge.html'" class="px-3 py-2 bg-purple-500 text-white font-black text-xs rounded-xl uppercase tracking-wider shadow shadow-purple-500/20 hover:bg-purple-600 transition"><i class="fa-solid fa-swords mr-1"></i>Battle</button>
+                    <div onclick="window.location.href='student-leaderboard.html'" class="flex items-center space-x-1.5 bg-amber-500/10 border border-amber-500/30 px-3 py-2 rounded-xl cursor-pointer hover:scale-105 transition"><span class="text-sm">🪙</span><span id="coinCount" class="text-amber-500 font-extrabold text-xs">100</span></div>
                 </div>
             </header>
 
-            <!-- CANVAS INTERIOR SCREEN AREA -->
+            <!-- 5. HOME VIEW CORE PORTAL ELEMENTS -->
             <div class="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
                 
-                <!-- Course Selector & HIGHER PRO TIMER BLOCK -->
+                <!-- Course Select Strap & Precise Timer Bar -->
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm">
-                    <select class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black text-slate-700 dark:text-slate-300 focus:outline-none w-full sm:w-60">
-                        <option>mNEET Target 2026 Course</option>
-                    </select>
-                    <!-- LARGER TEXT TARGET TIMER -->
-                    <div class="flex flex-col items-center sm:items-end space-y-0.5">
-                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400"><i class="fa-solid fa-bullseye text-sky-400 mr-1"></i> Target</span>
-                        <div id="countdownClock" class="font-mono text-base md:text-xl font-black text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-950 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 tracking-wide">
-                            <span id="tDays" class="text-sky-500">00</span><span class="text-xs text-slate-400 font-bold mx-0.5">d</span> :
-                            <span id="tHrs" class="text-sky-500">00</span><span class="text-xs text-slate-400 font-bold mx-0.5">h</span> :
-                            <span id="tMin" class="text-sky-500">00</span><span class="text-xs text-slate-400 font-bold mx-0.5">m</span> :
-                            <span id="tSec" class="text-sky-500">00</span><span class="text-xs text-slate-400 font-bold mx-0.5">s</span>
-                        </div>
+                    <div class="flex items-center space-x-2 w-full sm:w-auto">
+                        <i class="fa-solid fa-graduation-cap text-sky-500 text-lg"></i>
+                        <select class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-black text-slate-700 dark:text-slate-300 focus:outline-none w-full sm:w-60">
+                            <option>mNEET Target 2026 Course</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center space-x-1 font-mono text-xs font-black text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl">
+                        <span class="mr-1 text-sky-400"><i class="fa-solid fa-stopwatch animate-pulse"></i> Time:</span>
+                        <span id="tDays" class="text-sky-500 text-sm">00</span><span>d :</span>
+                        <span id="tHrs" class="text-sky-500 text-sm">00</span><span>h :</span>
+                        <span id="tMin" class="text-sky-500 text-sm">00</span><span>m :</span>
+                        <span id="tSec" class="text-sky-500 text-sm">00</span><span>s</span>
                     </div>
                 </div>
 
-                <!-- Motivation Banner -->
-                <div class="bg-gradient-to-r from-sky-500 to-indigo-600 text-white p-6 rounded-3xl shadow-xl">
-                    <span class="bg-slate-950/30 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full">Motivation Arena</span>
-                    <h3 class="text-lg md:text-xl font-black mt-2 leading-snug">"Your dreams don't work unless you do. Lock your targets today!"</h3>
+                <!-- Admin Motivation Card Widget -->
+                <div class="bg-gradient-to-r from-sky-500 to-indigo-600 text-white p-6 rounded-3xl shadow-xl relative overflow-hidden group">
+                    <div class="absolute right-0 bottom-0 opacity-10 text-8xl p-2 pointer-events-none"><i class="fa-solid fa-quote-right"></i></div>
+                    <span class="bg-slate-950/30 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full"><i class="fa-solid fa-bullhorn mr-1"></i> Motivation Broadcast</span>
+                    <h3 class="text-lg md:text-xl font-black mt-2 leading-snug">"Your dreams don't work unless you do. Lock your targets today, solve the arena, wear the white coat!"</h3>
                 </div>
 
-                <!-- ADVANCED PROGRESS MATRIX WITH COMPLETE DATA COMPARISONS -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-4">
-                    <h3 class="text-xs font-black tracking-widest uppercase text-slate-400"><i class="fa-solid fa-chart-bar mr-1.5"></i> Live Academic Progress Matrix</h3>
+                <!-- Perfect Student Progress Metric Matrix Table -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-sm space-y-4">
+                    <h3 class="text-xs font-black tracking-widest uppercase text-slate-400"><i class="fa-solid fa-chart-bar mr-1"></i> Comparative Progress Matrix</h3>
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs font-bold whitespace-nowrap border-collapse">
+                        <table class="w-full text-left text-xs font-bold border-collapse">
                             <thead>
-                                <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider">
-                                    <th class="pb-3 pr-4">Metric Parameters</th>
-                                    <th class="pb-3 px-4 text-center">Completed</th>
-                                    <th class="pb-3 px-4 text-center">Pending</th>
-                                    <th class="pb-3 px-4 text-center">Percentage</th>
-                                    <th class="pb-3 px-4 text-center text-emerald-500">Topper Average</th>
-                                    <th class="pb-3 pl-4 text-center text-indigo-400">Student Average</th>
+                                <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-400 text-[10px] uppercase tracking-wider">
+                                    <th class="pb-2.5">Academic Metric Focus</th>
+                                    <th class="pb-2.5 text-center">Your Status</th>
+                                    <th class="pb-2.5 text-center">Remaining</th>
+                                    <th class="pb-2.5 text-center">Topper Benchmark</th>
+                                    <th class="pb-2.5 text-center">Average Student</th>
+                                    <th class="pb-2.5 text-right">Completion Ratio</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-slate-700 dark:text-slate-300">
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-semibold text-sm">
                                 <tr>
-                                    <td class="py-3.5 pr-4 font-bold text-slate-900 dark:text-slate-100"><i class="fa-solid fa-book-open text-sky-500 mr-2"></i> NCERT Reading</td>
-                                    <td class="py-3.5 px-4 text-center">0 / 38</td>
-                                    <td class="py-3.5 px-4 text-center text-slate-400">38 Chapters</td>
-                                    <td class="py-3.5 px-4 text-center"><span class="bg-sky-500/10 text-sky-500 px-2 py-0.5 rounded font-black">0%</span></td>
-                                    <td class="py-3.5 px-4 text-center text-emerald-500 font-bold">35 / 38</td>
-                                    <td class="py-3.5 pl-4 text-center text-indigo-400">18 / 38</td>
+                                    <td class="py-3.5 font-bold text-slate-900 dark:text-slate-200 flex items-center"><i class="fa-solid fa-book-open text-sky-500 mr-2"></i> NCERT Reading</td>
+                                    <td class="py-3.5 text-center font-black">0 / 38</td>
+                                    <td class="py-3.5 text-center text-slate-400">38 Chapters</td>
+                                    <td class="py-3.5 text-center text-emerald-500">35 / 38</td>
+                                    <td class="py-3.5 text-center text-amber-500">12 / 38</td>
+                                    <td class="py-3.5 text-right"><span class="bg-sky-500/10 text-sky-500 font-black text-xs px-2 py-0.5 rounded">0%</span></td>
                                 </tr>
                                 <tr>
-                                    <td class="py-3.5 pr-4 font-bold text-slate-900 dark:text-slate-100"><i class="fa-solid fa-vial text-emerald-500 mr-2"></i> Chapter Quizzes</td>
-                                    <td class="py-3.5 px-4 text-center">0 / 120</td>
-                                    <td class="py-3.5 px-4 text-center text-slate-400">120 Tests</td>
-                                    <td class="py-3.5 px-4 text-center"><span class="bg-sky-500/10 text-sky-500 px-2 py-0.5 rounded font-black">0%</span></td>
-                                    <td class="py-3.5 px-4 text-center text-emerald-500 font-bold">115 / 120</td>
-                                    <td class="py-3.5 pl-4 text-center text-indigo-400">55 / 120</td>
+                                    <td class="py-3.5 font-bold text-slate-900 dark:text-slate-200 flex items-center"><i class="fa-solid fa-vial text-purple-500 mr-2"></i> Chapter Quizzes</td>
+                                    <td class="py-3.5 text-center font-black">0 / 120</td>
+                                    <td class="py-3.5 text-center text-slate-400">120 Tests</td>
+                                    <td class="py-3.5 text-center text-emerald-500">110 / 120</td>
+                                    <td class="py-3.5 text-center text-amber-500">32 / 120</td>
+                                    <td class="py-3.5 text-right"><span class="bg-purple-500/10 text-purple-500 font-black text-xs px-2 py-0.5 rounded">0%</span></td>
                                 </tr>
                                 <tr>
-                                    <td class="py-3.5 pr-4 font-bold text-slate-900 dark:text-slate-100"><i class="fa-solid fa-stopwatch text-amber-500 mr-2"></i> Full Mock Papers</td>
-                                    <td class="py-3.5 px-4 text-center">0 / 30</td>
-                                    <td class="py-3.5 px-4 text-center text-slate-400">30 Mocks</td>
-                                    <td class="py-3.5 px-4 text-center"><span class="bg-sky-500/10 text-sky-500 px-2 py-0.5 rounded font-black">0%</span></td>
-                                    <td class="py-3.5 px-4 text-center text-emerald-500 font-bold">28 / 30</td>
-                                    <td class="py-3.5 pl-4 text-center text-indigo-400">12 / 30</td>
+                                    <td class="py-3.5 font-bold text-slate-900 dark:text-slate-200 flex items-center"><i class="fa-solid fa-stopwatch text-amber-500 mr-2"></i> Mock Papers</td>
+                                    <td class="py-3.5 text-center font-black">0 / 30</td>
+                                    <td class="py-3.5 text-center text-slate-400">30 Papers</td>
+                                    <td class="py-3.5 text-center text-emerald-500">27 / 30</td>
+                                    <td class="py-3.5 text-center text-amber-500">05 / 30</td>
+                                    <td class="py-3.5 text-right"><span class="bg-amber-500/10 text-amber-500 font-black text-xs px-2 py-0.5 rounded">0%</span></td>
                                 </tr>
                                 <tr>
-                                    <td class="py-3.5 pr-4 font-bold text-slate-900 dark:text-slate-100"><i class="fa-solid fa-bullseye text-purple-500 mr-2"></i> MCQs Attempted</td>
-                                    <td class="py-3.5 px-4 text-center">0</td>
-                                    <td class="py-3.5 px-4 text-center text-slate-400">12,000 Questions</td>
-                                    <td class="py-3.5 px-4 text-center"><span class="bg-sky-500/10 text-sky-500 px-2 py-0.5 rounded font-black">0%</span></td>
-                                    <td class="py-3.5 px-4 text-center text-emerald-500 font-bold">10,800</td>
-                                    <td class="py-3.5 pl-4 text-center text-indigo-400">4,200</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Premium Live Store Area -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl flex flex-col sm:flex-row gap-5 items-center hover:border-sky-500/30 transition shadow-sm">
-                    <div class="w-full sm:w-44 h-28 bg-gradient-to-tr from-sky-500 to-indigo-600 text-white rounded-2xl flex items-center j
+                                    <td class="py-3.5 font-bold text-slate-900 dark:text-slate-200 flex items-center"><i class="fa-solid fa-bullseye text-rose-500 mr-2"></i> Total MCQ Counter</td>
+                                    <td class="py-3.5 text-center font-black">0</td>
+                                    <td class="py-3.5 text-center text-slate-400">Unlimited</td>
+                                    <td class="py-3.5 text-center text-emerald-500">4,800 MCQs</td>
+                                    <td class="py-3.5 text-center text-amb
