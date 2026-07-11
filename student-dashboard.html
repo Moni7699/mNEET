@@ -179,7 +179,7 @@
                 <div class="space-y-2">
                     <span class="text-[9px] font-black tracking-widest text-slate-400 uppercase block px-1 mb-1">Official Hub Communities</span>
                     <a href="https://youtube.com" target="_blank" class="flex items-center p-3 rounded-xl bg-red-500/5 hover:bg-red-500/10 text-red-500 border border-red-500/10 font-bold text-xs transition"><i class="fa-brands fa-youtube mr-3 text-base"></i>YouTube Channel</a>
-                    <a href="https://facebook.com" target="_blank" class="flex items-center p-3 rounded-xl bg-blue-600/5 hover:bg-blue-600/10 text-blue-500 border border-blue-600/20 font-bold text-xs transition"><i class="fa-brands fa-facebook mr-3 text-base"></i>Facebook Page</a>
+                    <a href="https://facebook.com" target="_blank" class="flex items-center p-3 rounded-xl bg-blue-600/5 hover:bg-blue-600/10 text-blue-500 border border-blue-600/10 font-bold text-xs transition"><i class="fa-brands fa-facebook mr-3 text-base"></i>Facebook Page</a>
                     <a href="https://instagram.com" target="_blank" class="flex items-center p-3 rounded-xl bg-pink-500/5 hover:bg-pink-500/10 text-pink-500 border border-pink-500/10 font-bold text-xs transition"><i class="fa-brands fa-instagram mr-3 text-base"></i>Instagram Feed</a>
                     <a href="https://telegram.org" target="_blank" class="flex items-center p-3 rounded-xl bg-sky-500/5 hover:bg-sky-500/10 text-sky-500 border border-sky-500/10 font-bold text-xs transition"><i class="fa-brands fa-telegram mr-3 text-base"></i>Telegram Channel</a>
                     <a href="#" class="flex items-center p-3 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 text-xs font-bold"><i class="fa-solid fa-circle-info mr-3 text-base"></i>About mNEET App</a>
@@ -190,28 +190,28 @@
             </div>
     </aside>
             <!-- MAIN APP INTERACTION BOUNDARY -->
-        <main class="flex-1 lg:pl-80 pb-24 min-h-screen flex flex-col">
+        <main class="flex-1 w-full lg:max-w-[calc(100%-20rem)] lg:ml-80 pb-24 min-h-screen flex flex-col overflow-x-hidden">
             <!-- 3. MAIN TOP ACTION ROW STRAP -->
-            <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 py-4 sticky top-0 z-40 flex justify-between items-center transition-colors">
+            <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 py-4 sticky top-0 z-40 flex justify-between items-center transition-colors w-full">
                 <div class="flex items-center space-x-2 max-w-[45%]">
                     <button onclick="openSidebar()" class="lg:hidden p-2 text-slate-500 text-lg flex-shrink-0"><i class="fa-solid fa-bars"></i></button>
                     <div class="truncate">
-                        <h2 id="midName" class="text-sm md:text-base font-black text-slate-900 dark:text-white truncate">Aspirant</h2>
-                        <p id="midCollege" class="text-[10px] md:text-xs font-black text-sky-500 dark:text-sky-400 tracking-wide truncate">Dream College</p>
+                        <h2 id="midName" class="text-xs md:text-sm font-black text-slate-900 dark:text-white truncate">Aspirant</h2>
+                        <p id="midCollege" class="text-[9px] md:text-xs font-black text-sky-500 dark:text-sky-400 tracking-wide truncate">Dream College</p>
                     </div>
                 </div>
                 <!-- 2. RIGHT CORNER WIDGET OPTIONS TRIO -->
-                <div class="flex items-center space-x-2 md:space-x-3">
-                    <button onclick="window.location.href='student-notification.html'" class="p-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 hover:border-sky-400 transition flex-shrink-0"><i class="fa-solid fa-bell text-sm"></i></button>
-                    <button onclick="window.location.href='student-challenge.html'" class="px-2.5 py-2 bg-purple-500 text-white font-black text-[10px] md:text-xs rounded-xl uppercase tracking-wider hover:bg-purple-600 transition flex-shrink-0 shadow shadow-purple-500/10"><i class="fa-solid fa-swords mr-1"></i>Battle</button>
-                    <div onclick="window.location.href='student-leaderboard.html'" class="flex items-center space-x-1 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1.5 rounded-xl cursor-pointer hover:scale-105 transition flex-shrink-0"><span class="text-sm">🪙</span><span id="coinCount" class="text-amber-500 font-black text-xs">100</span></div>
+                <div class="flex items-center space-x-1.5 md:space-x-3 flex-shrink-0">
+                    <button onclick="window.location.href='student-notification.html'" class="p-2 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 hover:border-sky-400 transition"><i class="fa-solid fa-bell text-xs"></i></button>
+                    <button onclick="window.location.href='student-challenge.html'" class="px-2 py-2 bg-purple-500 text-white font-black text-[9px] md:text-xs rounded-xl uppercase tracking-wider hover:bg-purple-600 transition shadow shadow-purple-500/10"><i class="fa-solid fa-swords mr-1"></i>Battle</button>
+                    <div onclick="window.location.href='student-leaderboard.html'" class="flex items-center space-x-1 bg-amber-500/10 border border-amber-500/30 px-2 py-1.5 rounded-xl cursor-pointer hover:scale-105 transition"><span class="text-xs">🪙</span><span id="coinCount" class="text-amber-500 font-black text-[10px] md:text-xs">100</span></div>
                 </div>
             </header>
 
             <!-- 5. HOME PAGE PRIMARY CANVAS MODULES -->
-            <div class="max-w-5xl w-full mx-auto p-4 md:p-6 space-y-6 flex-1">
+            <div class="w-full px-4 md:px-6 py-6 space-y-6 flex-1 max-w-5xl mx-auto box-border overflow-x-hidden">
                 <!-- Course Selection Header & Timer widget -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm w-full">
                     <div class="flex items-center space-x-2 w-full sm:w-auto">
                         <i class="fa-solid fa-graduation-cap text-sky-500 text-base"></i>
                         <select class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-black text-slate-700 dark:text-slate-300 focus:outline-none w-full sm:w-64">
@@ -228,14 +228,14 @@
                 </div>
 
                 <!-- Motivation Card -->
-                <div class="bg-gradient-to-r from-sky-500 to-indigo-600 text-white p-5 md:p-6 rounded-3xl shadow-xl relative overflow-hidden">
+                <div class="bg-gradient-to-r from-sky-500 to-indigo-600 text-white p-5 md:p-6 rounded-3xl shadow-xl relative overflow-hidden w-full">
                     <div class="absolute right-0 bottom-0 opacity-10 text-7xl p-2 pointer-events-none"><i class="fa-solid fa-notes-medical"></i></div>
                     <span class="bg-slate-950/20 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full"><i class="fa-solid fa-bullhorn mr-1"></i> Admin Broadcast</span>
-                    <h3 class="text-base md:text-lg font-black mt-2 leading-relaxed">"Your dreams don't work unless you do. Lock your targets today, solve the arena, wear the white coat!"</h3>
+                    <h3 class="text-sm md:text-base font-black mt-2 leading-relaxed">"Your dreams don't work unless you do. Lock your targets today, solve the arena, wear the white coat!"</h3>
                 </div>
 
                 <!-- Progress Comparison Matrix Table -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 md:p-6 rounded-3xl shadow-sm space-y-4">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 md:p-6 rounded-3xl shadow-sm space-y-4 w-full overflow-hidden">
                     <h3 class="text-xs font-black tracking-widest uppercase text-slate-400"><i class="fa-solid fa-chart-line-up mr-1"></i> Comparative Progress Matrix</h3>
                     <div class="overflow-x-auto w-full">
                         <table class="w-full text-left text-xs font-bold border-collapse min-w-[550px]">
@@ -288,9 +288,9 @@
                 </div>
 
                 <!-- Premium Courses Storefront -->
-                <div class="space-y-4">
+                <div class="space-y-4 w-full">
                     <h3 class="text-xs font-black tracking-widest uppercase text-slate-400"><i class="fa-solid fa-store-medical mr-1"></i> Available Premium NEET Batches</h3>
-                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 md:p-6 flex flex-col md:flex-row gap-5 items-center shadow-md">
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-4 md:p-6 flex flex-col md:flex-row gap-5 items-center shadow-md w-full">
                         <div class="w-full md:w-52 h-36 bg-gradient-to-tr from-sky-500 to-indigo-600 text-white rounded-2xl flex flex-col justify-center items-center p-4 font-black shrink-0 relative overflow-hidden shadow">
                             <i class="fa-solid fa-dna text-7xl absolute -bottom-4 -right-4 opacity-15"></i>
                             <span class="text-base tracking-wider font-black uppercase">mNEET Pro</span>
@@ -298,11 +298,11 @@
                         </div>
                         <div class="flex-1 space-y-2.5 w-full">
                             <div class="flex justify-between items-start flex-wrap gap-2">
-                                <h4 class="font-black text-base md:text-lg text-slate-900 dark:text-white leading-tight">mNEET Alpha Pro Complete Comprehensive 2026 Batch</h4>
-                                <span class="text-xl md:text-2xl font-black text-sky-500">₹4,999</span>
+                                <h4 class="font-black text-sm md:text-base text-slate-900 dark:text-white leading-tight">mNEET Alpha Pro Complete Comprehensive 2026 Batch</h4>
+                                <span class="text-lg md:text-xl font-black text-sky-500">₹4,999</span>
                             </div>
                             <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Full complete deployment pack unlocking active voice synthesis reading panels, separate multiplayer combat arenas, and detailed pattern test configurations.</p>
-                            <div class="flex flex-wrap gap-4 text-[9px] font-black text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/60 items-center w-full">
+                            <div class="flex flex-wrap gap-3 text-[9px] font-black text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/60 items-center w-full">
                                 <span><i class="fa-solid fa-calendar text-sky-400 mr-1"></i> START: 01 AUG 2026</span>
                                 <span><i class="fa-solid fa-calendar-check text-indigo-400 mr-1"></i> END: MAY 2027</span>
                                 <button class="ml-auto bg-sky-500 hover:bg-sky-600 text-white dark:text-slate-950 px-4 py-2 font-black rounded-xl transition text-xs shadow shadow-sky-500/10 active:scale-95">Enroll Package</button>
@@ -314,13 +314,13 @@
         </main>
 
         <!-- 4. BOTTOM ROW NAVIGATION -->
-        <nav id="bottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-4 py-3 flex justify-around items-center shadow-2xl transition-transform duration-300 lg:pl-80">
-            <button onclick="window.location.href='student-dashboard.html'" class="text-sky-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-house-chimney text-lg"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
-            <button onclick="window.location.href='student-ncert.html'" class="text-slate-400 hover:text-sky-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-book-open-reader text-lg"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
-            <button onclick="window.location.href='student-quiz.html'" class="text-slate-400 hover:text-sky-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-lg"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
-            <button onclick="window.location.href='student-mocktest.html'" class="text-slate-400 hover:text-sky-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-stopwatch-20 text-lg"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
+        <nav id="bottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3 flex justify-around items-center shadow-2xl transition-transform duration-300 lg:pl-80 w-full box-border">
+            <button onclick="window.location.href='student-dashboard.html'" class="text-sky-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-house-chimney text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
+            <button onclick="window.location.href='student-ncert.html'" class="text-slate-400 hover:text-sky-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-book-open-reader text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
+            <button onclick="window.location.href='student-quiz.html'" class="text-slate-400 hover:text-sky-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
+            <button onclick="window.location.href='student-mocktest.html'" class="text-slate-400 hover:text-sky-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
         </nav>
     </div>
 </body>
     </html>
-                                                                                                           
+    
