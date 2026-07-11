@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET Dashboard - Pro Edition</title>
-    <!-- Tailwind CSS for Advanced Responsive UI -->
+    <title>mNEET - Ultimate Student Arena</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
         }
     </script>
-    <!-- FontAwesome for Pro App Icons -->
+    <!-- FontAwesome for Premium Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Firebase SDK Modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
@@ -37,27 +36,27 @@
         let currentUser = null;
         let timerInterval = null;
 
-        // Security Lock & Data Orchestrator
+        // Firebase Sync Engine
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
                 const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (userDoc.exists() && userDoc.data().role === 'student') {
+                if (userDoc.exists()) {
                     const data = userDoc.data();
                     
-                    // Populate data perfectly across UI
+                    // Profile Mapping
                     document.getElementById('sbName').innerText = data.name || "Aspirant";
                     document.getElementById('sbEmail').innerText = data.email || "";
-                    document.getElementById('sbPhone').innerText = data.phone || "No Phone";
-                    document.getElementById('headerName').innerText = data.name || "Aspirant";
-                    document.getElementById('coinCount').innerText = data.bpCoins || 0;
+                    document.getElementById('sbPhone').innerText = data.phone || "";
+                    document.getElementById('midName').innerText = data.name || "Aspirant";
                     
-                    // Dream College & Target Date Sync
-                    const dc = data.dreamCollege || "Not Set Yet";
+                    const college = data.dreamCollege || "Set Dream College";
+                    document.getElementById('midCollege').innerText = college;
                     document.getElementById('sbDreamCollegeInput').value = data.dreamCollege || "";
-                    document.getElementById('headerDreamCollege').innerText = dc;
                     document.getElementById('targetDateInput').value = data.targetDate || "";
                     
+                    document.getElementById('coinCount').innerText = data.bpCoins || 100;
+
                     if(data.profilePic) {
                         document.getElementById('profileImg').src = data.profilePic;
                     }
@@ -66,272 +65,231 @@
                         startCountdown(data.targetDate);
                     }
 
-                    document.getElementById('mainContent').classList.remove('hidden');
-                } else {
-                    window.location.href = "index.html";
+                    document.getElementById('mainAppArea').classList.remove('hidden');
                 }
             } else {
                 window.location.href = "index.html";
             }
         });
 
-        // Save Meta Features (Dream College & Target Date)
-        window.saveMetaData = async function() {
-            if(!currentUser) return;
-            const dcValue = document.getElementById('sbDreamCollegeInput').value.trim();
-            const tdValue = document.getElementById('targetDateInput').value;
+        // Save Profiles
+        window.saveTargets = async function() {
+            if (!currentUser) return;
+            const dc = document.getElementById('sbDreamCollegeInput').value.trim();
+            const td = document.getElementById('targetDateInput').value;
 
-            try {
-                await updateDoc(doc(db, "users", currentUser.uid), {
-                    dreamCollege: dcValue,
-                    targetDate: tdValue
-                });
-                document.getElementById('headerDreamCollege').innerText = dcValue || "Not Set Yet";
-                if(tdValue) startCountdown(tdValue);
-                alert("Profile targets updated successfully!");
-            } catch(e) {
-                alert("Error saving profiles.");
-            }
+            await updateDoc(doc(db, "users", currentUser.uid), {
+                dreamCollege: dc,
+                targetDate: td
+            });
+            document.getElementById('midCollege').innerText = dc || "Set Dream College";
+            if (td) startCountdown(td);
+            alert("🎯 Targets Locked Successfully!");
         };
 
-        // Live Dynamic Countdown Clock Engine
-        function startCountdown(targetDateStr) {
+        // Countdown Timer Engine
+        function startCountdown(dateStr) {
             if(timerInterval) clearInterval(timerInterval);
-            const target = new Date(targetDateStr).getTime();
-            
+            const target = new Date(dateStr).getTime();
             timerInterval = setInterval(() => {
                 const now = new Date().getTime();
                 const diff = target - now;
-
                 if(diff <= 0) {
-                    document.getElementById('countdownClock').innerHTML = "EXAM ARENA LIVE!";
                     clearInterval(timerInterval);
                     return;
                 }
-
-                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const secs = Math.floor((diff % (1000 * 60)) / 1000);
-
-                document.getElementById('timerDays').innerText = String(days).padStart(2, '0');
-                document.getElementById('timerHours').innerText = String(hours).padStart(2, '0');
-                document.getElementById('timerMins').innerText = String(mins).padStart(2, '0');
-                document.getElementById('timerSecs').innerText = String(secs).padStart(2, '0');
+                document.getElementById('d-day').innerText = Math.floor(diff / (1000 * 60 * 60 * 24));
+                document.getElementById('d-hr').innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                document.getElementById('d-min').innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                document.getElementById('d-sec').innerText = Math.floor((diff % (1000 * 60)) / 1000);
             }, 1000);
         }
 
-        // Direct Profile Photo Upload to Base64 (Gallery Bypass)
-        window.triggerPhotoUpload = function() {
-            document.getElementById('galleryInput').click();
-        };
-
-        window.uploadPhoto = function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
+        // Image Base64 Upload
+        window.triggerPhoto = () => document.getElementById('photoFile').click();
+        window.uploadPhoto = function(e) {
+            const file = e.target.files[0];
             const reader = new FileReader();
-            reader.onloadend = async function() {
-                const base64String = reader.result;
-                document.getElementById('profileImg').src = base64String;
-                if(currentUser) {
-                    await updateDoc(doc(db, "users", currentUser.uid), {
-                        profilePic: base64String
-                    });
-                }
+            reader.onloadend = async () => {
+                document.getElementById('profileImg').src = reader.result;
+                if(currentUser) await updateDoc(doc(db, "users", currentUser.uid), { profilePic: reader.result });
             };
-            reader.readAsDataURL(file);
+            if(file) reader.readAsDataURL(file);
         };
 
-        // Theme Switcher Sync Engine
+        // Theme Switch Matrix
         window.toggleTheme = function() {
-            const htmlTag = document.documentElement;
-            const themeBtnText = document.getElementById('themeBtnText');
-            if (htmlTag.classList.contains('dark')) {
-                htmlTag.classList.remove('dark');
-                themeBtnText.innerText = "Dark Mode";
-                localStorage.setItem('theme', 'light');
+            const html = document.documentElement;
+            const btn = document.getElementById('themeToggleBtn');
+            if(html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                btn.innerHTML = '<i class="fa-solid fa-moon text-lg"></i> <span>Dark Mode</span>';
             } else {
-                htmlTag.classList.add('dark');
-                themeBtnText.innerText = "Light Mode";
-                localStorage.setItem('theme', 'dark');
+                html.classList.add('dark');
+                btn.innerHTML = '<i class="fa-solid fa-sun text-lg"></i> <span>Light Mode</span>';
             }
         };
 
-        // UI Controls for Pro Sidebar Toggle
-        window.toggleSidebar = function() {
-            const sidebar = document.getElementById('appSidebar');
-            sidebar.classList.toggle('-translate-x-full');
+        // Screen Routing Management System
+        window.showTab = function(tabName) {
+            const tabs = ['home-view', 'study-view', 'test-view', 'mock-view', 'notify-view', 'battle-view', 'leaderboard-view'];
+            tabs.forEach(t => document.getElementById(t).classList.add('hidden'));
+            document.getElementById(`${tabName}-view`).classList.remove('hidden');
+
+            // Reset Bottom Navigation highlight color active states
+            const buttons = document.querySelectorAll('.nav-btn');
+            buttons.forEach(btn => btn.classList.remove('text-sky-500', 'font-black'));
+            
+            // Add focus highlight color back based on selection
+            if(tabName === 'home') document.getElementById('btn-home').classList.add('text-sky-500', 'font-black');
+            if(tabName === 'study') document.getElementById('btn-study').classList.add('text-sky-500', 'font-black');
+            if(tabName === 'test') document.getElementById('btn-test').classList.add('text-sky-500', 'font-black');
+            if(tabName === 'mock') document.getElementById('btn-mock').classList.add('text-sky-500', 'font-black');
         };
 
-        // Session Log Out
-        window.handleLogout = function() {
-            signOut(auth).then(() => { window.location.href = "index.html"; });
-        };
+        // Sidebar Actions
+        window.openSidebar = () => document.getElementById('sidebar').classList.remove('-translate-x-full');
+        window.closeSidebar = () => document.getElementById('sidebar').classList.add('-translate-x-full');
+        window.handleLogout = () => signOut(auth).then(() => window.location.href = "index.html");
 
-        // Bottom Bar Hide/Show on Scroll End Logic
-        let isScrolling;
+        // Bottom Bar Auto Hide on Scroll Engine
+        let lastScrollTop = 0;
         window.addEventListener('scroll', () => {
-            const bBar = document.getElementById('bottomNav');
-            bBar.style.transform = "translateY(100%)"; // Hide completely on scroll
-            
-            clearTimeout(isScrolling);
-            isScrolling = setTimeout(() => {
-                bBar.style.transform = "translateY(0)"; // Bring back on scroll stop
-            }, 250);
+            const st = window.pageYOffset || document.documentElement.scrollTop;
+            const bNav = document.getElementById('bottomNavbar');
+            if (st > lastScrollTop) {
+                bNav.style.transform = "translateY(100%)";
+            } else {
+                bNav.style.transform = "translateY(0)";
+            }
+            lastScrollTop = st <= 0 ? 0 : st;
         });
-
-        // Module Navigation Router Matrix
-        window.switchScreen = function(target) {
-            alert(`Navigating to ${target} Screen. \n(Coming Up in next steps!)`);
-        };
     </script>
-    <style>
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-    </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen font-sans antialiased transition-colors duration-300">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
 
-    <div id="mainContent" class="hidden flex min-h-screen relative overflow-x-hidden">
+    <div id="mainAppArea" class="hidden min-h-screen flex relative">
 
-        <!-- ============================================ -->
-        <!-- 1. LEFT SIDEBAR SCREEN PERFECTION            -->
-        <!-- ============================================ -->
-        <aside id="appSidebar" class="fixed top-0 bottom-0 left-0 z-50 w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col justify-between shadow-2xl lg:shadow-none">
+        <!-- ========================== -->
+        <!-- 1. PREMIUM APP SIDEBAR     -->
+        <!-- ========================== -->
+        <aside id="sidebar" class="fixed top-0 bottom-0 left-0 z-50 w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col justify-between shadow-2xl">
             
-            <!-- Top Controls Matrix inside Sidebar -->
-            <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
-                <button onclick="toggleTheme()" class="flex items-center space-x-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-sky-500">
-                    <i class="fa-solid var(--tw-brightness) fa-moon text-base"></i>
-                    <span id="themeBtnText">Light Mode</span>
+            <!-- Top Controls Box -->
+            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/20">
+                <button id="themeToggleBtn" onclick="toggleTheme()" class="flex items-center space-x-3 text-sm font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 active:scale-95 transition">
+                    <i class="fa-solid fa-sun text-lg text-amber-500"></i> <span>Light Mode</span>
                 </button>
-                <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 text-xl"><i class="fa-solid fa-xmark"></i></button>
+                <button onclick="closeSidebar()" class="lg:hidden p-2 text-slate-400 hover:text-rose-500"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
 
-            <!-- Profile & Configuration Area (Scrollable) -->
-            <div class="flex-1 overflow-y-auto custom-scroll p-6 space-y-6">
-                <!-- Profile Image Engine -->
-                <div class="text-center space-y-3 relative group">
-                    <div class="w-24 h-24 mx-auto rounded-full overflow-hidden border-2 border-sky-400 shadow-md relative">
-                        <img id="profileImg" src="https://api.dicebear.com/7.x/adventurer/svg?seed=Felix" alt="Avatar" class="w-full h-full object-cover">
+            <!-- Profile Data Fields Block -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <div class="text-center space-y-3">
+                    <div class="w-24 h-24 mx-auto rounded-full overflow-hidden border-4 border-sky-400 shadow-xl relative group cursor-pointer" onclick="triggerPhoto()">
+                        <img id="profileImg" src="https://api.dicebear.com/7.x/adventurer/svg?seed=MNEET" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                            <i class="fa-solid fa-camera text-white"></i>
+                        </div>
                     </div>
-                    <input type="file" id="galleryInput" accept="image/*" class="hidden" onchange="uploadPhoto(event)">
-                    <button onclick="triggerPhotoUpload()" class="text-xs font-bold text-sky-500 hover:underline block mx-auto"><i class="fa-solid fa-camera mr-1"></i> Upload Photo</button>
+                    <input type="file" id="photoFile" class="hidden" onchange="uploadPhoto(event)">
+                    <button onclick="triggerPhoto()" class="text-xs font-bold text-sky-500 hover:underline"><i class="fa-solid fa-pen-to-square mr-1"></i>Edit Avatar</button>
                     
-                    <h3 id="sbName" class="text-lg font-black tracking-wide">Aspirant Name</h3>
-                    <p id="sbEmail" class="text-xs text-slate-400 -mt-2">email@gmail.com</p>
-                    <p id="sbPhone" class="text-xs text-slate-500 -mt-2">Phone</p>
+                    <h3 id="sbName" class="text-xl font-black tracking-wide text-slate-900 dark:text-white">Loading...</h3>
+                    <p id="sbGmail" class="text-xs bg-sky-500/10 text-sky-600 dark:text-sky-400 px-3 py-1 rounded-full inline-block font-semibold border border-sky-500/20" id="sbEmail">...</p>
+                    <p id="sbPhone" class="text-xs text-slate-400 block font-medium">...</p>
                 </div>
 
-                <hr class="border-slate-200 dark:border-slate-800">
-
-                <!-- Target Updates Input Block -->
-                <div class="space-y-4">
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-black tracking-widest text-slate-400 uppercase">Dream Medical College</label>
-                        <input type="text" id="sbDreamCollegeInput" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-sky-500" placeholder="AIIMS, New Delhi">
+                <div class="space-y-4 bg-slate-100/50 dark:bg-slate-950/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                    <div>
+                        <label class="text-[10px] font-black tracking-widest text-slate-400 uppercase block mb-1">Dream Medical College</label>
+                        <input type="text" id="sbDreamCollegeInput" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-sky-500" placeholder="e.g. AIIMS, New Delhi">
                     </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-black tracking-widest text-slate-400 uppercase">NEET Target Exam Date</label>
-                        <input type="date" id="targetDateInput" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-sky-500">
+                    <div>
+                        <label class="text-[10px] font-black tracking-widest text-slate-400 uppercase block mb-1">NEET Target Date</label>
+                        <input type="date" id="targetDateInput" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-sky-500">
                     </div>
-                    <button onclick="saveMetaData()" class="w-full bg-sky-500 text-white dark:text-slate-950 font-bold text-xs py-2.5 rounded-xl hover:bg-sky-400 transition">💾 Save Core Targets</button>
+                    <button onclick="saveTargets()" class="w-full bg-sky-500 hover:bg-sky-400 text-white dark:text-slate-950 font-black text-xs py-2.5 rounded-xl shadow transition">🎯 Lock Core Targets</button>
                 </div>
 
-                <hr class="border-slate-200 dark:border-slate-800">
-
-                <!-- Admin Social Integrations Matrix -->
-                <div class="space-y-3">
-                    <span class="text-[10px] font-black tracking-widest text-slate-400 uppercase block">Official Hub Communities</span>
-                    <a href="#" class="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-red-500"><i class="fa-brands fa-youtube w-6 text-base"></i> YouTube Channel</a>
-                    <a href="#" class="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-blue-500"><i class="fa-brands fa-facebook w-6 text-base"></i> Facebook Page</a>
-                    <a href="#" class="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-pink-500"><i class="fa-brands fa-instagram w-6 text-base"></i> Instagram Feed</a>
-                    <a href="#" class="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-sky-400"><i class="fa-brands fa-telegram w-6 text-base"></i> Telegram Channel</a>
+                <!-- Premium Styled Links Panel -->
+                <div class="space-y-2.5">
+                    <span class="text-[10px] font-black tracking-widest text-slate-400 uppercase block mb-1">Official Hub Channels</span>
+                    <a href="https://youtube.com" target="_blank" class="flex items-center space-x-3 p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 font-bold text-sm transition"><i class="fa-brands fa-youtube text-lg"></i> <span>YouTube Channel</span></a>
+                    <a href="https://facebook.com" target="_blank" class="flex items-center space-x-3 p-3 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-500 border border-blue-600/20 font-bold text-sm transition"><i class="fa-brands fa-facebook text-lg"></i> <span>Facebook Page</span></a>
+                    <a href="https://instagram.com" target="_blank" class="flex items-center space-x-3 p-3 rounded-xl bg-pink-500/10 hover:bg-pink-500/20 text-pink-500 border border-pink-500/20 font-bold text-sm transition"><i class="fa-brands fa-instagram text-lg"></i> <span>Instagram Feed</span></a>
+                    <a href="https://telegram.org" target="_blank" class="flex items-center space-x-3 p-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-500 border border-sky-500/20 font-bold text-sm transition"><i class="fa-brands fa-telegram text-lg"></i> <span>Telegram Channel</span></a>
                 </div>
 
-                <hr class="border-slate-200 dark:border-slate-800">
-
-                <a href="#" class="flex items-center text-sm font-semibold text-slate-500 dark:text-slate-400 hover:underline"><i class="fa-solid fa-circle-info w-6"></i> About mNEET App</a>
+                <button class="w-full text-left p-3 rounded-xl text-xs font-bold text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 block"><i class="fa-solid fa-circle-info mr-2"></i>About mNEET Arena v2.0</button>
             </div>
 
-            <!-- Absolute Bottom Action -->
-            <div class="p-4 border-t border-slate-200 dark:border-slate-800">
-                <button onclick="handleLogout()" class="w-full bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 dark:hover:bg-rose-900/40 text-rose-500 font-bold py-2.5 rounded-xl transition text-sm">
-                    <i class="fa-solid fa-power-off mr-2"></i> Log Out Account
-                </button>
+            <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20">
+                <button onclick="handleLogout()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-xl transition text-sm flex items-center justify-center space-x-2"><i class="fa-solid fa-power-off"></i> <span>Log Out Account</span></button>
             </div>
         </aside>
 
-        <!-- ============================================ -->
-        <!-- MAIN WORKSPACE ARENA COMPONENT               -->
-        <!-- ============================================ -->
-        <main class="flex-1 lg:pl-80 pb-24 transition-all duration-300">
+        <!-- ========================== -->
+        <!-- CORE CANVAS VIEW CONTAINER -->
+        <!-- ========================== -->
+        <main class="flex-1 lg:pl-80 pb-24 min-h-screen">
             
-            <!-- 2 & 3. DYNAMIC TOP MATRIX STRAP -->
-            <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-6 py-4 sticky top-0 z-40 flex justify-between items-center transition-colors">
-                <!-- Hamburger Trigger & Context Identity -->
+            <!-- 2 & 3. ACTION APP HEADER -->
+            <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-6 py-4 sticky top-0 z-40 flex justify-between items-center transition-all">
                 <div class="flex items-center space-x-3">
-                    <button onclick="toggleSidebar()" class="lg:hidden text-slate-500 text-xl"><i class="fa-solid fa-bars"></i></button>
-                    <div class="flex flex-col">
-                        <h2 id="headerName" class="text-lg font-black tracking-wide text-slate-900 dark:text-white">Aspirant</h2>
-                        <p id="headerDreamCollege" class="text-xs font-bold text-sky-500 dark:text-sky-400 -mt-0.5">Targeting: Not Set Yet</p>
+                    <button onclick="openSidebar()" class="lg:hidden p-2 text-slate-500 text-xl"><i class="fa-solid fa-bars"></i></button>
+                    <div>
+                        <h2 id="midName" class="text-xl font-black text-slate-900 dark:text-white tracking-wide">Aspirant</h2>
+                        <p id="midCollege" class="text-xs font-bold text-sky-500 tracking-wide">Set Dream College</p>
                     </div>
                 </div>
 
-                <!-- Three Direct Interaction Grid Widgets -->
-                <div class="flex items-center space-x-3 md:space-x-4">
-                    <!-- Notification Trigger -->
-                    <button onclick="switchScreen('Notifications')" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-sky-400 transition relative">
-                        <i class="fa-solid fa-bell text-slate-500 dark:text-slate-400"></i>
-                        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full"></span>
-                    </button>
-                    <!-- Challenge Action -->
-                    <button onclick="switchScreen('Challenges')" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-purple-400 transition flex items-center space-x-1">
-                        <i class="fa-solid fa-swords text-purple-400"></i>
-                        <span class="hidden md:inline text-xs font-black uppercase text-purple-400 tracking-wider">Battle</span>
-                    </button>
-                    <!-- bP Coin Display / Leaderboard Launcher -->
-                    <div onclick="switchScreen('Leaderboard')" class="flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-xl cursor-pointer hover:scale-105 transition">
-                        <span class="text-amber-500 text-sm">🪙</span>
-                        <span id="coinCount" class="text-amber-500 font-black text-sm">0</span>
-                    </div>
+                <!-- Top Right Interactions -->
+                <div class="flex items-center space-x-3">
+                    <button onclick="showTab('notify')" class="p-3 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:border-sky-500 transition relative"><i class="fa-solid fa-bell text-slate-500 dark:text-slate-400"></i><span class="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full"></span></button>
+                    <button onclick="showTab('battle')" class="px-4 py-2.5 bg-purple-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-purple-500/20 hover:bg-purple-600 active:scale-95 transition"><i class="fa-solid fa-swords mr-1.5"></i>Battle</button>
+                    <div onclick="showTab('leaderboard')" class="flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 px-4 py-2 rounded-xl cursor-pointer hover:scale-105 active:scale-95 transition"><span class="text-lg">🪙</span><span id="coinCount" class="text-amber-500 font-black text-sm">100</span></div>
                 </div>
             </header>
 
-            <!-- CANVAS SCREEN PORTAL CONTENT CONTAINER -->
-            <div class="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
+            <!-- ========================== -->
+            <!-- WINDOW TAB ROUTER CHANNELS -->
+            <!-- ========================== -->
+            <div class="max-w-5xl mx-auto p-4 md:p-6">
 
-                <!-- COURSE SELECTION MATRIX BAR -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div class="flex items-center space-x-3 w-full md:w-auto">
-                        <i class="fa-solid fa-graduation-cap text-sky-400 text-xl"></i>
-                        <select class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm font-bold rounded-xl px-4 py-2 text-slate-700 dark:text-slate-300 focus:outline-none w-full md:w-64">
-                            <option>mNEET Ultimate 2026 Batch</option>
-                            <option>Crash Course Express</option>
-                        </select>
-                    </div>
+                <!-- VIEW STATE A: HOME STAGE -->
+                <div id="home-view" class="space-y-6">
                     
-                    <!-- Dynamic Countdown UI Target Block -->
-                    <div id="countdownClock" class="flex items-center space-x-2 text-slate-600 dark:text-slate-400 font-mono text-sm font-bold bg-slate-100 dark:bg-slate-950 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800">
-                        <span>⏳ Time to Arena:</span>
-                        <span id="timerDays" class="text-sky-500 font-extrabold">00</span><span>d</span>
-                        <span id="timerHours" class="text-sky-500 font-extrabold">00</span><span>h</span>
-                        <span id="timerMins" class="text-sky-500 font-extrabold">00</span><span>m</span>
-                        <span id="timerSecs" class="text-sky-500 font-extrabold">00</span><span>s</span>
+                    <!-- Course Selector & Premium Countdown Clock -->
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm">
+                        <div class="flex items-center space-x-3 w-full md:w-auto">
+                            <i class="fa-solid fa-graduation-cap text-sky-500 text-xl"></i>
+                            <select class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm font-black text-slate-700 dark:text-slate-300 focus:outline-none w-full md:w-64">
+                                <option>mNEET Target 2026 Batch</option>
+                                <option>AIIMS Ultimate Capsule Batch</option>
+                            </select>
+                        </div>
+                        <div id="countdownClock" class="flex items-center space-x-2 font-mono text-xs md:text-sm font-bold bg-slate-100 dark:bg-slate-950 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400">
+                            <span class="mr-1"><i class="fa-solid fa-hourglass-half text-sky-400 animate-spin"></i> Target:</span>
+                            <span id="timerDays" class="text-sky-500 font-black text-base">00</span><span>d</span>
+                            <span id="timerHours" class="text-sky-500 font-black text-base">00</span><span>h</span>
+                            <span id="timerMins" class="text-sky-500 font-black text-base">00</span><span>m</span>
+                            <span id="timerSecs" class="text-sky-500 font-black text-base">00</span><span>s</span>
+                        </div>
                     </div>
-                </div>
 
-                <!-- DYNAMIC AD-ADMIN MOTIVATION BANNER MODULE -->
-                <div class="bg-gradient-to-r from-sky-500/10 via-purple-500/5 to-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 relative overflow-hidden group">
-                    <div class="absolute right-0 top-0 bottom-0 opacity-10 pointer-events-none transition group-hover:scale-110"><i class="fa-solid fa-dna text-[120px] p-4 text-sky-400"></i></div>
-                    <div class="max-w-xl space-y-2">
-                        <span class="bg-sky-500 text-slate-950 text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full">Arena Motivation</span>
-                        <h3 class="text-xl font-extrabold tracking-wide dark:text-white text-slate-800">"Success isn't given. It's earned in the arena of consistency."</h3>
-                        <p class="text-xs text-slate-400">Admin Live Broadcast Post • Updated Today</p>
+                    <!-- Media Broadcast Arena -->
+                    <div class="bg-gradient-to-br from-sky-500 via-sky-600 to-indigo-700 text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                        <div class="absolute right-0 bottom-0 top-0 opacity-10 pointer-events-none"><i class="fa-solid fa-user-md text-[180px] p-4"></i></div>
+                        <span class="bg-slate-950/40 backdrop-blur text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full"><i class="fa-solid fa-bolt mr-1"></i> Admin Arena Post</span>
+                        <h3 class="text-xl md:text-2xl font-black mt-3 mb-2 tracking-wide leading-tight">"Strive for progress, not perfection. Every MCQ you solve brings you closer to your white coat."</h3>
+                        <p class="text-xs text-sky-200/80 font-medium"><i class="fa-solid fa-clock mr-1"></i> Live Media Broadcast Sync Node Active</p>
                     </div>
-                </div>
 
-                <!-- ADVANCED STUDENT METRIC PROGRESS COMPARISON MATRIX -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
-                    <h3 class="text-xs font-black tracking-widest uppercase 
+                    <!-- Progress Statistics Table Dashboard Matrix -->
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+                        <h3 class="text-xs font-black tracking-widest uppercase text-slate-400"><i class="fa-solid fa-chart-line mr-1"></i> Comparative Success Index</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b bo
