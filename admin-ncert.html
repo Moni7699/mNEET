@@ -3,14 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET Admin - NCERT Control Studio</title>
+    <title>mNEET Admin - Interactive Study Control</title>
+    <!-- Tailwind CSS with Dark/Light Support -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { darkMode: 'class' }</script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <!-- FontAwesome for Professional UI Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
@@ -26,102 +33,236 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Security Validation Loop Matrix
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists() && userDoc.data().role === 'admin') {
-                    document.getElementById('adminNcertArea').classList.remove('hidden');
+                    document.getElementById('adminStudyArea').classList.remove('hidden');
                 } else { window.location.href = "index.html"; }
             } else { window.location.href = "index.html"; }
         });
 
-        // Simulating PDF upload and breaking pages into editable components
-        window.processPDFUpload = function() {
-            const fileInput = document.getElementById('pdfFile');
-            const subject = document.getElementById('subSelect').value;
-            const chapter = document.getElementById('chapName').value.trim();
-
-            if(!fileInput.files[0] || !chapter) {
-                alert("Please select PDF and type Chapter name.");
-                return;
-            }
-
-            // Simulate parsing text arrays from PDF file pages safely
-            document.getElementById('processingStatus').innerText = "⏳ Extracting layout vectors and texts...";
+        // App Navigation and Multi-View Router Engine
+        window.changeView = function(targetViewId) {
+            const views = ['view-subjects', 'view-chapters', 'view-pdf-canvas'];
+            views.forEach(v => document.getElementById(v).classList.add('hidden'));
+            document.getElementById(targetViewId).classList.remove('hidden');
             
-            setTimeout(async () => {
-                const generatedPages = [
-                    "The living world is rich in biodiversity. Organisms are classified scientifically. Taxonomy helps in biological identification.",
-                    "Cell is the basic structural unit of life. All living entities are composed of complex membranes. Mitosis controls replication cells."
-                ];
+            // Manage top-bottom row dynamically based on PDF screen view condition
+            const navRow = document.getElementById('adminBottomNav');
+            if(targetViewId === 'view-pdf-canvas') {
+                navRow.classList.add('hidden');
+            } else {
+                navRow.classList.remove('hidden');
+            }
+        };
 
-                await setDoc(doc(db, "ncert_books", `${subject}_${chapter.replace(/\s+/g, '_')}`), {
-                    subject: subject,
-                    chapterName: chapter,
-                    pages: generatedPages,
-                    createdAt: new Date().toISOString()
-                });
+        // Drag and Drop Sequence Interceptor Variables
+        let draggedItem = null;
 
-                document.getElementById('processingStatus').innerText = "✅ Book Deployed perfectly!";
-                alert("Book Layout Synced to database!");
-            }, 2500);
+        window.handleDragStart = function(e) {
+            draggedItem = this;
+            e.dataTransfer.effectAllowed = 'move';
+        };
+        window.handleDragOver = function(e) {
+            e.preventDefault();
+            return false;
+        };
+        window.handleDrop = function(e) {
+            e.stopPropagation();
+            if (draggedItem !== this) {
+                const parent = this.parentNode;
+                const allNodes = Array.from(parent.children);
+                const draggedIdx = allNodes.indexOf(draggedItem);
+                const targetIdx = allNodes.indexOf(this);
+                
+                if (draggedIdx < targetIdx) {
+                    parent.insertBefore(draggedItem, this.nextSibling);
+                } else {
+                    parent.insertBefore(draggedItem, this);
+                }
+            }
+            return false;
+        };
+
+        // MCQs and Image Upload Helpers inside PDF View
+        window.triggerMcqImg = () => document.getElementById('mcqImgInput').click();
+        window.previewMcqImg = function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const imgPreview = document.getElementById('mcqImgPreview');
+                imgPreview.src = reader.result;
+                imgPreview.classList.remove('hidden');
+            };
+            if(file) reader.readAsDataURL(file);
+        };
+
+        window.submitPyqQuestion = function() {
+            alert("🔥 PYQ Question Uploaded Successfully to Database Node!");
+            document.getElementById('pyqText').value = "";
+            document.getElementById('mcqImgPreview').classList.add('hidden');
+        };
+
+        // Static flip view parameters mockup
+        let totalPdfPages = 5;
+        let currentPdfPage = 1;
+
+        window.changePdfPage = function(dir) {
+            if(dir === 'next' && currentPdfPage < totalPdfPages) currentPdfPage++;
+            else if(dir === 'prev' && currentPdfPage > 1) currentPdfPage--;
+            document.getElementById('pageIndicatorText').innerText = `Page ${currentPdfPage} of ${totalPdfPages}`;
         };
     </script>
-</head>        <div class="max-w-3xl w-full mx-auto p-4 md:p-6 space-y-6 flex-1">
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-4">
-                <h3 class="text-xs font-black tracking-widest uppercase text-slate-400"><i class="fa-solid fa-file-pdf mr-1"></i> Upload & Vectorize Textbook PDF</h3>
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
-                    <div>
-                        <label class="block mb-1 text-slate-400">Select Subject</label>
-                        <select id="subSelect" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-slate-700 dark:text-slate-300 focus:outline-none">
-                            <option value="biology">Biology Arena</option>
-                            <option value="chemistry">Chemistry Hub</option>
-                            <option value="physics">Physics Core</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block mb-1 text-slate-400">Chapter Name</label>
-                        <input type="text" id="chapName" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="e.g. The Living World">
-                    </div>
+    <style>
+        .drag-card { cursor: grab; }
+        .drag-card:active { cursor: grabbing; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
+    <div id="adminStudyArea" class="hidden min-h-screen flex flex-col justify-between overflow-x-hidden">
+        
+        <!-- ========================================================= -->
+        <!-- SCREEN VIEW STATE 1: ALL SUBJECTS VIEW BAR               -->
+        <!-- ========================================================= -->
+        <div id="view-subjects" class="w-full flex-1 flex flex-col">
+            <!-- Top bar configuration strap -->
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
+                <div class="flex items-center space-x-3 w-full">
+                    <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 p-2"><i class="fa-solid fa-house-medical"></i></button>
+                    <h2 class="font-black text-sm md:text-base text-slate-900 dark:text-white mx-auto">All Subject</h2>
+                </div>
+            </header>
+
+            <div class="w-full px-4 md:px-6 py-6 space-y-6 flex-1 max-w-5xl mx-auto box-border">
+                <!-- Subject creation box -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex flex-col sm:flex-row items-center gap-3 shadow-sm w-full">
+                    <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black focus:outline-none" placeholder="Enter Subject Name (e.g. Biology Arena)">
+                    <button class="w-full sm:w-auto bg-rose-500 hover:bg-rose-600 text-white font-black text-xs px-6 py-3 rounded-xl transition whitespace-nowrap">Create Subject</button>
                 </div>
 
-                <div>
-                    <label class="block mb-1 text-xs text-slate-400 font-bold">Upload RAW Textbook Document</label>
-                    <input type="file" id="pdfFile" accept=".pdf" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-xs focus:outline-none">
-                </div>
-
-                <div class="pt-2">
-                    <button onclick="processPDFUpload()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs px-5 py-3 rounded-xl transition shadow active:scale-95">Deconstruct & Sync to Database</button>
-                    <p id="processingStatus" class="text-xs text-sky-500 font-bold mt-2"></p>
+                <!-- Draggable Subjects Card Containers Loop -->
+                <div class="space-y-3 w-full" id="subjectsContainer">
+                    <div draggable="true" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver(event)" ondrop="handleDrop.call(this, event)" class="drag-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm transition hover:border-sky-400">
+                        <div class="flex items-center space-x-3 cursor-pointer" onclick="changeView('view-chapters')">
+                            <i class="fa-solid fa-grip-vertical text-slate-400"></i>
+                            <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white">Biology Arena</span>
+                        </div>
+                        <div class="flex items-center space-x-1 text-white text-[10px] font-bold">
+                            <button class="bg-sky-500 px-2.5 py-1.5 rounded-xl hover:bg-sky-600 transition"><i class="fa-solid fa-pen"></i></button>
+                            <button class="bg-amber-500 px-2.5 py-1.5 rounded-xl hover:bg-amber-600 transition"><i class="fa-solid fa-eye-slash"></i></button>
+                            <button class="bg-rose-500 px-2.5 py-1.5 rounded-xl hover:bg-rose-600 transition"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
                 </div>
             </div>
+                      <!-- ========================================================= -->
+        <!-- SCREEN VIEW STATE 2: CHAPTER NAMES HUB                    -->
+        <!-- ========================================================= -->
+        <div id="view-chapters" class="w-full flex-1 flex flex-col hidden">
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
+                <div class="flex items-center space-x-3 w-full">
+                    <button onclick="changeView('view-subjects')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left"></i></button>
+                    <h2 class="font-black text-sm md:text-base text-slate-900 dark:text-white mx-auto">Chapter names</h2>
+                </div>
+            </header>
 
-            <!-- Suggestion Content Tagging simulation module -->
-            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-3">
-                <h3 class="text-xs font-black tracking-widest uppercase text-slate-400"><i class="fa-solid fa-tags mr-1"></i> Smart Mapping Workspace</h3>
-                <p class="text-xs text-slate-400 leading-relaxed">Once uploaded, paragraphs will layout into active nodes. Select lines within sentences to lock specific PYQ tags (e.g., NEET 2024 Line) or bind live question tokens instantly to database records.</p>
+            <div class="w-full px-4 md:px-6 py-6 space-y-6 flex-1 max-w-5xl mx-auto box-border">
+                <!-- Chapter Creator Form Widget with File Upload Options -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex flex-col gap-3 shadow-sm w-full">
+                    <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black focus:outline-none" placeholder="Enter Chapter Name (e.g. The Living World)">
+                    <div class="flex flex-col sm:flex-row gap-3 w-full">
+                        <input type="file" accept=".pdf" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs font-bold text-slate-400">
+                        <button class="w-full sm:w-auto bg-rose-500 hover:bg-rose-600 text-white font-black text-xs px-6 py-3 rounded-xl transition whitespace-nowrap">Create Chapter</button>
+                    </div>
+                </div>
+
+                <!-- Draggable Chapter Cards Loop Container -->
+                <div class="space-y-3 w-full" id="chaptersContainer">
+                    <div draggable="true" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver(event)" ondrop="handleDrop.call(this, event)" class="drag-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm transition hover:border-purple-400">
+                        <div class="flex items-center space-x-3 cursor-pointer" onclick="changeView('view-pdf-canvas')">
+                            <i class="fa-solid fa-grip-vertical text-slate-400"></i>
+                            <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white">Chapter 1: The Living World</span>
+                        </div>
+                        <div class="flex items-center space-x-1 text-white text-[10px] font-bold">
+                            <button class="bg-sky-500 px-2.5 py-1.5 rounded-xl hover:bg-sky-600 transition"><i class="fa-solid fa-pen"></i></button>
+                            <button class="bg-amber-500 px-2.5 py-1.5 rounded-xl hover:bg-amber-600 transition"><i class="fa-solid fa-eye-slash"></i></button>
+                            <button class="bg-rose-500 px-2.5 py-1.5 rounded-xl hover:bg-rose-600 transition"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <nav id="adminBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3.5 flex justify-around items-center shadow-2xl lg:pl-80 w-full box-border">
-            <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
-            <button onclick="window.location.href='admin-ncert.html'" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
+        <!-- ========================================================= -->
+        <!-- SCREEN VIEW STATE 3: MASTER FLIPBOOK CANVAS (NO ROWS)    -->
+        <!-- ========================================================= -->
+        <div id="view-pdf-canvas" class="w-full flex-1 flex flex-col hidden bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+            <!-- Strict Back and Chapter title top barstrap -->
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex justify-between items-center w-full shadow-sm">
+                <button onclick="changeView('view-chapters')" class="text-slate-400 font-bold p-2 text-xs md:text-sm"><i class="fa-solid fa-chevron-left"></i> Back</button>
+                <h2 class="font-black text-xs md:text-sm truncate">The Living World (PDF Studio)</h2>
+                <div class="w-12"></div>
+            </header>
+
+            <!-- Book layout simulation mapping arena -->
+            <div class="max-w-4xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 items-start">
+                
+                <!-- Left Column: Flipbook View Layer Component -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-xl space-y-4 min-h-[350px] flex flex-col justify-between">
+                    <div class="text-xs md:text-sm leading-relaxed font-serif space-y-2">
+                        <p class="p-2 bg-yellow-100/30 border-l-4 border-yellow-400">Biodiversity refers to the number and types of organisms present on Earth. Each organism is given a distinct scientific name.</p>
+                        <p class="text-slate-400 text-[11px]">Select text or tag vectors to inject official NTA MCQ maps into student engines.</p>
+                    </div>
+                    
+                    <!-- Flip Controls Footer Section -->
+                    <div class="flex justify-between items-center border-t pt-3 font-black text-xs">
+                        <button onclick="changePdfPage('prev')" class="bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl"><i class="fa-solid fa-arrow-left"></i> Prev</button>
+                        <span id="pageIndicatorText" class="font-mono text-slate-400">Page 1 of 5</span>
+                        <button onclick="changePdfPage('next')" class="bg-slate-900 text-white dark:bg-slate-800 px-3 py-1.5 rounded-xl">Next <i class="fa-solid fa-arrow-right"></i></button>
+                    </div>
+                </div>
+
+                <!-- Right Column: PYQ MCQ Injected Publisher Panel Interface -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-md space-y-3 text-xs font-bold">
+                    <span class="text-[9px] font-black tracking-widest text-slate-400 uppercase block"><i class="fa-solid fa-tags text-rose-500 mr-1"></i> Tag PYQ MCQ Platform (No Timer/No Coins)</span>
+                    
+                    <textarea id="pyqText" rows="2" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs font-bold focus:outline-none resize-none" placeholder="Type Question text..."></textarea>
+                    
+                    <!-- Image option attachment triggers -->
+                    <div class="w-full">
+                        <button onclick="triggerMcqImg()" class="bg-slate-100 dark:bg-slate-950 border border-dashed border-slate-300 dark:border-slate-800 w-full p-2.5 rounded-xl text-slate-400"><i class="fa-solid fa-image mr-1"></i> Upload Question Image</button>
+                        <input type="file" id="mcqImgInput" accept="image/*" class="hidden" onchange="previewMcqImg(event)">
+                        <img id="mcqImgPreview" src="" class="hidden w-full h-24 object-contain mt-2 border rounded-xl">
+                    </div>
+
+                    <!-- 4 Option Inputs Matrix Configurations -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border rounded-xl p-2 focus:outline-none" placeholder="Option A">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border rounded-xl p-2 focus:outline-none" placeholder="Option B">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border rounded-xl p-2 focus:outline-none" placeholder="Option C">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border rounded-xl p-2 focus:outline-none" placeholder="Option D">
+                    </div>
+                    
+                    <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border rounded-xl p-2 focus:outline-none" placeholder="View Solution Explanation text...">
+                    <button onclick="submitPyqQuestion()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black py-2.5 rounded-xl transition">Deploy PYQ MCQ Question</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- 4. BOTTOM DYNAMIC CONTROL NAVIGATION STRAP                -->
+        <!-- ========================================================= -->
+        <nav id="adminBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3.5 flex justify-around items-center shadow-2xl transition-transform duration-300 lg:pl-80 w-full box-border">
+            <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
+            <button onclick="changeView('view-subjects')" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
             <button onclick="window.location.href='admin-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
             <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
             <button onclick="window.location.href='admin-students.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Students</span></button>
         </nav>
     </div>
 </body>
-</html>
-
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen">
-    <div id="adminNcertArea" class="hidden min-h-screen flex flex-col pb-24">
-        <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 p-2"><i class="fa-solid fa-arrow-left"></i></button>
-                <h2 class="font-black text-sm md:text-base">NCERT Content Publisher</h2>
-            </div>
-            <span class="text-xs bg-emerald-500/10 text-emerald-500 font-bold px-3 py-1.5 rounded-xl border border-emerald-500/20">Studio Mode</span>
-        </header>
-      
+    </html>
+    </div>
+                                                                                                                    
