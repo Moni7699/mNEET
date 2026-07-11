@@ -1,26 +1,38 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>mNEET - Admin Control Center</title>
+    <!-- Tailwind CSS for Modern Responsive UI -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <!-- Firebase SDK Modules -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
+        // Firebase Exact Configuration Object
         const firebaseConfig = {
-            projectId: "mneet-spark",
+            apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
             authDomain: "mneet-spark.firebaseapp.com",
-            storageBucket: "mneet-spark.appspot.com"
+            databaseURL: "https://mneet-spark-default-rtdb.firebaseio.com",
+            projectId: "mneet-spark",
+            storageBucket: "mneet-spark.firebasestorage.app",
+            messagingSenderId: "252201633700",
+            appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
         };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Security Check: Ensure only Admin can access
+        // Security Matrix: Strictly check role from Firestore to prevent illegal entry
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -28,7 +40,7 @@
                     document.getElementById('adminName').innerText = userDoc.data().name;
                     document.getElementById('mainContent').classList.remove('hidden');
                 } else {
-                    alert("Unauthorized Access! Redirecting to login...");
+                    alert("Unauthorized Access Attempt! Redirecting to login arena.");
                     window.location.href = "index.html";
                 }
             } else {
@@ -36,78 +48,114 @@
             }
         });
 
-        // Logout Function
+        // Theme Switcher Sync Engine
+        window.toggleTheme = function() {
+            const htmlTag = document.documentElement;
+            const themeBtn = document.getElementById('themeBtn');
+            if (htmlTag.classList.contains('dark')) {
+                htmlTag.classList.remove('dark');
+                themeBtn.innerText = "🌙 Dark Mode";
+                localStorage.setItem('theme', 'light');
+            } else {
+                htmlTag.classList.add('dark');
+                themeBtn.innerText = "☀️ Light Mode";
+                localStorage.setItem('theme', 'dark');
+            }
+        };
+
+        // Secure Session Sign Out
         window.handleLogout = function() {
             signOut(auth).then(() => {
                 window.location.href = "index.html";
             });
-        }
+        };
+
+        // Load Persistent Theme Setting
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            const htmlTag = document.documentElement;
+            const themeBtn = document.getElementById('themeBtn');
+            if (savedTheme === 'light') {
+                htmlTag.classList.remove('dark');
+                themeBtn.innerText = "🌙 Dark Mode";
+            } else {
+                htmlTag.classList.add('dark');
+                themeBtn.innerText = "☀️ Light Mode";
+            }
+        });
     </script>
 </head>
-<body class="bg-slate-950 min-h-screen text-slate-100 font-sans">
+<body class="bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100 font-sans transition-colors duration-300">
 
     <div id="mainContent" class="hidden">
         <!-- Top Navigation Bar -->
-        <nav class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex justify-between items-center">
+        <nav class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 transition-colors duration-300">
             <div class="flex items-center space-x-3">
-                <span class="text-2xl font-black tracking-wider text-sky-400">mNEET Hub</span>
-                <span class="bg-rose-500/10 text-rose-400 text-xs px-2.5 py-1 rounded-md font-bold border border-rose-500/20">MENTOR PANEL</span>
+                <span class="text-2xl font-black tracking-wider text-sky-500 dark:text-sky-400">mNEET Hub</span>
+                <span class="bg-rose-500/10 text-rose-500 dark:text-rose-400 text-xs px-2.5 py-1 rounded-md font-bold border border-rose-500/20">MENTOR PANEL</span>
             </div>
-            <div class="flex items-center space-x-4">
-                <span class="text-sm text-slate-400">Welcome, <strong id="adminName" class="text-slate-200">Mentor</strong></span>
-                <button onclick="handleLogout()" class="bg-slate-800 hover:bg-rose-900/40 text-rose-400 text-sm font-semibold px-4 py-2 rounded-xl border border-slate-700 hover:border-rose-500/30 transition duration-200">
-                    Log Out
+            
+            <div class="flex items-center space-x-4 w-full sm:w-auto justify-between sm:justify-end">
+                <!-- Theme Switcher Button -->
+                <button id="themeBtn" onclick="toggleTheme()" class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-3.5 py-1.5 rounded-xl text-xs font-bold transition hover:scale-105">
+                    ☀️ Light Mode
                 </button>
+                <div class="flex items-center space-x-3">
+                    <span class="text-sm text-slate-500 dark:text-slate-400">Welcome, <strong id="adminName" class="text-slate-800 dark:text-slate-200">Mentor</strong></span>
+                    <button onclick="handleLogout()" class="bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white dark:hover:bg-rose-900/40 text-rose-500 dark:text-rose-400 text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 transition duration-200">
+                        Log Out
+                    </button>
+                </div>
             </div>
         </nav>
 
         <!-- Main Workspace -->
         <div class="max-w-7xl mx-auto p-6 md:p-8">
-            <h2 class="text-xl font-bold text-slate-400 mb-6">Quick Management Grid</h2>
+            <h2 class="text-lg font-bold text-slate-400 dark:text-slate-500 mb-6 uppercase tracking-wider">Quick Management Grid</h2>
             
             <!-- Management Cards Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 
                 <!-- Card: Quiz Management -->
-                <div onclick="window.location.href='admin-quiz.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-sky-500/50 cursor-pointer transition dynamic-card group">
-                    <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 text-2xl mb-4 group-hover:bg-sky-500 group-hover:text-slate-950 transition">📝</div>
-                    <h3 class="text-lg font-bold text-slate-200 mb-2">Subject & Quiz Control</h3>
-                    <p class="text-sm text-slate-400">Add subjects, chapters, topics, and upload MCQs with text or images.</p>
+                <div onclick="window.location.href='admin-quiz.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-sky-500 dark:hover:border-sky-500/50 cursor-pointer transition shadow-sm dark:shadow-none group">
+                    <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500 dark:text-sky-400 text-2xl mb-4 group-hover:bg-sky-500 group-hover:text-white dark:group-hover:text-slate-950 transition">📝</div>
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Subject & Quiz Control</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Add subjects, chapters, topics, and upload MCQs with text or images.</p>
                 </div>
 
                 <!-- Card: NCERT Management -->
-                <div onclick="window.location.href='admin-ncert.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-emerald-500/50 cursor-pointer transition dynamic-card group">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-2xl mb-4 group-hover:bg-emerald-500 group-hover:text-slate-950 transition">📚</div>
-                    <h3 class="text-lg font-bold text-slate-200 mb-2">NCERT & PYQ Tagging</h3>
-                    <p class="text-sm text-slate-400">Upload textbooks, attach interactive AI voice scripts, and tag past years' NEET lines.</p>
+                <div onclick="window.location.href='admin-ncert.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-emerald-500 dark:hover:border-emerald-500/50 cursor-pointer transition shadow-sm dark:shadow-none group">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 dark:text-emerald-400 text-2xl mb-4 group-hover:bg-emerald-500 group-hover:text-white dark:group-hover:text-slate-950 transition">📚</div>
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">NCERT & PYQ Tagging</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Upload textbooks, attach interactive AI voice scripts, and tag past years' NEET lines.</p>
                 </div>
 
                 <!-- Card: Mock Test Control -->
-                <div onclick="window.location.href='admin-mocktest.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-amber-500/50 cursor-pointer transition dynamic-card group">
-                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-2xl mb-4 group-hover:bg-amber-500 group-hover:text-slate-950 transition">⏱️</div>
-                    <h3 class="text-lg font-bold text-slate-200 mb-2">Official Mock Tests</h3>
-                    <p class="text-sm text-slate-400">Schedule live full-length mock tests based on precise NTA patterns.</p>
+                <div onclick="window.location.href='admin-mocktest.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-amber-500 dark:hover:border-amber-500/50 cursor-pointer transition shadow-sm dark:shadow-none group">
+                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 dark:text-amber-400 text-2xl mb-4 group-hover:bg-amber-500 group-hover:text-white dark:group-hover:text-slate-950 transition">⏱️</div>
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Official Mock Tests</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Schedule live full-length mock tests based on precise NTA patterns.</p>
                 </div>
 
                 <!-- Card: Course Control -->
-                <div onclick="window.location.href='admin-course.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-indigo-500/50 cursor-pointer transition dynamic-card group">
-                    <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-2xl mb-4 group-hover:bg-indigo-500 group-hover:text-slate-950 transition">🎟️</div>
-                    <h3 class="text-lg font-bold text-slate-200 mb-2">Course & Batches</h3>
-                    <p class="text-sm text-slate-400">Launch new premium batches, test packages, and control enrollment criteria.</p>
+                <div onclick="window.location.href='admin-course.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-indigo-500 dark:hover:border-indigo-500/50 cursor-pointer transition shadow-sm dark:shadow-none group">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 dark:text-indigo-400 text-2xl mb-4 group-hover:bg-indigo-500 group-hover:text-white dark:group-hover:text-slate-950 transition">🎟️</div>
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Course & Batches</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Launch new premium batches, test packages, and control enrollment criteria.</p>
                 </div>
 
                 <!-- Card: Student Control -->
-                <div onclick="window.location.href='admin-students.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-purple-500/50 cursor-pointer transition dynamic-card group">
-                    <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-2xl mb-4 group-hover:bg-purple-500 group-hover:text-slate-950 transition">👥</div>
-                    <h3 class="text-lg font-bold text-slate-200 mb-2">Student Database</h3>
-                    <p class="text-sm text-slate-400">View registered students, manage profiles, reward/deduct game coins, or ban accounts.</p>
+                <div onclick="window.location.href='admin-students.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-purple-500 dark:hover:border-purple-500/50 cursor-pointer transition shadow-sm dark:shadow-none group">
+                    <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500 dark:text-purple-400 text-2xl mb-4 group-hover:bg-purple-500 group-hover:text-white dark:group-hover:text-slate-950 transition">👥</div>
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Student Database</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">View registered students, manage profiles, reward/deduct game coins, or ban accounts.</p>
                 </div>
 
                 <!-- Card: Admin Notification -->
-                <div onclick="window.location.href='admin-notification.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-rose-500/50 cursor-pointer transition dynamic-card group">
-                    <div class="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 text-2xl mb-4 group-hover:bg-rose-500 group-hover:text-slate-950 transition">🔔</div>
-                    <h3 class="text-lg font-bold text-slate-200 mb-2">Broadcast Alerts</h3>
-                    <p class="text-sm text-slate-400">Push crucial notifications, text updates, or exam alerts to all students instantly.</p>
+                <div onclick="window.location.href='admin-notification.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 hover:border-rose-500 dark:hover:border-rose-500/50 cursor-pointer transition shadow-sm dark:shadow-none group">
+                    <div class="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 dark:text-rose-400 text-2xl mb-4 group-hover:bg-rose-500 group-hover:text-white dark:group-hover:text-slate-950 transition">🔔</div>
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Broadcast Alerts</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Push crucial notifications, text updates, or exam alerts to all students instantly.</p>
                 </div>
 
             </div>
@@ -115,4 +163,5 @@
     </div>
 
 </body>
-</html>
+                        </html>
+                        
