@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mNEET Dashboard - Speed to Success</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            projectId: "mneet-spark",
+            authDomain: "mneet-spark.firebaseapp.com",
+            storageBucket: "mneet-spark.appspot.com"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Security Check & Dynamic Profile Data Loading
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists() && userDoc.data().role === 'student') {
+                    document.getElementById('studentName').innerText = userDoc.data().name;
+                    document.getElementById('coinCount').innerText = userDoc.data().bpCoins || 0;
+                    document.getElementById('mainContent').classList.remove('hidden');
+                } else {
+                    alert("Access restricted. Please log in with a valid student account.");
+                    window.location.href = "index.html";
+                }
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        // Logout Function
+        window.handleLogout = function() {
+            signOut(auth).then(() => {
+                window.location.href = "index.html";
+            });
+        }
+    </script>
+</head>
+<body class="bg-slate-950 min-h-screen text-slate-100 font-sans">
+
+    <div id="mainContent" class="hidden">
+        <!-- Main Navigation Header -->
+        <nav class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <span class="text-3xl font-black tracking-wider text-sky-400">mNEET</span>
+                <span class="text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-0.5 rounded-md">BATTLE READY</span>
+            </div>
+            
+            <!-- Dynamic Gamified Status Engine -->
+            <div class="flex items-center space-x-6 w-full sm:w-auto justify-between sm:justify-end">
+                <div class="flex items-center space-x-2 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 shadow-inner">
+                    <span class="text-amber-400 text-lg">🪙</span>
+                    <span class="text-xs text-slate-400 font-bold">bP Coins:</span>
+                    <span id="coinCount" class="text-amber-400 font-extrabold text-base">---</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <span class="text-sm text-slate-300 font-medium" id="studentName">Aspirant</span>
+                    <button onclick="handleLogout()" class="text-xs font-bold text-slate-400 hover:text-rose-400 transition">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Arena Selector Grid -->
+        <div class="max-w-6xl mx-auto p-6 md:p-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- 1. Interactive NCERT Module -->
+                <div onclick="window.location.href='student-ncert.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-sky-400 cursor-pointer transition transform hover:-translate-y-1 duration-200">
+                    <div class="text-3xl mb-4">📖</div>
+                    <h3 class="text-xl font-bold text-slate-100 mb-2">NCERT Interactive Reader</h3>
+                    <p class="text-sm text-slate-400">Read with active voice-guided synthesis, dynamic text highlighting, personalized notes, and interactive PYQ markers.</p>
+                </div>
+
+                <!-- 2. Practice Quizzes -->
+                <div onclick="window.location.href='student-quiz.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-emerald-400 cursor-pointer transition transform hover:-translate-y-1 duration-200">
+                    <div class="text-3xl mb-4">⚡</div>
+                    <h3 class="text-xl font-bold text-slate-100 mb-2">Topic & Chapter Quizzes</h3>
+                    <p class="text-sm text-slate-400">Test accuracy step-by-step. Access instant visual results, performance analytics, and clear solutions.</p>
+                </div>
+
+                <!-- 3. Official Mock Tests -->
+                <div onclick="window.location.href='student-mocktest.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-amber-400 cursor-pointer transition transform hover:-translate-y-1 duration-200">
+                    <div class="text-3xl mb-4">🏆</div>
+                    <h3 class="text-xl font-bold text-slate-100 mb-2">NTA Pattern Mock Tests</h3>
+                    <p class="text-sm text-slate-400">Simulate the real NEET examination environment. Strict timers, comprehensive papers, and multi-tier analytics.</p>
+                </div>
+
+                <!-- 4. Gamified Battle Arena -->
+                <div onclick="window.location.href='student-challenge.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-purple-400 cursor-pointer transition transform hover:-translate-y-1 duration-200">
+                    <div class="text-3xl mb-4">⚔️</div>
+                    <h3 class="text-xl font-bold text-slate-100 mb-2">1v1 Quiz Challenges</h3>
+                    <p class="text-sm text-slate-400">Invite peers to direct real-time academic battles. Win live duels to secure massive bP Coin multipliers.</p>
+                </div>
+
+                <!-- 5. Active Leaderboards -->
+                <div onclick="window.location.href='student-leaderboard.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-indigo-400 cursor-pointer transition transform hover:-translate-y-1 duration-200">
+                    <div class="text-3xl mb-4">📊</div>
+                    <h3 class="text-xl font-bold text-slate-100 mb-2">National Leaderboard</h3>
+                    <p class="text-sm text-slate-400">Trace your direct academic rank. Compare accurate metrics against top performers across India.</p>
+                </div>
+
+                <!-- 6. Notifications Hub -->
+                <div onclick="window.location.href='student-notification.html'" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-rose-400 cursor-pointer transition transform hover:-translate-y-1 duration-200">
+                    <div class="text-3xl mb-4">🔔</div>
+                    <h3 class="text-xl font-bold text-slate-100 mb-2">Announcements</h3>
+                    <p class="text-sm text-slate-400">Receive urgent notices, upcoming live exam timelines, and targeted updates directly from mentors.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
