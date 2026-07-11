@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET - Mentor Portal Pro</title>
+    <title>mNEET - Mentor Control Center</title>
     <!-- Tailwind CSS with Dark/Light Support -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -11,13 +11,13 @@
             darkMode: 'class',
         }
     </script>
-    <!-- FontAwesome for Premium Icons -->
+    <!-- FontAwesome for Pro App Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
@@ -34,36 +34,67 @@
         const db = getFirestore(app);
         let currentAdmin = null;
 
-        // Secure Authentication & Access Controller Rules
+        // Security Framework Validation Rules
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentAdmin = user;
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists() && userDoc.data().role === 'admin') {
                     const data = userDoc.data();
-                    
-                    // Sidebar Data Sync
                     document.getElementById('sbAdminName').innerText = data.name || "Mentor";
                     document.getElementById('sbAdminEmail').innerText = data.email || "";
                     document.getElementById('sbAdminPhone').innerText = data.phone || "";
-                    
-                    // Header Data Sync
                     document.getElementById('midAdminName').innerText = data.name || "Mentor";
                     
-                    if(data.profilePic) {
-                        document.getElementById('adminProfileImg').src = data.profilePic;
-                    }
+                    if(data.profilePic) document.getElementById('adminProfileImg').src = data.profilePic;
+                    
+                    // Load saved social configurations
+                    loadSocialSettings();
                     document.getElementById('adminAppArea').classList.remove('hidden');
                 } else {
-                    alert("🚨 Unauthorized Entry! Admins Only.");
+                    alert("🚨 Access Denied! Administrators Scope Only.");
                     window.location.href = "index.html";
                 }
-            } else { 
-                window.location.href = "index.html"; 
-            }
+            } else { window.location.href = "index.html"; }
         });
 
-        // Gallery Avatar Engine
+        // Load & Save Social Links Settings globally to Firestore
+        async function loadSocialSettings() {
+            const settingsDoc = await getDoc(doc(db, "settings", "social_links"));
+            if(settingsDoc.exists()) {
+                const s = settingsDoc.data();
+                document.getElementById('ytLink').value = s.youtube || "";
+                document.getElementById('tgLink').value = s.telegram || "";
+                document.getElementById('fbLink').value = s.facebook || "";
+                document.getElementById('igLink').value = s.instagram || "";
+                document.getElementById('wpLink').value = s.whatsapp || "";
+            }
+        }
+
+        window.saveSocials = async function() {
+            await setDoc(doc(db, "settings", "social_links"), {
+                youtube: document.getElementById('ytLink').value.trim(),
+                telegram: document.getElementById('tgLink').value.trim(),
+                facebook: document.getElementById('fbLink').value.trim(),
+                instagram: document.getElementById('igLink').value.trim(),
+                whatsapp: document.getElementById('wpLink').value.trim()
+            });
+            alert("🔗 Social Communities Sync Complete!");
+        };
+
+        // Upload Core Broadcast Motivation Data
+        window.uploadMotivation = async function() {
+            const type = document.getElementById('mType').value;
+            const text = document.getElementById('mText').value.trim();
+            const media = document.getElementById('mMediaLink').value.trim();
+            
+            await setDoc(doc(db, "settings", "live_motivation"), {
+                type, text, media, updatedAt: new Date().toISOString()
+            });
+            alert("🔥 Motivation Vector Pushed Live to Students!");
+        };
+
+        // Admin Avatar Streamer
         window.triggerAdminPhoto = () => document.getElementById('adminPhotoInput').click();
         window.uploadAdminPhoto = function(e) {
             const file = e.target.files[0];
@@ -75,137 +106,184 @@
             if(file) reader.readAsDataURL(file);
         };
 
-        // Theme Configuration Matrix
-        window.toggleTheme = function() {
-            document.documentElement.classList.toggle('dark');
-        };
-        
+        window.toggleTheme = () => document.documentElement.classList.toggle('dark');
         window.openAdminSidebar = () => document.getElementById('adminSidebar').classList.remove('-translate-x-full');
         window.closeAdminSidebar = () => document.getElementById('adminSidebar').classList.add('-translate-x-full');
         window.handleAdminLogout = () => signOut(auth).then(() => window.location.href = "index.html");
+
+        // Bottom Nav Dynamic Scroll Hide/Show
+        let lastScroll = 0;
+        let isScrolling;
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+            const nav = document.getElementById('adminBottomNav');
+            nav.style.transform = "translateY(100%)";
+            clearTimeout(isScrolling);
+            isScrolling = setTimeout(() => { nav.style.transform = "translateY(0)"; }, 200);
+            lastScroll = currentScroll <= 0 ? 0 : currentScroll;
+        });
     </script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
     <div id="adminAppArea" class="hidden min-h-screen flex relative overflow-x-hidden">
         
-        <!-- LEFT SIDEBAR -->
+        <!-- 1. ADMIIN SIDEBAR (CONTAINS ADJUSTABLE MODE AND LINKS ONLY) -->
         <aside id="adminSidebar" class="fixed top-0 bottom-0 left-0 z-50 w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col justify-between shadow-2xl">
             <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950/40">
                 <button onclick="toggleTheme()" class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl text-xs font-black flex items-center space-x-2 text-slate-600 dark:text-slate-300 active:scale-95 transition">
-                    <i class="fa-solid fa-circle-half-stroke text-sky-500 text-sm"></i>
-                    <span>Toggle Theme</span>
+                    <i class="fa-solid fa-circle-half-stroke text-sky-500 text-sm"></i> <span>Toggle Theme</span>
                 </button>
-                <button onclick="closeAdminSidebar()" class="lg:hidden p-2 text-slate-400 hover:text-rose-500"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <button onclick="closeAdminSidebar()" class="lg:hidden p-2 text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             
-            <div class="flex-1 overflow-y-auto p-5 space-y-6">
-                <!-- Avatar Controls -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-5">
+                <!-- Avatar block -->
                 <div class="text-center space-y-2">
                     <div onclick="triggerAdminPhoto()" class="w-24 h-24 mx-auto rounded-full overflow-hidden border-4 border-rose-500 shadow-xl relative group cursor-pointer">
                         <img id="adminProfileImg" src="https://api.dicebear.com/7.x/bottts/svg?seed=Mentor" class="w-full h-full object-cover">
                         <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-camera text-white"></i></div>
                     </div>
                     <input type="file" id="adminPhotoInput" class="hidden" accept="image/*" onchange="uploadAdminPhoto(event)">
-                    
-                    <h3 id="sbAdminName" class="font-black text-lg text-slate-900 dark:text-white">Loading...</h3>
-                    <p id="sbAdminEmail" class="text-xs font-bold text-slate-400 -mt-1 block">Gmail</p>
-                    <p id="sbAdminPhone" class="text-xs font-bold text-rose-500 dark:text-rose-400 -mt-1 block">Phone</p>
+                    <h3 id="sbAdminName" class="font-black text-lg text-slate-900 dark:text-white">Mentor</h3>
+                    <p id="sbAdminEmail" class="text-xs font-bold text-slate-400 -mt-1 truncate">Gmail</p>
+                    <p id="sbAdminPhone" class="text-xs font-bold text-rose-500 dark:text-rose-400 -mt-1">Phone</p>
                 </div>
 
-                <!-- Admin Core Controls Navigation -->
-                <div class="space-y-2">
-                    <span class="text-[9px] font-black tracking-widest text-slate-400 uppercase block px-1 mb-1">Shortcut Navigations</span>
-                    <a href="admin-quiz.html" class="flex items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-950 hover:bg-sky-500/10 dark:hover:bg-sky-500/10 text-slate-700 dark:text-slate-300 font-bold text-xs transition border border-slate-200 dark:border-slate-800"><i class="fa-solid fa-list-check mr-3 text-sky-500"></i>Quiz Control</a>
-                    <a href="admin-ncert.html" class="flex items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-950 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/10 text-slate-700 dark:text-slate-300 font-bold text-xs transition border border-slate-200 dark:border-slate-800"><i class="fa-solid fa-book mr-3 text-emerald-500"></i>NCERT Setup</a>
-                    <a href="admin-mocktest.html" class="flex items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-950 hover:bg-amber-500/10 dark:hover:bg-amber-500/10 text-slate-700 dark:text-slate-300 font-bold text-xs transition border border-slate-200 dark:border-slate-800"><i class="fa-solid fa-stopwatch mr-3 text-amber-500"></i>Mock Scheduler</a>
-                    <a href="admin-course.html" class="flex items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-950 hover:bg-indigo-500/10 dark:hover:bg-indigo-500/10 text-slate-700 dark:text-slate-300 font-bold text-xs transition border border-slate-200 dark:border-slate-800"><i class="fa-solid fa-graduation-cap mr-3 text-indigo-500"></i>Launch Course</a>
-                    <a href="admin-students.html" class="flex items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-950 hover:bg-purple-500/10 dark:hover:bg-purple-500/10 text-slate-700 dark:text-slate-300 font-bold text-xs transition border border-slate-200 dark:border-slate-800"><i class="fa-solid fa-users mr-3 text-purple-500"></i>Student Control</a>
-                    <a href="admin-notification.html" class="flex items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-950 hover:bg-rose-500/10 dark:hover:bg-rose-500/10 text-slate-700 dark:text-slate-300 font-bold text-xs transition border border-slate-200 dark:border-slate-800"><i class="fa-solid fa-bullhorn mr-3 text-rose-500"></i>Broadcast System</a>
+                <!-- Live Social Link Deployment Forms -->
+                <div class="space-y-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl">
+                    <span class="text-[9px] font-black tracking-widest text-slate-400 uppercase block mb-1">Update Student Channel Links</span>
+                    <div class="space-y-2 font-bold text-xs">
+                        <input type="text" id="ytLink" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 focus:outline-none focus:border-red-500" placeholder="🔴 YouTube Url">
+                        <input type="text" id="tgLink" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 focus:outline-none focus:border-sky-400" placeholder="🔵 Telegram Url">
+                        <input type="text" id="fbLink" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 focus:outline-none focus:border-blue-600" placeholder="🔵 Facebook Url">
+                        <input type="text" id="igLink" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 focus:outline-none focus:border-pink-500" placeholder="🟣 Instagram Url">
+                        <input type="text" id="wpLink" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 focus:outline-none focus:border-emerald-500" placeholder="🟢 WhatsApp Community Url">
+                    </div>
+                    <button onclick="saveSocials()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black text-xs py-2 rounded-xl transition shadow">Push Links to App</button>
                 </div>
             </div>
 
             <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40">
-                <button onclick="handleAdminLogout()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black py-2.5 rounded-xl transition text-xs flex items-center justify-center space-x-2 shadow-md shadow-rose-500/10"><i class="fa-solid fa-power-off"></i> <span>Log Out Mentor Panel</span></button>
+                <button onclick="handleAdminLogout()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black py-2.5 rounded-xl transition text-xs flex items-center justify-center space-x-2 shadow-md"><i class="fa-solid fa-power-off"></i> <span>Log Out Mentor Panel</span></button>
             </div>
         </aside>
-                <!-- MAIN WORKSPACE PLATFORM AREA -->
+                <!-- MAIN WORKSPACE -->
         <main class="flex-1 w-full lg:max-w-[calc(100%-20rem)] lg:ml-80 pb-24 min-h-screen flex flex-col overflow-x-hidden">
             
-            <!-- HEADER MATRIX -->
+            <!-- 3. TOP ROW HEADER (MIDDLE POSITION CONTAINS NAME & POSITION) -->
             <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 py-4 sticky top-0 z-40 flex justify-between items-center transition-colors w-full">
-                <div class="flex items-center space-x-2 max-w-[55%]">
+                <div class="flex items-center space-x-2 max-w-[45%]">
                     <button onclick="openAdminSidebar()" class="lg:hidden p-2 text-slate-500 text-lg flex-shrink-0"><i class="fa-solid fa-bars"></i></button>
                     <div class="truncate">
-                        <h2 id="midAdminName" class="text-sm md:text-base font-black text-slate-900 dark:text-white truncate">Mentor</h2>
-                        <p class="text-[9px] md:text-xs font-black text-rose-500 dark:text-rose-400 tracking-wide uppercase">System Administrator Hub</p>
+                        <h2 id="midAdminName" class="text-xs md:text-sm font-black text-slate-900 dark:text-white truncate">Mentor</h2>
+                        <p class="text-[9px] md:text-xs font-black text-rose-500 tracking-wide uppercase truncate">System Administrator Hub</p>
                     </div>
                 </div>
-                
-                <div class="flex items-center space-x-2 flex-shrink-0">
-                    <span class="bg-rose-500/10 text-rose-500 text-[10px] font-black px-3 py-1.5 rounded-xl border border-rose-500/20 tracking-wider">SECURE LIVE</span>
+                <!-- 2. TOP RIGHT WIDGET TRIO REDIRECTION -->
+                <div class="flex items-center space-x-1.5 md:space-x-3 flex-shrink-0">
+                    <button onclick="window.location.href='admin-notification.html'" class="p-2 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 hover:border-rose-500 transition"><i class="fa-solid fa-bell text-xs"></i></button>
+                    <button onclick="window.location.href='admin-challenge.html'" class="px-2 py-2 bg-purple-500 text-white font-black text-[9px] md:text-xs rounded-xl uppercase tracking-wider hover:bg-purple-600 transition"><i class="fa-solid fa-swords mr-1"></i>Challenge Set</button>
+                    <button onclick="window.location.href='admin-leaderboard.html'" class="p-2 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-500 text-xs font-black uppercase hover:scale-105 transition"><i class="fa-solid fa-trophy mr-1"></i>Rank View</button>
                 </div>
             </header>
 
-            <!-- GRID DASHBOARD INTERFACES -->
+            <!-- CORE ACTIVE HUB CANVAS -->
             <div class="w-full px-4 md:px-6 py-6 space-y-6 flex-1 max-w-5xl mx-auto box-border overflow-x-hidden">
                 
-                <!-- Quick Metric Greeting Strap -->
-                <div class="bg-gradient-to-r from-rose-500 to-red-600 text-white p-5 rounded-3xl shadow-xl relative overflow-hidden w-full">
-                    <div class="absolute right-0 bottom-0 opacity-10 text-7xl p-2 pointer-events-none"><i class="fa-solid fa-shield-halved"></i></div>
-                    <span class="bg-slate-950/30 text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full"><i class="fa-solid fa-lock mr-1"></i> Control System Status</span>
-                    <h3 class="text-sm md:text-base font-black mt-2 leading-relaxed">Welcome back to mNEET Master Dashboard. Configure academic boundaries, push mock tests, and manage students perfectly across channels.</h3>
+                <!-- Master Course Selector Filter Bar -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm w-full">
+                    <div class="flex items-center space-x-2 w-full">
+                        <i class="fa-solid fa-filter text-rose-500 text-base"></i>
+                        <select class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-black text-slate-700 dark:text-slate-300 focus:outline-none w-full sm:w-64">
+                            <option>mNEET Target 2026 Ultimate Arena</option>
+                        </select>
+                    </div>
                 </div>
 
-                <!-- Complete Core Action Work Grid Cards (Adjusted beautifully for Mobile UI Layout) -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+                <!-- Motivation Broadcast Module Component -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-4 w-full">
+                    <h3 class="text-xs font-black tracking-widest uppercase text-slate-400"><i class="fa-solid fa-bullhorn mr-1"></i> Live Motivation Publisher Panel</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
+                        <select id="mType" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-slate-700 dark:text-slate-300 focus:outline-none">
+                            <option value="text">Text Only Content</option>
+                            <option value="image">Image Attachment Url</option>
+                            <option value="video">Direct Video Frame Link</option>
+                        </select>
+                        <input type="text" id="mMediaLink" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Paste Image/Video URL if applicable">
+                    </div>
+                    <textarea id="mText" rows="2" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-xs font-bold focus:outline-none resize-none" placeholder="Type motivational text quote for student interface..."></textarea>
+                    <button onclick="uploadMotivation()" class="bg-sky-500 hover:bg-sky-600 text-white font-black text-xs px-5 py-2.5 rounded-xl transition shadow shadow-sky-500/10">Broadcast to Dashboard</button>
+                </div>
+
+                <!-- Course Creation Builder Setup Form -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-4 w-full">
+                    <h3 class="text-xs font-black tracking-widest uppercase text-slate-400"><i class="fa-solid fa-folder-plus mr-1"></i> Launch & Create Premium Course</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Course Name">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Thumbnail Image or Video link">
+                        <input type="date" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none">
+                        <input type="date" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Price (INR)">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Discount %">
+                    </div>
+                    <textarea rows="2" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-xs font-bold focus:outline-none resize-none" placeholder="Course descriptions..."></textarea>
                     
-                    <!-- Card: Subject Management -->
-                    <div onclick="window.location.href='admin-quiz.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-sky-500 transition cursor-pointer shadow-sm group">
-                        <div class="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500 text-lg mb-3 group-hover:bg-sky-500 group-hover:text-white transition"><i class="fa-solid fa-list-check"></i></div>
-                        <h4 class="font-black text-sm text-slate-900 dark:text-slate-100">Subject & Quiz</h4>
-                        <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">Add fields, topics, and input questions easily with image blocks.</p>
+                    <!-- Advanced Scope Feature Selector Suggestion -->
+                    <div class="space-y-1.5 border-t border-slate-100 dark:border-slate-800/60 pt-3">
+                        <span class="text-[10px] font-black tracking-widest text-slate-400 uppercase block mb-1">Select Features Pack Access Included:</span>
+                        <div class="flex flex-wrap gap-4 text-xs font-bold text-slate-600 dark:text-slate-400">
+                            <label class="flex items-center space-x-2"><input type="checkbox" checked class="accent-rose-500"> <span>Study Module</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" checked class="accent-rose-500"> <span>Test Arena</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" checked class="accent-rose-500"> <span>Mock Tests</span></label>
+                            <label class="flex items-center space-x-2"><input type="checkbox" checked class="accent-rose-500"> <span>Leaderboards</span></label>
+                        </div>
                     </div>
+                    <button class="bg-rose-500 hover:bg-rose-600 text-white font-black text-xs px-5 py-2.5 rounded-xl transition shadow">Launch Package</button>
+                </div>
 
-                    <!-- Card: NCERT Core Setup -->
-                    <div onclick="window.location.href='admin-ncert.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-emerald-500 transition cursor-pointer shadow-sm group">
-                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 text-lg mb-3 group-hover:bg-emerald-500 group-hover:text-white transition"><i class="fa-solid fa-book"></i></div>
-                        <h4 class="font-black text-sm text-slate-900 dark:text-slate-100">NCERT & PYQ</h4>
-                        <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">Upload textbook paragraphs, attach audio modules & setup live PYQs.</p>
+                <!-- Admin Courses Store Cards Management Grid (Edit/Delete/Hide Options) -->
+                <div class="space-y-4 w-full">
+                    <h3 class="text-xs font-black tracking-widest uppercase text-slate-400"><i class="fa-solid fa-cubes mr-1"></i> Active Courses Cards Log Manager</h3>
+                    
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 flex flex-col sm:flex-row gap-5 items-center w-full shadow-sm">
+                        <div class="w-full sm:w-52 h-36 bg-gradient-to-tr from-rose-500 to-red-600 text-white rounded-2xl flex flex-col justify-center items-center p-4 font-black shrink-0 shadow relative overflow-hidden">
+                            <i class="fa-solid fa-dna text-7xl absolute -bottom-4 -right-4 opacity-15"></i>
+                            <span class="text-base tracking-wider font-black uppercase">mNEET Pro</span>
+                            <span class="text-[9px] opacity-75 mt-1 font-bold">Live Management Mode</span>
+                        </div>
+                        <div class="flex-1 space-y-2.5 w-full">
+                            <div class="flex justify-between items-start flex-wrap gap-2">
+                                <h4 class="font-black text-base md:text-lg text-slate-900 dark:text-white leading-tight">mNEET Alpha Pro Complete Comprehensive 2026 Batch</h4>
+                                <span class="text-xl font-black text-rose-500">₹4,999</span>
+                            </div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Full features pack deployed containing reading modules, multiplayer combats, and detailed custom patterns test keys.</p>
+                            
+                            <div class="flex flex-wrap gap-3 text-[9px] font-black text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/60 items-center w-full">
+                                <span>START: 01 AUG 2026</span>
+                                <span>END: MAY 2027</span>
+                                <!-- Option Switches Matrix -->
+                                <div class="ml-auto flex items-center space-x-2 text-xs font-bold text-white">
+                                    <button class="bg-sky-500 px-3 py-1.5 rounded-xl hover:bg-sky-600 transition"><i class="fa-solid fa-pen"></i> Edit</button>
+                                    <button class="bg-amber-500 px-3 py-1.5 rounded-xl hover:bg-amber-600 transition"><i class="fa-solid fa-eye-slash"></i> Hide</button>
+                                    <button class="bg-rose-500 px-3 py-1.5 rounded-xl hover:bg-rose-600 transition"><i class="fa-solid fa-trash"></i> Delete</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-
-                    <!-- Card: Mock Test Control -->
-                    <div onclick="window.location.href='admin-mocktest.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-amber-500 transition cursor-pointer shadow-sm group">
-                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 text-lg mb-3 group-hover:bg-amber-500 group-hover:text-white transition"><i class="fa-solid fa-stopwatch"></i></div>
-                        <h4 class="font-black text-sm text-slate-900 dark:text-slate-100">Mock Scheduler</h4>
-                        <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">Deploy new mock test frameworks following official NTA criteria.</p>
-                    </div>
-
-                    <!-- Card: Course Deployment -->
-                    <div onclick="window.location.href='admin-course.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-indigo-500 transition cursor-pointer shadow-sm group">
-                        <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 text-lg mb-3 group-hover:bg-indigo-500 group-hover:text-white transition"><i class="fa-solid fa-graduation-cap"></i></div>
-                        <h4 class="font-black text-sm text-slate-900 dark:text-slate-100">Course & Batches</h4>
-                        <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">Manage premium product cards, prices, and end timelines directly.</p>
-                    </div>
-
-                    <!-- Card: Students Controls -->
-                    <div onclick="window.location.href='admin-students.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-purple-500 transition cursor-pointer shadow-sm group">
-                        <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500 text-lg mb-3 group-hover:bg-purple-500 group-hover:text-white transition"><i class="fa-solid fa-users"></i></div>
-                        <h4 class="font-black text-sm text-slate-900 dark:text-slate-100">Student Control</h4>
-                        <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">Sync global registry profiles, view data, and control coins.</p>
-                    </div>
-
-                    <!-- Card: Broadcast Alerts System -->
-                    <div onclick="window.location.href='admin-notification.html'" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-rose-500 transition cursor-pointer shadow-sm group">
-                        <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 text-lg mb-3 group-hover:bg-rose-500 group-hover:text-white transition"><i class="fa-solid fa-bullhorn"></i></div>
-                        <h4 class="font-black text-sm text-slate-900 dark:text-slate-100">Broadcast System</h4>
-                        <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">Send date-wise alert summaries directly onto student devices.</p>
-                    </div>
-
                 </div>
 
             </div>
         </main>
+
+        <!-- 4. BOTTOM ACTION CONTROL NAV ROW STRAP (5 TOTAL CRUCIAL OPTIONS) -->
+        <nav id="adminBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3.5 flex justify-around items-center shadow-2xl transition-transform duration-300 lg:pl-80 w-full box-border">
+            <button onclick="window.location.href='admin-dashboard.html'" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
+            <button onclick="window.location.href='admin-ncert.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
+            <button onclick="window.location.href='admin-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
+            <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
+            <button onclick="window.location.href='admin-students.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Students</span></button>
+        </nav>
     </div>
 </body>
-    </html>
-    
+            </html>
+                                
