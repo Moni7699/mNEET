@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET Admin - Interactive Study Control</title>
-    <!-- Tailwind CSS with Dark/Light Support -->
+    <title>mNEET Admin - NCERT Studio</title>
+    <!-- Tailwind CSS with Dark/Light Engine -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
         }
     </script>
-    <!-- FontAwesome for Professional UI Icons -->
+    <!-- FontAwesome for Pro App Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script type="module">
@@ -33,123 +33,126 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Security Validation Loop Matrix
+        // Security Validation Routing Logic
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists() && userDoc.data().role === 'admin') {
-                    document.getElementById('adminStudyArea').classList.remove('hidden');
+                    document.getElementById('adminNcertPortal').classList.remove('hidden');
                 } else { window.location.href = "index.html"; }
             } else { window.location.href = "index.html"; }
         });
 
-        // App Navigation and Multi-View Router Engine
-        window.changeView = function(targetViewId) {
-            const views = ['view-subjects', 'view-chapters', 'view-pdf-canvas'];
-            views.forEach(v => document.getElementById(v).classList.add('hidden'));
-            document.getElementById(targetViewId).classList.remove('hidden');
-            
-            // Manage top-bottom row dynamically based on PDF screen view condition
-            const navRow = document.getElementById('adminBottomNav');
-            if(targetViewId === 'view-pdf-canvas') {
-                navRow.classList.add('hidden');
+        // Strict Screen Routing Controls
+        window.navigateToView = function(viewId) {
+            const screens = ['view-subject-hub', 'view-chapter-hub', 'view-book-canvas'];
+            screens.forEach(s => document.getElementById(s).classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+
+            // Hide bottom rows perfectly if user opens the canvas screen
+            const bottomStrap = document.getElementById('adminBottomNav');
+            if(viewId === 'view-book-canvas') {
+                bottomStrap.classList.add('hidden');
             } else {
-                navRow.classList.remove('hidden');
+                bottomStrap.classList.remove('hidden');
             }
         };
 
-        // Drag and Drop Sequence Interceptor Variables
-        let draggedItem = null;
+        // HTML5 Sequence Draggable System Matrix
+        let activeDraggedNode = null;
 
-        window.handleDragStart = function(e) {
-            draggedItem = this;
+        window.onDragStartNode = function(e) {
+            activeDraggedNode = this;
             e.dataTransfer.effectAllowed = 'move';
         };
-        window.handleDragOver = function(e) {
+        window.onDragOverNode = function(e) {
             e.preventDefault();
             return false;
         };
-        window.handleDrop = function(e) {
+        window.onDropNode = function(e) {
             e.stopPropagation();
-            if (draggedItem !== this) {
-                const parent = this.parentNode;
-                const allNodes = Array.from(parent.children);
-                const draggedIdx = allNodes.indexOf(draggedItem);
-                const targetIdx = allNodes.indexOf(this);
+            if (activeDraggedNode !== this) {
+                const rootParent = this.parentNode;
+                const nodeList = Array.from(rootParent.children);
+                const srcIdx = nodeList.indexOf(activeDraggedNode);
+                const destIdx = nodeList.indexOf(this);
                 
-                if (draggedIdx < targetIdx) {
-                    parent.insertBefore(draggedItem, this.nextSibling);
+                if (srcIdx < destIdx) {
+                    rootParent.insertBefore(activeDraggedNode, this.nextSibling);
                 } else {
-                    parent.insertBefore(draggedItem, this);
+                    rootParent.insertBefore(activeDraggedNode, this);
                 }
             }
             return false;
         };
 
-        // MCQs and Image Upload Helpers inside PDF View
-        window.triggerMcqImg = () => document.getElementById('mcqImgInput').click();
-        window.previewMcqImg = function(e) {
+        // MCQ Image Preview Handlers inside Canvas view
+        window.clickMcqImage = () => document.getElementById('pyqFileField').click();
+        window.loadMcqImagePreview = function(e) {
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onloadend = () => {
-                const imgPreview = document.getElementById('mcqImgPreview');
-                imgPreview.src = reader.result;
-                imgPreview.classList.remove('hidden');
+                const box = document.getElementById('pyqImgRender');
+                box.src = reader.result;
+                box.classList.remove('hidden');
             };
             if(file) reader.readAsDataURL(file);
         };
 
-        window.submitPyqQuestion = function() {
-            alert("🔥 PYQ Question Uploaded Successfully to Database Node!");
-            document.getElementById('pyqText').value = "";
-            document.getElementById('mcqImgPreview').classList.add('hidden');
+        window.submitPyqPayload = function() {
+            alert("🚀 MCQ Question Injected into Page Hierarchy successfully!");
+            document.getElementById('pyqQuestionArea').value = "";
+            document.getElementById('pyqImgRender').classList.add('hidden');
         };
 
-        // Static flip view parameters mockup
-        let totalPdfPages = 5;
-        let currentPdfPage = 1;
+        // Flipbook local variables mockups
+        let totalBookPages = 8;
+        let currentBookPage = 1;
 
-        window.changePdfPage = function(dir) {
-            if(dir === 'next' && currentPdfPage < totalPdfPages) currentPdfPage++;
-            else if(dir === 'prev' && currentPdfPage > 1) currentPdfPage--;
-            document.getElementById('pageIndicatorText').innerText = `Page ${currentPdfPage} of ${totalPdfPages}`;
+        window.flipBookPage = function(action) {
+            if(action === 'next' && currentBookPage < totalBookPages) currentBookPage++;
+            else if(action === 'prev' && currentBookPage > 1) currentBookPage--;
+            document.getElementById('flipIndicator').innerText = `Page ${currentBookPage} of ${totalBookPages}`;
         };
+
+        window.toggleTheme = () => document.documentElement.classList.toggle('dark');
     </script>
     <style>
-        .drag-card { cursor: grab; }
-        .drag-card:active { cursor: grabbing; }
+        .grab-card { cursor: grab; }
+        .grab-card:active { cursor: grabbing; }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
-    <div id="adminStudyArea" class="hidden min-h-screen flex flex-col justify-between overflow-x-hidden">
+    <div id="adminNcertPortal" class="hidden min-h-screen flex flex-col justify-between overflow-x-hidden">
         
-        <!-- ========================================================= -->
-        <!-- SCREEN VIEW STATE 1: ALL SUBJECTS VIEW BAR               -->
-        <!-- ========================================================= -->
-        <div id="view-subjects" class="w-full flex-1 flex flex-col">
-            <!-- Top bar configuration strap -->
+        <!-- ========================================== -->
+        <!-- VIEW 1: ALL SUBJECTS COMPONENT             -->
+        <!-- ========================================== -->
+        <div id="view-subject-hub" class="w-full flex-1 flex flex-col">
+            <!-- Top bar layout -->
             <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
                 <div class="flex items-center space-x-3 w-full">
-                    <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 p-2"><i class="fa-solid fa-house-medical"></i></button>
+                    <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-house-medical text-lg"></i></button>
                     <h2 class="font-black text-sm md:text-base text-slate-900 dark:text-white mx-auto">All Subject</h2>
+                    <button onclick="toggleTheme()" class="text-slate-400 p-2"><i class="fa-solid fa-circle-half-stroke"></i></button>
                 </div>
             </header>
 
             <div class="w-full px-4 md:px-6 py-6 space-y-6 flex-1 max-w-5xl mx-auto box-border">
-                <!-- Subject creation box -->
+                <!-- Create subject bar widget input -->
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex flex-col sm:flex-row items-center gap-3 shadow-sm w-full">
-                    <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black focus:outline-none" placeholder="Enter Subject Name (e.g. Biology Arena)">
+                    <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black focus:outline-none" placeholder="Create Subject Name...">
                     <button class="w-full sm:w-auto bg-rose-500 hover:bg-rose-600 text-white font-black text-xs px-6 py-3 rounded-xl transition whitespace-nowrap">Create Subject</button>
                 </div>
 
-                <!-- Draggable Subjects Card Containers Loop -->
-                <div class="space-y-3 w-full" id="subjectsContainer">
-                    <div draggable="true" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver(event)" ondrop="handleDrop.call(this, event)" class="drag-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm transition hover:border-sky-400">
-                        <div class="flex items-center space-x-3 cursor-pointer" onclick="changeView('view-chapters')">
+                <!-- Subjects Cards Wrapper List -->
+                <div class="space-y-3 w-full" id="subjectListNode">
+                    <div draggable="true" ondragstart="onDragStartNode.call(this, event)" ondragover="onDragOverNode(event)" ondrop="onDropNode.call(this, event)" class="grab-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm transition hover:border-sky-400">
+                        <div class="flex items-center space-x-3 flex-1" onclick="navigateToView('view-chapter-hub')">
                             <i class="fa-solid fa-grip-vertical text-slate-400"></i>
                             <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white">Biology Arena</span>
                         </div>
-                        <div class="flex items-center space-x-1 text-white text-[10px] font-bold">
+                        <div class="flex items-center space-x-1.5 text-white text-[10px] font-bold">
                             <button class="bg-sky-500 px-2.5 py-1.5 rounded-xl hover:bg-sky-600 transition"><i class="fa-solid fa-pen"></i></button>
                             <button class="bg-amber-500 px-2.5 py-1.5 rounded-xl hover:bg-amber-600 transition"><i class="fa-solid fa-eye-slash"></i></button>
                             <button class="bg-rose-500 px-2.5 py-1.5 rounded-xl hover:bg-rose-600 transition"><i class="fa-solid fa-trash"></i></button>
@@ -157,35 +160,40 @@
                     </div>
                 </div>
             </div>
-                      <!-- ========================================================= -->
-        <!-- SCREEN VIEW STATE 2: CHAPTER NAMES HUB                    -->
-        <!-- ========================================================= -->
-        <div id="view-chapters" class="w-full flex-1 flex flex-col hidden">
+        </div>
+                <!-- ========================================== -->
+        <!-- VIEW 2: CHAPTER NAMES HUB COMPONENT        -->
+        <!-- ========================================== -->
+        <div id="view-chapter-hub" class="w-full flex-1 flex flex-col hidden">
             <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
                 <div class="flex items-center space-x-3 w-full">
-                    <button onclick="changeView('view-subjects')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button onclick="navigateToView('view-subject-hub')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg"></i></button>
                     <h2 class="font-black text-sm md:text-base text-slate-900 dark:text-white mx-auto">Chapter names</h2>
+                    <div class="w-8"></div>
                 </div>
             </header>
 
             <div class="w-full px-4 md:px-6 py-6 space-y-6 flex-1 max-w-5xl mx-auto box-border">
-                <!-- Chapter Creator Form Widget with File Upload Options -->
+                <!-- Chapter creator panel input elements wrapper -->
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex flex-col gap-3 shadow-sm w-full">
-                    <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black focus:outline-none" placeholder="Enter Chapter Name (e.g. The Living World)">
-                    <div class="flex flex-col sm:flex-row gap-3 w-full">
-                        <input type="file" accept=".pdf" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2 text-xs font-bold text-slate-400">
+                    <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black focus:outline-none" placeholder="Enter Chapter Title (e.g. The Living World)">
+                    <div class="flex flex-col sm:flex-row gap-3 w-full items-center">
+                        <div class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2 flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-400 pl-2">Select Chapter PDF Document</span>
+                            <input type="file" accept=".pdf" class="text-xs text-slate-500 font-bold file:bg-rose-500/10 file:border-0 file:text-rose-500 file:px-3 file:py-1 file:rounded-xl cursor-pointer">
+                        </div>
                         <button class="w-full sm:w-auto bg-rose-500 hover:bg-rose-600 text-white font-black text-xs px-6 py-3 rounded-xl transition whitespace-nowrap">Create Chapter</button>
                     </div>
                 </div>
 
-                <!-- Draggable Chapter Cards Loop Container -->
-                <div class="space-y-3 w-full" id="chaptersContainer">
-                    <div draggable="true" ondragstart="handleDragStart.call(this, event)" ondragover="handleDragOver(event)" ondrop="handleDrop.call(this, event)" class="drag-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm transition hover:border-purple-400">
-                        <div class="flex items-center space-x-3 cursor-pointer" onclick="changeView('view-pdf-canvas')">
+                <!-- Draggable Chapters Cards Container Array List -->
+                <div class="space-y-3 w-full" id="chapterListNode">
+                    <div draggable="true" ondragstart="onDragStartNode.call(this, event)" ondragover="onDragOverNode(event)" ondrop="onDropNode.call(this, event)" class="grab-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm transition hover:border-purple-400">
+                        <div class="flex items-center space-x-3 flex-1" onclick="navigateToView('view-book-canvas')">
                             <i class="fa-solid fa-grip-vertical text-slate-400"></i>
                             <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white">Chapter 1: The Living World</span>
                         </div>
-                        <div class="flex items-center space-x-1 text-white text-[10px] font-bold">
+                        <div class="flex items-center space-x-1.5 text-white text-[10px] font-bold">
                             <button class="bg-sky-500 px-2.5 py-1.5 rounded-xl hover:bg-sky-600 transition"><i class="fa-solid fa-pen"></i></button>
                             <button class="bg-amber-500 px-2.5 py-1.5 rounded-xl hover:bg-amber-600 transition"><i class="fa-solid fa-eye-slash"></i></button>
                             <button class="bg-rose-500 px-2.5 py-1.5 rounded-xl hover:bg-rose-600 transition"><i class="fa-solid fa-trash"></i></button>
@@ -195,68 +203,68 @@
             </div>
         </div>
 
-        <!-- ========================================================= -->
-        <!-- SCREEN VIEW STATE 3: MASTER FLIPBOOK CANVAS (NO ROWS)    -->
-        <!-- ========================================================= -->
-        <div id="view-pdf-canvas" class="w-full flex-1 flex flex-col hidden bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-            <!-- Strict Back and Chapter title top barstrap -->
+        <!-- ========================================== -->
+        <!-- VIEW 3: NCERT BOOK CANVAS (NO NAV ROWS)     -->
+        <!-- ========================================== -->
+        <div id="view-book-canvas" class="w-full flex-1 flex flex-col hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+            <!-- Strict Back and Chapter title strap header layout options -->
             <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex justify-between items-center w-full shadow-sm">
-                <button onclick="changeView('view-chapters')" class="text-slate-400 font-bold p-2 text-xs md:text-sm"><i class="fa-solid fa-chevron-left"></i> Back</button>
-                <h2 class="font-black text-xs md:text-sm truncate">The Living World (PDF Studio)</h2>
+                <button onclick="navigateToView('view-chapter-hub')" class="text-slate-400 font-bold p-2 text-xs md:text-sm transition hover:text-rose-500"><i class="fa-solid fa-chevron-left"></i> Back</button>
+                <h2 class="font-black text-xs md:text-sm tracking-wide truncate">The Living World (PDF Processing Editor)</h2>
                 <div class="w-12"></div>
             </header>
 
-            <!-- Book layout simulation mapping arena -->
-            <div class="max-w-4xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 items-start">
+            <!-- Book layout simulation panels -->
+            <div class="max-w-5xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 items-start">
                 
-                <!-- Left Column: Flipbook View Layer Component -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-xl space-y-4 min-h-[350px] flex flex-col justify-between">
-                    <div class="text-xs md:text-sm leading-relaxed font-serif space-y-2">
-                        <p class="p-2 bg-yellow-100/30 border-l-4 border-yellow-400">Biodiversity refers to the number and types of organisms present on Earth. Each organism is given a distinct scientific name.</p>
-                        <p class="text-slate-400 text-[11px]">Select text or tag vectors to inject official NTA MCQ maps into student engines.</p>
+                <!-- Left Column Panel Component: Interactive Book Layer -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-xl space-y-4 min-h-[380px] flex flex-col justify-between">
+                    <div class="text-sm md:text-base leading-loose font-serif text-slate-800 dark:text-slate-200 space-y-2">
+                        <p class="p-2 bg-yellow-400/10 border-l-4 border-yellow-400 rounded-r-lg font-bold">Biodiversity represents the massive pool of living variations existing on Earth. To map them precisely, taxonomy processes rules to define scientific nomenclature benchmarks.</p>
+                        <p class="text-[11px] text-slate-400 font-sans font-medium">Select target paragraphs or structures inside text flows to inject live custom MCQ question tokens without timing constraints or coin multipliers.</p>
                     </div>
                     
-                    <!-- Flip Controls Footer Section -->
-                    <div class="flex justify-between items-center border-t pt-3 font-black text-xs">
-                        <button onclick="changePdfPage('prev')" class="bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl"><i class="fa-solid fa-arrow-left"></i> Prev</button>
-                        <span id="pageIndicatorText" class="font-mono text-slate-400">Page 1 of 5</span>
-                        <button onclick="changePdfPage('next')" class="bg-slate-900 text-white dark:bg-slate-800 px-3 py-1.5 rounded-xl">Next <i class="fa-solid fa-arrow-right"></i></button>
+                    <!-- Flip Controls Footer Panel inside Book layer -->
+                    <div class="flex justify-between items-center border-t border-slate-100 dark:border-slate-800/80 pt-3.5 font-black text-xs text-slate-500">
+                        <button onclick="flipBookPage('prev')" class="bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl active:scale-95 transition"><i class="fa-solid fa-arrow-left mr-1"></i> Previous</button>
+                        <span id="flipIndicator" class="font-mono text-[11px]">Page 1 of 8</span>
+                        <button onclick="flipBookPage('next')" class="bg-slate-900 text-white dark:bg-slate-800 px-3 py-1.5 rounded-xl active:scale-95 transition">Next Page <i class="fa-solid fa-arrow-right ml-1"></i></button>
                     </div>
                 </div>
 
-                <!-- Right Column: PYQ MCQ Injected Publisher Panel Interface -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-md space-y-3 text-xs font-bold">
-                    <span class="text-[9px] font-black tracking-widest text-slate-400 uppercase block"><i class="fa-solid fa-tags text-rose-500 mr-1"></i> Tag PYQ MCQ Platform (No Timer/No Coins)</span>
+                <!-- Right Column Panel Component: PYQ MCQ Injector Builder Form tools -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-md space-y-3.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <span class="text-[9px] font-black tracking-widest text-slate-400 uppercase block border-b pb-1.5"><i class="fa-solid fa-tags text-rose-500 mr-1"></i> Tag PYQ MCQ Platform Editor Scope</span>
                     
-                    <textarea id="pyqText" rows="2" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs font-bold focus:outline-none resize-none" placeholder="Type Question text..."></textarea>
+                    <textarea id="pyqQuestionArea" rows="2" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-xs font-bold focus:outline-none resize-none" placeholder="Type Question content parameters..."></textarea>
                     
-                    <!-- Image option attachment triggers -->
+                    <!-- Question image element attachments trigger box panel -->
                     <div class="w-full">
-                        <button onclick="triggerMcqImg()" class="bg-slate-100 dark:bg-slate-950 border border-dashed border-slate-300 dark:border-slate-800 w-full p-2.5 rounded-xl text-slate-400"><i class="fa-solid fa-image mr-1"></i> Upload Question Image</button>
-                        <input type="file" id="mcqImgInput" accept="image/*" class="hidden" onchange="previewMcqImg(event)">
-                        <img id="mcqImgPreview" src="" class="hidden w-full h-24 object-contain mt-2 border rounded-xl">
+                        <button onclick="clickMcqImage()" class="bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-300 dark:border-slate-800 w-full p-3 rounded-xl text-slate-400 text-center"><i class="fa-solid fa-image mr-1"></i> Bind Question Image File</button>
+                        <input type="file" id="pyqFileField" accept="image/*" class="hidden" onchange="loadMcqImagePreview(event)">
+                        <img id="pyqImgRender" src="" class="hidden w-full h-28 object-contain mt-2 border border-slate-200 rounded-xl bg-slate-50">
                     </div>
 
-                    <!-- 4 Option Inputs Matrix Configurations -->
+                    <!-- 4 Input Options Controls Grid Matrix -->
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border rounded-xl p-2 focus:outline-none" placeholder="Option A">
-                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border rounded-xl p-2 focus:outline-none" placeholder="Option B">
-                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border rounded-xl p-2 focus:outline-none" placeholder="Option C">
-                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border rounded-xl p-2 focus:outline-none" placeholder="Option D">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Option A">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Option B">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Option C">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Option D">
                     </div>
                     
-                    <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border rounded-xl p-2 focus:outline-none" placeholder="View Solution Explanation text...">
-                    <button onclick="submitPyqQuestion()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black py-2.5 rounded-xl transition">Deploy PYQ MCQ Question</button>
+                    <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="View Solution Explanation text layout...">
+                    <button onclick="submitPyqPayload()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black py-3 rounded-xl transition shadow active:scale-95">Deploy Injected PYQ MCQ</button>
                 </div>
             </div>
         </div>
 
-        <!-- ========================================================= -->
-        <!-- 4. BOTTOM DYNAMIC CONTROL NAVIGATION STRAP                -->
-        <!-- ========================================================= -->
+        <!-- ========================================== -->
+        <!-- 4. BOTTOM DYNAMIC ROW NAVIGATION BAR       -->
+        <!-- ========================================== -->
         <nav id="adminBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3.5 flex justify-around items-center shadow-2xl transition-transform duration-300 lg:pl-80 w-full box-border">
             <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
-            <button onclick="changeView('view-subjects')" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
+            <button onclick="navigateToView('view-subject-hub')" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
             <button onclick="window.location.href='admin-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
             <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
             <button onclick="window.location.href='admin-students.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Students</span></button>
@@ -264,5 +272,4 @@
     </div>
 </body>
     </html>
-    </div>
-                                                                                                                    
+                    
