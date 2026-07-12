@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>mNEET Admin - Challenge Control Center</title>
+    <!-- Tailwind CSS Engine -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- FontAwesome Pro Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
+            authDomain: "mneet-spark.firebaseapp.com",
+            databaseURL: "https://mneet-spark-default-rtdb.firebaseio.com",
+            projectId: "mneet-spark",
+            storageBucket: "mneet-spark.firebasestorage.app",
+            messagingSenderId: "252201633700",
+            appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let activeChallengeId = "";
+        let activeTaskId = "";
+        let liveStreamUnsubscribe = null;
+
+        // Dynamic Router Matrix Matrix
+        window.navigateToChallengeView = function(viewId) {
+            const screens = ['view-challenge-dashboard', 'view-task-manager', 'view-challenge-studio'];
+            screens.forEach(s => document.getElementById(s).classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+        };
+
+        // Firebase Auth Logout Trigger
+        window.triggerChallengeLogout = function() {
+            if(confirm("Are you sure you want to Logout from Admin Session?")) {
+                signOut(auth).then(() => { window.location.href = "index.html"; });
+            }
+        };
+
+        // LEVEL 1: CHALLENGE CREATION MATRIX
+        window.deployNewChallengeHub = async function() {
+            const nameInput = document.getElementById('challengeNameInput');
+            const syllabusInput = document.getElementById('challengeSyllabusInput');
+            const timerInput = document.getElementById('challengeTimerInput');
+            const limitInput = document.getElementById('challengeLimitInput');
+            const expiryInput = document.getElementById('challengeExpiryInput');
+
+            const name = nameInput.value.trim();
+            const syllabus = syllabusInput.value.trim();
+            if(!name || !syllabus) return;
+
+            // Collect active subject checkboxes
+            const subjects = [];
+            ['phy', 'chem', 'bot', 'zoo'].forEach(sub => {
+                if(document.getElementById(`check-${sub}`).checked) subjects.push(sub.toUpperCase());
+            });
+
+            await addDoc(collection(db, "challenges"), {
+                name,
+                syllabus,
+                subjects,
+                duration: parseInt(timerInput.value) || 20,
+                dailyLimit: limitInput.value,
+                expiryDate: expiryInput.value || "2026-12-31",
+                createdAt: Date.now(),
+                coinRules: { right: "+4", wrong: "-2" },
+                hidden: false
+            });
+
+            nameInput.value = ""; syllabusInput.value = "";
+        };
+
+        window.loadAllChallengesData = function() {
+            onSnapshot(query(collection(db, "challenges"), orderBy("createdAt", "desc")), (snapshot) => {
+                const container = document.getElementById('challengesListNode');
+                container.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const c = docSnap.data(); const id = docSnap.id;
+                    container.innerHTML += `
+                        <div class="bg-white dark:bg-slate-900 border ${c.hidden ? 'opacity-40 border-slate-300' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
+                            <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.enterChallengeTasks('${id}', '${c.name.replace(/'/g, "\\'")}')">
+                                <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500"><i class="fa-solid fa-fire text-lg"></i></div>
+                                <div class="flex flex-col">
+                                    <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white">${c.name}</span>
+                                    <span class="text-[10px] text-slate-400 font-bold">Limit: ${c.dailyLimit} | Rules: +4 / -2 Coins</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <button onclick="window.toggleHideChallenge('${id}', ${c.hidden})" class="bg-amber-50 text-amber-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-eye-slash"></i></button>
+                                <button onclick="deleteDoc(doc(db, 'challenges', '${id}'))" class="bg-rose-50 text-rose-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        };
+
+        window.toggleHideChallenge = async function(id, status) {
+            await updateDoc(doc(db, "challenges", id), { hidden: !status });
+        };
+
+        window.enterChallengeTasks = function(id, name) {
+            activeChallengeId = id;
+            document.getElementById('taskManagerHeaderTitle').innerText = name;
+            window.navigateToChallengeView('view-task-manager');
+            window.loadChallengeTasks();
+        };
+
+        window.addEventListener('DOMContentLoaded', () => window.loadAllChallengesData());
+          // LEVEL 2: DAILY TASK IMPLEMENTATION MATRIX
+        window.createNewChallengeTask = async function() {
+            const input = document.getElementById('taskTitleInput');
+            const name = input.value.trim();
+            if(!name || !activeChallengeId) return;
+            await addDoc(collection(db, `challenges/${activeChallengeId}/tasks`), { name, createdAt: Date.now() });
+            input.value = "";
+        };
+
+        window.loadChallengeTasks = function() {
+            if(liveStreamUnsubscribe) liveStreamUnsubscribe();
+            liveStreamUnsubscribe = onSnapshot(query(collection(db, `challenges/${activeChallengeId}/tasks`), orderBy("createdAt", "asc")), (snapshot) => {
+                const container = document.getElementById('tasksListNode');
+                container.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const t = docSnap.data(); const id = docSnap.id;
+                    container.innerHTML += `
+                        <div onclick="window.openChallengeQuestionStudio('${id}', '${t.name.replace(/'/g, "\\'")}')" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm active:scale-[0.99] cursor-pointer hover:border-rose-400">
+                            <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-bolt text-amber-500 mr-2"></i>${t.name}</span>
+                            <i class="fa-solid fa-angle-right text-slate-400"></i>
+                        </div>
+                    `;
+                });
+            });
+        };
+
+        // LEVEL 3: FULL SCREEN QUESTION COMPILATION SYSTEM
+        window.openChallengeQuestionStudio = function(id, name) {
+            activeTaskId = id;
+            document.getElementById('studioTaskHeaderTitle').innerText = name;
+            window.navigateToChallengeView('view-challenge-studio');
+        };
+
+        window.loadStudioImageFile = function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const img = document.getElementById('studioImgPreview');
+                img.src = reader.result;
+                img.classList.remove('hidden');
+            };
+            if(file) reader.readAsDataURL(file);
+        };
+
+        window.deployChallengeQuestionPayload = function() {
+            alert("🔥 Challenge Question Injected with Strict Rules Matrix (+4 Right / -2 Wrong)!");
+            document.getElementById('qAreaText').value = "";
+            document.getElementById('studioImgPreview').classList.add('hidden');
+            window.navigateToChallengeView('view-task-manager');
+        };
+
+        window.toggleTheme = () => document.documentElement.classList.toggle('dark');
+    </script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
+    <div id="challengeAppFrame" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+        
+        <!-- SCREEN 1: CHALLENGES DASHBOARD -->
+        <div id="view-challenge-dashboard" class="w-full flex-1 flex flex-col">
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full shadow-sm">
+                <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+                <h1 class="font-black text-lg md:text-xl text-slate-900 dark:text-white mx-auto">Challenges Hub</h1>
+                <button onclick="window.triggerChallengeLogout()" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-right-from-bracket text-lg"></i></button>
+            </header>
+
+            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-4 flex-1">
+                <!-- Comprehensive Challenge Configuration Layout -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl space-y-3.5 shadow-sm text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <span class="text-[10px] font-black uppercase text-slate-400 block tracking-wider"><i class="fa-solid fa-plus-circle text-rose-500 mr-1"></i> Setup New Batch Challenge</span>
+                    <input type="text" id="challengeNameInput" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none" placeholder="Enter Challenge Name...">
+                    <input type="text" id="challengeSyllabusInput" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none" placeholder="Enter Specific Target Syllabus Mapping...">
+                    
+                    <!-- Subject Checkbox Cluster Matrix -->
+                    <div class="grid grid-cols-4 gap-2 py-1 text-[10px] text-center">
+                        <label class="flex flex-col items-center bg-slate-50 dark:bg-slate-955 p-2 border rounded-xl cursor-pointer"><input type="checkbox" id="check-phy" class="accent-rose-500 mb-1">PHY</label>
+                        <label class="flex flex-col items-center bg-slate-50 dark:bg-slate-955 p-2 border rounded-xl cursor-pointer"><input type="checkbox" id="check-chem" class="accent-rose-500 mb-1">CHEM</label>
+                        <label class="flex flex-col items-center bg-slate-50 dark:bg-slate-955 p-2 border rounded-xl cursor-pointer"><input type="checkbox" id="check-bot" class="accent-rose-500 mb-1">BOT</label>
+                        <label class="flex flex-col items-center bg-slate-50 dark:bg-slate-955 p-2 border rounded-xl cursor-pointer"><input type="checkbox" id="check-zoo" class="accent-rose-500 mb-1">ZOO</label>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="flex flex-col"><span class="text-[9px] text-slate-400 mb-0.5 uppercase">Daily Attempt Matrix</span><select id="challengeLimitInput" class="bg-slate-100 dark:bg-slate-955 border p-2 rounded-xl text-slate-900 dark:text-white focus:outline-none"><option value="1 Time">1 Time</option><option value="2 Times">2 Times</option><option value="Unlimited">Unlimited</option></select></div>
+                        <div class="flex flex-col"><span class="text-[9px] text-slate-400 mb-0.5 uppercase">Test Duration (Mins)</span><input type="number" id="challengeTimerInput" value="20" class="bg-slate-100 dark:bg-slate-955 border p-2 rounded-xl text-slate-900 dark:text-white text-center focus:outline-none"></div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 items-center">
+                        <div class="flex flex-col"><span class="text-[9px] text-slate-400 mb-0.5 uppercase">Expiry Window Date</span><input type="date" id="challengeExpiryInput" class="bg-slate-100 dark:bg-slate-955 border p-2 rounded-xl text-slate-900 dark:text-white focus:outline-none"></div>
+                        <div class="bg-slate-50 dark:bg-slate-955 border rounded-xl p-2 text-center text-rose-500 mt-3.5 text-[10px] uppercase font-black tracking-widest">Locked Rules: +4 / -2</div>
+                    </div>
+
+                    <button onclick="window.deployNewChallengeHub()" class="w-full bg-rose-500 text-white py-3 rounded-xl font-black shadow active:scale-95 transition mt-2">Launch Target Challenge Hub</button>
+                </div>
+                <div id="challengesListNode" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: DAILY TASK MANAGER -->
+        <div id="view-task-manager" class="w-full flex-1 flex flex-col hidden">
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full shadow-sm">
+                <button onclick="window.navigateToChallengeView('view-challenge-dashboard')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+                <h2 id="taskManagerHeaderTitle" class="font-black text-sm text-slate-900 dark:text-white mx-auto truncate max-w-[180px]">Daily Task Configuration</h2>
+                <div class="w-8"></div>
+            </header>
+            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-4 flex-1">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex items-center gap-2 shadow-sm">
+                    <input type="text" id="taskTitleInput" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black text-slate-800 dark:text-white focus:outline-none" placeholder="Create Milestone Node (e.g. Day 1 Challenge)...">
+                    <button onclick="window.createNewChallengeTask()" class="bg-rose-500 text-white font-black text-xs px-5 py-2.5 rounded-xl whitespace-nowrap">Add Task</button>
+                </div>
+                <div id="tasksListNode" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: FULL SCREEN QUESTION CANVASES -->
+        <div id="view-challenge-studio" class="fixed inset-0 bg-slate-900 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
+            <header class="bg-slate-950 text-white px-4 py-3 flex justify-between items-center border-b border-slate-800 w-full h-12 flex-shrink-0">
+                <button onclick="window.navigateToChallengeView('view-task-manager')" class="text-slate-400 font-bold text-xs"><i class="fa-solid fa-chevron-left"></i> Back</button>
+                <h2 id="studioTaskHeaderTitle" class="text-xs font-black uppercase tracking-wider text-slate-400 truncate max-w-[180px]">Challenge Studio</h2>
+                <div class="w-8"></div>
+            </header>
+
+            <div class="flex-1 w-full bg-slate-800 p-4 overflow-y-auto box-border">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-xl mx-auto rounded-3xl p-5 space-y-4 shadow-2xl text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <div>
+                        <textarea id="qAreaText" rows="3" class="w-full bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-3 focus:outline-none text-slate-900 dark:text-white font-bold" placeholder="Type evaluation challenge questions here..."></textarea>
+                    </div>
+
+                    <div>
+                        <button onclick="document.getElementById('studioFile').click()" class="bg-slate-50 dark:bg-slate-955 border border-dashed border-slate-300 dark:border-slate-800 w-full p-2.5 rounded-xl text-slate-400 text-center"><i class="fa-solid fa-image mr-1"></i> Attach Diagram Elements</button>
+                        <input type="file" id="studioFile" accept="image/*" class="hidden" onchange="window.loadStudioImageFile(event)">
+                        <img id="studioImgPreview" class="hidden w-full h-28 object-contain mt-2 border rounded-xl bg-slate-50">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option A">
+                        <input type="text" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option B">
+                        <input type="text" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option C">
+                        <input type="text" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option D">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="flex flex-col"><span class="text-[9px] text-slate-400 mb-0.5">ANSWER KEY</span><select class="w-full bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl text-slate-800 dark:text-white focus:outline-none"><option value="A">Option A</option><option value="B">Option B</option><option value="C">Option C</option><option value="D">Option D</option></select></div>
+                        <div class="flex flex-col"><span class="text-[9px] text-slate-400 mb-0.5">COIN SCORE VALUE</span><div class="w-full bg-slate-100 dark:bg-slate-850 p-2.5 rounded-xl text-center text-rose-500 font-black">+4 / -2 Lock</div></div>
+                    </div>
+
+                    <div>
+                        <input type="text" class="w-full bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Type solution text breakdown elements...">
+                    </div>
+
+                    <button onclick="window.deployChallengeQuestionPayload()" class="w-full bg-rose-500 text-white py-3 rounded-xl font-black shadow active:scale-95 transition">Deploy Challenge Question</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+                                                                                                                                       
