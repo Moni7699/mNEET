@@ -1,26 +1,205 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1v1 Combat - mNEET</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>mNEET Student - Challenge Arena</title>
+    <!-- Tailwind CSS Engine -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { darkMode: 'class' }</script>
+    <!-- FontAwesome Pro Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
+            authDomain: "mneet-spark.firebaseapp.com",
+            databaseURL: "https://mneet-spark-default-rtdb.firebaseio.com",
+            projectId: "mneet-spark",
+            storageBucket: "mneet-spark.firebasestorage.app",
+            messagingSenderId: "252201633700",
+            appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let selectedChallengeId = "";
+        let selectedTaskId = "";
+        let taskStreamUnsubscribe = null;
+        let studentCurrentBpCoins = 120; // Mock profile coins tracking
+
+        // Dynamic State Screen Router Engine
+        window.navigateToStudentChallengeView = function(viewId) {
+            const screens = ['student-challenge-dashboard', 'student-challenge-tasks', 'student-challenge-canvas'];
+            screens.forEach(s => document.getElementById(s).classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+        };
+
+        // LEVEL 1: RENDER REALTIME LIVE CHALLENGES
+        window.initStudentChallengeHub = function() {
+            onSnapshot(query(collection(db, "challenges"), orderBy("createdAt", "desc")), (snapshot) => {
+                const container = document.getElementById('studentChallengesContainer');
+                if(!container) return; container.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const c = docSnap.data();
+                    if(c.hidden) return; // Strict dashboard mapping bypass
+                    const id = docSnap.id;
+
+                    const subjectBadges = c.subjects.map(s => `<span class="bg-rose-500/10 text-rose-600 font-extrabold text-[9px] px-2 py-0.5 rounded-md border border-rose-500/20">${s}</span>`).join(' ');
+
+                    container.innerHTML += `
+                        <div onclick="window.enterStudentChallenge('${id}', '${c.name.replace(/'/g, "\\'")}')" class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm active:scale-[0.99] transition cursor-pointer hover:border-rose-400">
+                            <div class="flex justify-between items-start">
+                                <div class="flex items-center space-x-2.5">
+                                    <div class="w-9 h-9 bg-rose-500 rounded-xl flex items-center justify-center text-white font-black"><i class="fa-solid fa-fire text-base"></i></div>
+                                    <div class="flex flex-col">
+                                        <span class="font-black text-slate-800 text-xs md:text-sm">${c.name}</span>
+                                        <span class="text-[10px] text-slate-400 font-bold">Window Limit: ${c.dailyLimit} Attempts</span>
+                                    </div>
+                                </div>
+                                <span class="text-[9px] text-amber-600 bg-amber-50 border border-amber-200 font-black px-2 py-0.5 rounded-lg uppercase">Active</span>
+                            </div>
+                            <p class="text-[11px] font-medium text-slate-500 bg-slate-50 border border-dashed rounded-xl p-2.5 leading-relaxed">🎯 <strong>Syllabus Focus:</strong> ${c.syllabus}</p>
+                            <div class="flex justify-between items-center pt-1 border-t border-slate-100">
+                                <div class="flex space-x-1">${subjectBadges}</div>
+                                <span class="text-[10px] font-black font-mono text-slate-400"><i class="fa-solid fa-clock mr-1"></i>${c.duration} Mins</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        };
+
+        window.enterStudentChallenge = function(id, name) {
+            selectedChallengeId = id;
+            document.getElementById('challengeTasksHeaderTitle').innerText = name;
+            window.navigateToStudentChallengeView('student-challenge-tasks');
+            window.loadStudentChallengeTasks();
+        };
+
+        window.addEventListener('DOMContentLoaded', () => window.initStudentChallengeHub());
+                // LEVEL 2: LOAD REALTIME CHALLENGE MILESTONE TASKS
+        window.loadStudentChallengeTasks = function() {
+            if(taskStreamUnsubscribe) taskStreamUnsubscribe();
+            taskStreamUnsubscribe = onSnapshot(query(collection(db, `challenges/${selectedChallengeId}/tasks`), orderBy("createdAt", "asc")), (snapshot) => {
+                const container = document.getElementById('studentTasksContainer');
+                container.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const t = docSnap.data(); const id = docSnap.id;
+                    container.innerHTML += `
+                        <div onclick="window.launchChallengeBattleCanvas('${id}', '${t.name.replace(/'/g, "\\'")}')" class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm active:scale-[0.99] transition cursor-pointer hover:border-purple-400">
+                            <span class="font-black text-slate-800 text-xs md:text-sm"><i class="fa-solid fa-shield-halved text-amber-500 mr-2"></i>${t.name}</span>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-[9px] font-black text-slate-400 font-mono">0/45 Done</span>
+                                <i class="fa-solid fa-circle-play text-rose-500 text-base"></i>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        };
+
+        // LEVEL 3: IMMERSIVE CHALLENGE EXAM BATTLE CANVAS WITH RIGHT(+4) / WRONG(-2)
+        window.launchChallengeBattleCanvas = function(id, name) {
+            selectedTaskId = id;
+            window.navigateToStudentChallengeView('student-challenge-canvas');
+            document.getElementById('canvasChallengeTitle').innerText = name;
+            document.getElementById('hudCoinsTracker').innerText = studentCurrentBpCoins;
+        };
+
+        window.evaluateChallengeAnswer = function(status) {
+            const resultBox = document.getElementById('battleSolutionBox');
+            if(status === 'right') {
+                studentCurrentBpCoins += 4;
+                alert("🎉 Right Answer Matrix Checked! You Earned +4 BP Coins!");
+            } else {
+                studentCurrentBpCoins -= 2;
+                alert("🚨 Wrong Answer Triggered! Deducted -2 BP Coins from Profile!");
+            }
+            document.getElementById('hudCoinsTracker').innerText = studentCurrentBpCoins;
+            resultBox.classList.remove('hidden');
+        };
+
+        window.completeChallengeBattle = function() {
+            alert("🔥 Challenge Milestone Uploaded! Current Balance: " + studentCurrentBpCoins + " BP Coins.");
+            document.getElementById('battleSolutionBox').classList.add('hidden');
+            window.navigateToStudentChallengeView('student-challenge-tasks');
+        };
+    </script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen">
-    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center space-x-3">
-        <button onclick="window.location.href='student-dashboard.html'" class="text-slate-400 text-sm font-bold"><i class="fa-solid fa-arrow-left"></i> Back</button>
-        <h2 class="font-black text-lg text-slate-900 dark:text-white">1v1 Peer Combat Arena</h2>
-    </header>
-    <div class="max-w-md mx-auto p-6 text-center space-y-6 mt-10">
-        <div class="text-5xl">⚔️</div>
-        <div class="space-y-1">
-            <h3 class="text-xl font-black">Invite Peers to Live Duels</h3>
-            <p class="text-xs text-slate-400">Admin sets dedicated battle questions. Limit: 3 matches daily.</p>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans select-none antialiased">
+    <div id="studentChallengePortal" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+        
+        <!-- SCREEN 1: CHALLENGE DASHBOARD HUB -->
+        <div id="student-challenge-dashboard" class="w-full flex-1 flex flex-col">
+            <!-- Distraction Free Dynamic Notification Strap Header -->
+            <div class="bg-gradient-to-r from-amber-500 to-rose-500 text-white font-black text-[10px] py-1.5 px-4 text-center tracking-widest uppercase flex justify-center items-center space-x-1.5 shadow-inner">
+                <i class="fa-solid fa-bullhorn animate-bounce"></i> 
+                <span>Admin Alert: New 7-Day Organic Chemistry Challenge Strike is Live! Attempt Now.</span>
+            </div>
+            
+            <header class="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full shadow-sm">
+                <button onclick="window.location.href='student-dashboard.html'" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg text-slate-600"></i></button>
+                <h2 class="font-black text-sm md:text-base text-slate-800">Challenges Hub</h2>
+                <div class="w-8"></div>
+            </header>
+            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-4 shadow-none" id="studentChallengesContainer"></div>
         </div>
-        <div class="flex gap-3"><button class="w-full bg-purple-500 text-white font-bold py-3 text-xs rounded-xl uppercase tracking-wider">Create Room Code</button></div>
+
+        <!-- SCREEN 2: MILESTONES / DAILY TASKS LIST -->
+        <div id="student-challenge-tasks" class="w-full flex-1 flex flex-col hidden">
+            <header class="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full shadow-sm">
+                <button onclick="window.navigateToStudentChallengeView('student-challenge-dashboard')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg text-slate-600"></i></button>
+                <h2 id="challengeTasksHeaderTitle" class="font-black text-sm text-slate-800 mx-auto truncate max-w-[180px]">Daily Tasks</h2>
+                <div class="w-8"></div>
+            </header>
+            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-3" id="studentTasksContainer"></div>
+        </div>
+
+        <!-- SCREEN 3: NO BARS IMMERSIVE CHALLENGE BATTLE CANVAS -->
+        <div id="student-challenge-canvas" class="fixed inset-0 bg-slate-900 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
+            <!-- Live Gamified Dashboard HUD Tracking Strap -->
+            <header class="bg-slate-950 text-white px-4 py-3 flex justify-between items-center border-b border-slate-800 w-full h-12 flex-shrink-0">
+                <button onclick="window.navigateToStudentChallengeView('student-challenge-tasks')" class="text-slate-400 font-bold text-xs"><i class="fa-solid fa-chevron-left"></i> Quit</button>
+                <h2 id="canvasChallengeTitle" class="text-[10px] font-black uppercase tracking-wider text-slate-500 truncate max-w-[140px]">Battle Arena</h2>
+                <div class="flex items-center space-x-1.5 bg-amber-500/10 border border-amber-500/30 rounded-full px-2.5 py-0.5">
+                    <i class="fa-solid fa-coins text-amber-400 text-[10px]"></i>
+                    <span id="hudCoinsTracker" class="font-mono text-xs font-black text-amber-400">0</span>
+                </div>
+            </header>
+
+            <!-- Adaptive Canvas Container Frame Core -->
+            <div class="flex-1 w-full bg-slate-800 p-4 overflow-y-auto box-border flex flex-col items-center">
+                <div class="bg-white border border-slate-200 w-full max-w-xl rounded-3xl p-6 space-y-5 shadow-2xl text-xs font-bold text-slate-700">
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <span class="text-rose-500 font-black uppercase tracking-widest text-[9px]"><i class="fa-solid fa-circle-nodes mr-1"></i> Live Challenge Evaluation</span>
+                        <span class="text-[9px] text-slate-400 font-bold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-md">Strict Matrix: +4 / -2 Coins</span>
+                    </div>
+
+                    <!-- Evaluation Content Nodes Flow -->
+                    <p class="text-slate-900 text-sm font-black leading-relaxed">Calculate the absolute work done during an isothermal expansion phase of an ideal gas cluster system?</p>
+                    
+                    <div class="space-y-2.5 pt-1">
+                        <!-- Simulated Options with triggers -->
+                        <div onclick="window.evaluateChallengeAnswer('right')" class="flex items-center space-x-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:border-rose-400 transition"><span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-black">A</span> <span class="text-slate-800 font-bold">W = nRT ln(V2/V1)</span></div>
+                        <div onclick="window.evaluateChallengeAnswer('wrong')" class="flex items-center space-x-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:border-rose-400 transition"><span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-black">B</span> <span class="text-slate-800 font-bold">W = Zero internal parameters</span></div>
+                    </div>
+
+                    <!-- Review & Finalize actions -->
+                    <div class="pt-3 border-t">
+                        <button onclick="window.completeChallengeBattle()" class="w-full bg-slate-900 hover:bg-slate-950 text-white py-3 rounded-xl font-black shadow transition text-center uppercase tracking-wider">Save & Proceed Next</button>
+                    </div>
+
+                    <div id="battleSolutionBox" class="hidden p-4 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl leading-relaxed font-medium">
+                        📌 <strong>Explanation Matrix:</strong> Thermodynamic processes locking constant heat vectors evaluate total metrics via volume proportional log algorithms.
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 </html>
-
+    
