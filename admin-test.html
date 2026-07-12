@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>mNEET Admin - Test Studio Hub</title>
+    <!-- Tailwind CSS Engine -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- FontAwesome Pro Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
+            authDomain: "mneet-spark.firebaseapp.com",
+            databaseURL: "https://mneet-spark-default-rtdb.firebaseio.com",
+            projectId: "mneet-spark",
+            storageBucket: "mneet-spark.firebasestorage.app",
+            messagingSenderId: "252201633700",
+            appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Global State Tokens
+        let currentSubjectId = "";
+        let currentChapterId = "";
+        let currentTopicId = "";
+
+        let activeStreamUnsubscribe = null;
+
+        // Dynamic Hierarchical View Router Matrix
+        window.navigateToTestView = function(viewId) {
+            const views = ['view-test-subjects', 'view-test-chapters', 'view-test-topics', 'view-test-questions'];
+            views.forEach(v => document.getElementById(v).classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+
+            const bottomNav = document.getElementById('quizBottomNav');
+            if(viewId === 'view-test-questions') {
+                bottomNav.style.display = 'none'; // Auto hide for full screen focus
+            } else {
+                bottomNav.style.display = 'flex';
+            }
+        };
+
+        // =======================================================
+        // LEVEL 1: SUBJECT ENGINE (Realtime Persistent)
+        // =======================================================
+        window.createQuizSubject = async function() {
+            const input = document.getElementById('quizSubInput');
+            const name = input.value.trim();
+            if(!name) return;
+            await addDoc(collection(db, "quiz_subjects"), { name, createdAt: Date.now(), hidden: false });
+            input.value = "";
+        };
+
+        window.loadQuizSubjects = function() {
+            onSnapshot(query(collection(db, "quiz_subjects"), orderBy("createdAt", "asc")), (snapshot) => {
+                const container = document.getElementById('quizSubListNode');
+                if(!container) return; container.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const s = docSnap.data(); const id = docSnap.id;
+                    container.innerHTML += `
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm">
+                            <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.enterQuizSubject('${id}', '${s.name.replace(/'/g, "\\'")}')">
+                                <i class="fa-solid fa-folder text-rose-500 text-lg"></i>
+                                <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white">${s.name}</span>
+                            </div>
+                            <button onclick="deleteDoc(doc(db, 'quiz_subjects', '${id}'))" class="text-rose-500 bg-rose-50 p-2 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    `;
+                });
+            });
+        };
+
+        window.enterQuizSubject = function(id, name) {
+            currentSubjectId = id;
+            document.getElementById('quizChapterHeaderTitle').innerText = name;
+            window.navigateToTestView('view-test-chapters');
+            window.loadQuizChapters();
+        };
+
+        window.addEventListener('DOMContentLoaded', () => window.loadQuizSubjects());
+          // =======================================================
+        // LEVEL 2: CHAPTER ENGINE (Realtime Nested Query)
+        // =======================================================
+        window.createQuizChapter = async function() {
+            const input = document.getElementById('quizChapInput');
+            const name = input.value.trim();
+            if(!name || !currentSubjectId) return;
+            await addDoc(collection(db, `quiz_subjects/${currentSubjectId}/chapters`), { name, createdAt: Date.now() });
+            input.value = "";
+        };
+
+        window.loadQuizChapters = function() {
+            if(activeStreamUnsubscribe) activeStreamUnsubscribe();
+            activeStreamUnsubscribe = onSnapshot(query(collection(db, `quiz_subjects/${currentSubjectId}/chapters`), orderBy("createdAt", "asc")), (snapshot) => {
+                const container = document.getElementById('quizChapListNode');
+                container.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const c = docSnap.data(); const id = docSnap.id;
+                    container.innerHTML += `
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm" onclick="window.enterQuizChapter('${id}', '${c.name.replace(/'/g, "\\'")}')">
+                            <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white cursor-pointer">${c.name}</span>
+                            <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
+                        </div>
+                    `;
+                });
+            });
+        };
+
+        window.enterQuizChapter = function(id, name) {
+            currentChapterId = id;
+            document.getElementById('quizTopicHeaderTitle').innerText = name;
+            window.navigateToTestView('view-test-topics');
+            window.loadQuizTopics();
+        };
+
+        // =======================================================
+        // LEVEL 3: TOPIC ENGINE (Realtime Deep Subcollection)
+        // =======================================================
+        window.createQuizTopic = async function() {
+            const input = document.getElementById('quizTopicInput');
+            const name = input.value.trim();
+            if(!name || !currentChapterId) return;
+            await addDoc(collection(db, `quiz_subjects/${currentSubjectId}/chapters/${currentChapterId}/topics`), { name, createdAt: Date.now() });
+            input.value = "";
+        };
+
+        window.loadQuizTopics = function() {
+            onSnapshot(query(collection(db, `quiz_subjects/${currentSubjectId}/chapters/${currentChapterId}/topics`), orderBy("createdAt", "asc")), (snapshot) => {
+                const container = document.getElementById('quizTopicListNode');
+                container.innerHTML = "";
+                snapshot.forEach(docSnap => {
+                    const t = docSnap.data(); const id = docSnap.id;
+                    container.innerHTML += `
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm active:scale-[0.99] cursor-pointer" onclick="window.enterQuizQuestionsStudio('${id}', '${t.name.replace(/'/g, "\\'")}')">
+                            <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-tags text-purple-500 mr-2"></i>${t.name}</span>
+                            <i class="fa-solid fa-angle-right text-slate-400"></i>
+                        </div>
+                    `;
+                });
+            });
+        };
+
+        // =======================================================
+        // LEVEL 4: QUESTIONS MASS DEPLOYMENT CLUSTER ENGINE
+        // =======================================================
+        window.enterQuizQuestionsStudio = function(id, name) {
+            currentTopicId = id;
+            document.getElementById('studioTopicHeaderTitle').innerText = name;
+            window.navigateToTestView('view-test-questions');
+        };
+
+        window.commitQuestionPayload = function() {
+            alert("🚀 Question Added Successfully to Topic Hub!");
+            document.getElementById('qArea').value = "";
+            window.navigateToTestView('view-test-topics');
+        };
+
+        window.toggleTheme = () => document.documentElement.classList.toggle('dark');
+    </script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
+    <div id="quizAppPortal" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+        
+        <!-- SCREEN 1: SUBJECT NAMES HUB -->
+        <div id="view-test-subjects" class="w-full flex-1 flex flex-col">
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full shadow-sm">
+                <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 p-2"><i class="fa-solid fa-house-medical text-base"></i></button>
+                <h2 class="font-black text-sm mx-auto">Create Subject</h2>
+                <button onclick="window.toggleTheme()" class="text-slate-400 p-2"><i class="fa-solid fa-circle-half-stroke"></i></button>
+            </header>
+            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-4 flex-1">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex items-center gap-2 shadow-sm">
+                    <input type="text" id="quizSubInput" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black text-slate-800 dark:text-white focus:outline-none" placeholder="Enter Subject Name...">
+                    <button onclick="window.createQuizSubject()" class="bg-rose-500 text-white font-black text-xs px-5 py-2.5 rounded-xl whitespace-nowrap">Add Subject</button>
+                </div>
+                <div id="quizSubListNode" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: CHAPTER HUB -->
+        <div id="view-test-chapters" class="w-full flex-1 flex flex-col hidden">
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full shadow-sm">
+                <button onclick="window.navigateToTestView('view-test-subjects')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-base"></i></button>
+                <h2 id="quizChapterHeaderTitle" class="font-black text-sm mx-auto truncate max-w-[180px]">Chapters</h2>
+                <div class="w-8"></div>
+            </header>
+            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-4 flex-1">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex items-center gap-2 shadow-sm">
+                    <input type="text" id="quizChapInput" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black text-slate-800 dark:text-white focus:outline-none" placeholder="Enter Chapter Title...">
+                    <button onclick="window.createQuizChapter()" class="bg-rose-500 text-white font-black text-xs px-5 py-2.5 rounded-xl whitespace-nowrap">Create Chapter</button>
+                </div>
+                <div id="quizChapListNode" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: TOPICS HUB -->
+        <div id="view-test-topics" class="w-full flex-1 flex flex-col hidden">
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full shadow-sm">
+                <button onclick="window.navigateToTestView('view-test-chapters')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-base"></i></button>
+                <h2 id="quizTopicHeaderTitle" class="font-black text-sm mx-auto truncate max-w-[180px]">Topics</h2>
+                <div class="w-8"></div>
+            </header>
+            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-4 flex-1">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex items-center gap-2 shadow-sm">
+                    <input type="text" id="quizTopicInput" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black text-slate-800 dark:text-white focus:outline-none" placeholder="Enter Topic Title...">
+                    <button onclick="window.createQuizTopic()" class="bg-rose-500 text-white font-black text-xs px-5 py-2.5 rounded-xl whitespace-nowrap">Create Topic</button>
+                </div>
+                <div id="quizTopicListNode" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- SCREEN 4: FULL SCREEN QUESTIONS BUILDER CANVAS STUDIO -->
+        <div id="view-test-questions" class="fixed inset-0 bg-slate-900 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
+            <header class="bg-slate-950 text-white px-4 py-3 flex justify-between items-center border-b border-slate-800 w-full h-12 flex-shrink-0">
+                <button onclick="window.navigateToTestView('view-test-topics')" class="text-slate-400 font-bold text-xs"><i class="fa-solid fa-chevron-left"></i> Back</button>
+                <h2 id="studioTopicHeaderTitle" class="text-xs font-black uppercase tracking-wider text-slate-400 truncate max-w-[180px]">Questions Manager</h2>
+                <div class="w-8"></div>
+            </header>
+
+            <div class="flex-1 w-full bg-slate-800 p-4 overflow-y-auto box-border">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-xl mx-auto rounded-3xl p-5 space-y-4 shadow-2xl text-xs font-bold text-slate-700 dark:text-slate-300">
+                    <div>
+                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Add New Quiz Question Parameter</span>
+                        <textarea id="qArea" rows="3" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 focus:outline-none text-slate-900 dark:text-white font-bold" placeholder="Type core evaluation parameters..."></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-slate-900 dark:text-white focus:outline-none" placeholder="Option A">
+                        <input type="text" class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-slate-900 dark:text-white focus:outline-none" placeholder="Option B">
+                        <input type="text" class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-slate-900 dark:text-white focus:outline-none" placeholder="Option C">
+                        <input type="text" class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-slate-900 dark:text-white focus:outline-none" placeholder="Option D">
+                    </div>
+
+                    <div>
+                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Correct Option Answer Key</span>
+                        <select class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-slate-800 dark:text-white focus:outline-none">
+                            <option value="A">Option A</option>
+                            <option value="B">Option B</option>
+                            <option value="C">Option C</option>
+                            <option value="D">Option D</option>
+                        </select>
+                    </div>
+
+                    <button onclick="window.commitQuestionPayload()" class="w-full bg-rose-500 hover:bg-rose-600 text-white py-3 rounded-xl font-black shadow active:scale-95 transition">Deploy Question Node</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NAVIGATION STRAP ROW FOOTER -->
+        <nav id="quizBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3.5 flex justify-around items-center shadow-2xl lg:pl-80 w-full box-border">
+            <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
+            <button onclick="window.location.href='admin-ncert.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
+            <button onclick="window.navigateToTestView('view-test-subjects')" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
+            <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
+            <button onclick="window.location.href='admin-students.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Students</span></button>
+        </nav>
+    </div>
+</body>
+</html>
+              
