@@ -117,11 +117,9 @@
         window.addEventListener('scroll', () => {
             const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
             const nav = document.getElementById('adminBottomNav');
-            if (nav) {
-                nav.style.transform = "translateY(100%)";
-                clearTimeout(isScrolling);
-                isScrolling = setTimeout(() => { nav.style.transform = "translateY(0)"; }, 200);
-            }
+            nav.style.transform = "translateY(100%)";
+            clearTimeout(isScrolling);
+            isScrolling = setTimeout(() => { nav.style.transform = "translateY(0)"; }, 200);
             lastScroll = currentScroll <= 0 ? 0 : currentScroll;
         });
     </script>
@@ -167,8 +165,7 @@
                 <button onclick="handleAdminLogout()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black py-2.5 rounded-xl transition text-xs flex items-center justify-center space-x-2 shadow-md"><i class="fa-solid fa-power-off"></i> <span>Log Out Mentor Panel</span></button>
             </div>
         </aside>
-
-        <!-- MAIN WORKSPACE -->
+                <!-- MAIN WORKSPACE -->
         <main class="flex-1 w-full lg:max-w-[calc(100%-20rem)] lg:ml-80 pb-24 min-h-screen flex flex-col overflow-x-hidden">
             
             <!-- 3. TOP ROW HEADER (ADJUSTED FOR MOBILE LAYOUT) -->
@@ -230,7 +227,7 @@
                         <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Course Name">
                         <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Thumbnail Image or Video link">
                         <input type="date" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none">
-                        <input type="date" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none">
+                        <input type="date" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none">
                         <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Price (INR)">
                         <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Discount %">
                     </div>
@@ -245,4 +242,5 @@
                             <label class="flex items-center space-x-2"><input type="checkbox" checked class="accent-rose-500"> <span>Leaderboards</span></label>
                         </div>
                     </div>
-                    <button class="bg-rose-500 hover:bg-rose-600 text-white font-black text-xs px-5 py-2.5 rounded-xl transition shadow">Launch Pa
+                    <button class="bg-rose-500 hover:bg-rose-600 text-white font-black text-xs px-5 py-2.5 rounded-xl transition shadow">Launch Package</button>
+    </div>
