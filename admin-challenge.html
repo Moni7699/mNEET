@@ -35,11 +35,18 @@
         let activeTaskId = "";
         let liveStreamUnsubscribe = null;
 
-        // Dynamic Router Matrix Matrix
+        // Dynamic Router Matrix & Bottom Nav Auto Hide
         window.navigateToChallengeView = function(viewId) {
             const screens = ['view-challenge-dashboard', 'view-task-manager', 'view-challenge-studio'];
             screens.forEach(s => document.getElementById(s).classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
+
+            const nav = document.getElementById('adminBottomNav');
+            if(viewId === 'view-challenge-studio') {
+                nav.style.display = 'none'; // Studio Screen-e bottom nav hide hobe
+            } else {
+                nav.style.display = 'flex';
+            }
         };
 
         // Firebase Auth Logout Trigger
@@ -61,7 +68,6 @@
             const syllabus = syllabusInput.value.trim();
             if(!name || !syllabus) return;
 
-            // Collect active subject checkboxes
             const subjects = [];
             ['phy', 'chem', 'bot', 'zoo'].forEach(sub => {
                 if(document.getElementById(`check-${sub}`).checked) subjects.push(sub.toUpperCase());
@@ -119,7 +125,7 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => window.loadAllChallengesData());
-          // LEVEL 2: DAILY TASK IMPLEMENTATION MATRIX
+                // LEVEL 2: DAILY TASK IMPLEMENTATION MATRIX
         window.createNewChallengeTask = async function() {
             const input = document.getElementById('taskTitleInput');
             const name = input.value.trim();
@@ -177,7 +183,7 @@
     <div id="challengeAppFrame" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
         
         <!-- SCREEN 1: CHALLENGES DASHBOARD -->
-        <div id="view-challenge-dashboard" class="w-full flex-1 flex flex-col">
+        <div id="view-challenge-dashboard" class="w-full flex-1 flex flex-col pb-20">
             <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full shadow-sm">
                 <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-chevron-left text-lg"></i></button>
                 <h1 class="font-black text-lg md:text-xl text-slate-900 dark:text-white mx-auto">Challenges Hub</h1>
@@ -185,13 +191,11 @@
             </header>
 
             <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-4 flex-1">
-                <!-- Comprehensive Challenge Configuration Layout -->
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl space-y-3.5 shadow-sm text-xs font-bold text-slate-700 dark:text-slate-300">
                     <span class="text-[10px] font-black uppercase text-slate-400 block tracking-wider"><i class="fa-solid fa-plus-circle text-rose-500 mr-1"></i> Setup New Batch Challenge</span>
                     <input type="text" id="challengeNameInput" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none" placeholder="Enter Challenge Name...">
                     <input type="text" id="challengeSyllabusInput" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none" placeholder="Enter Specific Target Syllabus Mapping...">
                     
-                    <!-- Subject Checkbox Cluster Matrix -->
                     <div class="grid grid-cols-4 gap-2 py-1 text-[10px] text-center">
                         <label class="flex flex-col items-center bg-slate-50 dark:bg-slate-955 p-2 border rounded-xl cursor-pointer"><input type="checkbox" id="check-phy" class="accent-rose-500 mb-1">PHY</label>
                         <label class="flex flex-col items-center bg-slate-50 dark:bg-slate-955 p-2 border rounded-xl cursor-pointer"><input type="checkbox" id="check-chem" class="accent-rose-500 mb-1">CHEM</label>
@@ -216,7 +220,7 @@
         </div>
 
         <!-- SCREEN 2: DAILY TASK MANAGER -->
-        <div id="view-task-manager" class="w-full flex-1 flex flex-col hidden">
+        <div id="view-task-manager" class="w-full flex-1 flex flex-col pb-20 hidden">
             <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full shadow-sm">
                 <button onclick="window.navigateToChallengeView('view-challenge-dashboard')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg"></i></button>
                 <h2 id="taskManagerHeaderTitle" class="font-black text-sm text-slate-900 dark:text-white mx-auto truncate max-w-[180px]">Daily Task Configuration</h2>
@@ -271,7 +275,31 @@
                 </div>
             </div>
         </div>
+
+        <!-- COMPLETE ADMIN BOTTOM NAVIGATION BAR MATRIX -->
+        <nav id="adminBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 px-2 py-3 flex justify-around items-center shadow-2xl w-full box-border">
+            <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition">
+                <i class="fa-solid fa-house-user text-base"></i>
+                <span class="text-[9px] uppercase tracking-widest font-black">Home</span>
+            </button>
+            <button onclick="window.location.href='admin-test.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition">
+                <i class="fa-solid fa-vial-circle-check text-base"></i>
+                <span class="text-[9px] uppercase tracking-widest font-black">Test</span>
+            </button>
+            <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition">
+                <i class="fa-solid fa-stopwatch-20 text-base"></i>
+                <span class="text-[9px] uppercase tracking-widest font-black">Mock</span>
+            </button>
+            <button onclick="window.location.href='admin-challenge.html'" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1">
+                <i class="fa-solid fa-fire text-base"></i>
+                <span class="text-[9px] uppercase tracking-widest font-black">Challenge</span>
+            </button>
+            <button onclick="window.location.href='admin-student.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition">
+                <i class="fa-solid fa-users-gear text-base"></i>
+                <span class="text-[9px] uppercase tracking-widest font-black">Students</span>
+            </button>
+        </nav>
     </div>
 </body>
 </html>
-                                                                                                                                       
+                                                                                                                                                                                                               
