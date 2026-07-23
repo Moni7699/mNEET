@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>mNEET - Mentor Control Center</title>
     <!-- Tailwind CSS with Dark/Light Support -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -48,8 +48,7 @@
                     
                     if(data.profilePic) document.getElementById('adminProfileImg').src = data.profilePic;
                     
-                    // Load saved social configurations
-                    loadSocialSettings();
+                    window.loadSocialSettings();
                     document.getElementById('adminAppArea').classList.remove('hidden');
                 } else {
                     alert("🚨 Access Denied! Administrators Scope Only.");
@@ -59,7 +58,7 @@
         });
 
         // Load & Save Social Links Settings globally to Firestore
-        async function loadSocialSettings() {
+        window.loadSocialSettings = async function() {
             const settingsDoc = await getDoc(doc(db, "settings", "social_links"));
             if(settingsDoc.exists()) {
                 const s = settingsDoc.data();
@@ -69,7 +68,7 @@
                 document.getElementById('igLink').value = s.instagram || "";
                 document.getElementById('wpLink').value = s.whatsapp || "";
             }
-        }
+        };
 
         window.saveSocials = async function() {
             await setDoc(doc(db, "settings", "social_links"), {
@@ -110,18 +109,6 @@
         window.openAdminSidebar = () => document.getElementById('adminSidebar').classList.remove('-translate-x-full');
         window.closeAdminSidebar = () => document.getElementById('adminSidebar').classList.add('-translate-x-full');
         window.handleAdminLogout = () => signOut(auth).then(() => window.location.href = "index.html");
-
-        // Bottom Nav Dynamic Scroll Hide/Show
-        let lastScroll = 0;
-        let isScrolling;
-        window.addEventListener('scroll', () => {
-            const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
-            const nav = document.getElementById('adminBottomNav');
-            nav.style.transform = "translateY(100%)";
-            clearTimeout(isScrolling);
-            isScrolling = setTimeout(() => { nav.style.transform = "translateY(0)"; }, 200);
-            lastScroll = currentScroll <= 0 ? 0 : currentScroll;
-        });
     </script>
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
@@ -130,19 +117,19 @@
         <!-- LEFT SIDEBAR -->
         <aside id="adminSidebar" class="fixed top-0 bottom-0 left-0 z-50 w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col justify-between shadow-2xl">
             <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950/40">
-                <button onclick="toggleTheme()" class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl text-xs font-black flex items-center space-x-2 text-slate-600 dark:text-slate-300 active:scale-95 transition">
+                <button onclick="window.toggleTheme()" class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-4 py-2 rounded-xl text-xs font-black flex items-center space-x-2 text-slate-600 dark:text-slate-300 active:scale-95 transition">
                     <i class="fa-solid fa-circle-half-stroke text-sky-500 text-sm"></i> <span>Toggle Theme</span>
                 </button>
-                <button onclick="closeAdminSidebar()" class="lg:hidden p-2 text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <button onclick="window.closeAdminSidebar()" class="lg:hidden p-2 text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             
             <div class="flex-1 overflow-y-auto p-5 space-y-5">
                 <div class="text-center space-y-2">
-                    <div onclick="triggerAdminPhoto()" class="w-24 h-24 mx-auto rounded-full overflow-hidden border-4 border-rose-500 shadow-xl relative group cursor-pointer">
+                    <div onclick="window.triggerAdminPhoto()" class="w-24 h-24 mx-auto rounded-full overflow-hidden border-4 border-rose-500 shadow-xl relative group cursor-pointer">
                         <img id="adminProfileImg" src="https://api.dicebear.com/7.x/bottts/svg?seed=Mentor" class="w-full h-full object-cover">
                         <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-camera text-white"></i></div>
                     </div>
-                    <input type="file" id="adminPhotoInput" class="hidden" accept="image/*" onchange="uploadAdminPhoto(event)">
+                    <input type="file" id="adminPhotoInput" class="hidden" accept="image/*" onchange="window.uploadAdminPhoto(event)">
                     <h3 id="sbAdminName" class="font-black text-lg text-slate-900 dark:text-white">Mentor</h3>
                     <p id="sbAdminEmail" class="text-xs font-bold text-slate-400 -mt-1 truncate">Gmail</p>
                     <p id="sbAdminPhone" class="text-xs font-bold text-rose-500 dark:text-rose-400 -mt-1">Phone</p>
@@ -157,29 +144,29 @@
                         <input type="text" id="igLink" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 focus:outline-none focus:border-pink-500" placeholder="🟣 Instagram Url">
                         <input type="text" id="wpLink" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 focus:outline-none focus:border-emerald-500" placeholder="🟢 WhatsApp Community Url">
                     </div>
-                    <button onclick="saveSocials()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black text-xs py-2 rounded-xl transition shadow">Push Links to App</button>
+                    <button onclick="window.saveSocials()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black text-xs py-2 rounded-xl transition shadow">Push Links to App</button>
                 </div>
             </div>
 
             <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40">
-                <button onclick="handleAdminLogout()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black py-2.5 rounded-xl transition text-xs flex items-center justify-center space-x-2 shadow-md"><i class="fa-solid fa-power-off"></i> <span>Log Out Mentor Panel</span></button>
+                <button onclick="window.handleAdminLogout()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black py-2.5 rounded-xl transition text-xs flex items-center justify-center space-x-2 shadow-md"><i class="fa-solid fa-power-off"></i> <span>Log Out Mentor Panel</span></button>
             </div>
-        </aside>
-                <!-- MAIN WORKSPACE -->
+                    </aside>
+                                <!-- MAIN WORKSPACE -->
         <main class="flex-1 w-full lg:max-w-[calc(100%-20rem)] lg:ml-80 pb-24 min-h-screen flex flex-col overflow-x-hidden">
             
-            <!-- 3. TOP ROW HEADER (ADJUSTED FOR MOBILE LAYOUT) -->
+            <!-- TOP ROW HEADER -->
             <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-3 md:px-6 py-4 sticky top-0 z-40 flex justify-between items-center transition-colors w-full box-border">
                 <div class="flex items-center space-x-1.5 max-w-[35%] min-w-0">
-                    <button onclick="openAdminSidebar()" class="lg:hidden p-1 text-slate-500 text-base flex-shrink-0"><i class="fa-solid fa-bars"></i></button>
+                    <button onclick="window.openAdminSidebar()" class="lg:hidden p-1 text-slate-500 text-base flex-shrink-0"><i class="fa-solid fa-bars"></i></button>
                     <div class="truncate">
                         <h2 id="midAdminName" class="text-[11px] md:text-sm font-black text-slate-900 dark:text-white truncate">Mentor</h2>
                         <p class="text-[8px] md:text-xs font-black text-rose-500 tracking-wide uppercase truncate">Admin Hub</p>
                     </div>
                 </div>
-                <!-- 2. TOP RIGHT TRIO (ADJUSTED PERFECTLY FOR MOBILE RESPONSIVENESS) -->
+                
                 <div class="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
-                    <button onclick="window.location.href='admin-notification.html'" class="p-2 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 hover:border-rose-500 transition flex-shrink-0"><i class="fa-solid fa-bell text-[10px] md:text-xs"></i></button>
+                    <button onclick="window.location.href='admin-notification.html'" class="p-2 bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 hover:border-rose-500 transition flex-shrink-0"><i class="fa-solid fa-bell text-[10px] md:text-xs"></i></button>
                     <button onclick="window.location.href='admin-challenge.html'" class="px-2 py-2 bg-purple-500 text-white font-black text-[9px] md:text-xs rounded-xl uppercase tracking-wider hover:bg-purple-600 transition shadow shadow-purple-500/10 flex-shrink-0"><i class="fa-solid fa-swords text-[9px] md:mr-1"></i><span class="hidden md:inline">Challenge Set</span><span class="md:hidden">Challenge</span></button>
                     <button onclick="window.location.href='admin-leaderboard.html'" class="px-2 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-500 text-[9px] md:text-xs font-black uppercase hover:scale-105 transition flex-shrink-0"><i class="fa-solid fa-trophy text-[9px] md:mr-1"></i><span class="hidden md:inline">Rank View</span><span class="md:hidden">Rank</span></button>
                 </div>
@@ -199,7 +186,7 @@
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm w-full">
                     <div class="flex items-center space-x-2 w-full">
                         <i class="fa-solid fa-filter text-rose-500 text-base"></i>
-                        <select class="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-black text-slate-700 dark:text-slate-300 focus:outline-none w-full sm:w-64">
+                        <select class="bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-black text-slate-700 dark:text-slate-300 focus:outline-none w-full sm:w-64">
                             <option>mNEET Target 2026 Ultimate Arena</option>
                         </select>
                     </div>
@@ -209,29 +196,29 @@
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-4 w-full">
                     <h3 class="text-xs font-black tracking-widest uppercase text-slate-400"><i class="fa-solid fa-bullhorn mr-1"></i> Live Motivation Publisher Panel</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
-                        <select id="mType" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-slate-700 dark:text-slate-300 focus:outline-none">
+                        <select id="mType" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-slate-700 dark:text-slate-300 focus:outline-none">
                             <option value="text">Text Only Content</option>
                             <option value="image">Image Attachment Url</option>
                             <option value="video">Direct Video Frame Link</option>
                         </select>
-                        <input type="text" id="mMediaLink" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Paste Image/Video URL if applicable">
+                        <input type="text" id="mMediaLink" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Paste Image/Video URL if applicable">
                     </div>
-                    <textarea id="mText" rows="2" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-xs font-bold focus:outline-none resize-none" placeholder="Type motivational text quote for student interface..."></textarea>
-                    <button onclick="uploadMotivation()" class="bg-sky-500 hover:bg-sky-600 text-white font-black text-xs px-5 py-2.5 rounded-xl transition shadow shadow-sky-500/10">Broadcast to Dashboard</button>
+                    <textarea id="mText" rows="2" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-xs font-bold focus:outline-none resize-none" placeholder="Type motivational text quote for student interface..."></textarea>
+                    <button onclick="window.uploadMotivation()" class="bg-sky-500 hover:bg-sky-600 text-white font-black text-xs px-5 py-2.5 rounded-xl transition shadow shadow-sky-500/10">Broadcast to Dashboard</button>
                 </div>
 
                 <!-- Course Creation Builder Setup Form -->
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-4 w-full">
                     <h3 class="text-xs font-black tracking-widest uppercase text-slate-400"><i class="fa-solid fa-folder-plus mr-1"></i> Launch & Create Premium Course</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold">
-                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Course Name">
-                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Thumbnail Image or Video link">
-                        <input type="date" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none">
-                        <input type="date" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none">
-                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Price (INR)">
-                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Discount %">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Course Name">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Thumbnail Image or Video link">
+                        <input type="date" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none">
+                        <input type="date" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Price (INR)">
+                        <input type="text" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 focus:outline-none" placeholder="Discount %">
                     </div>
-                    <textarea rows="2" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-xs font-bold focus:outline-none resize-none" placeholder="Course descriptions..."></textarea>
+                    <textarea rows="2" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-xs font-bold focus:outline-none resize-none" placeholder="Course descriptions..."></textarea>
                     
                     <div class="space-y-1.5 border-t border-slate-100 dark:border-slate-800/60 pt-3">
                         <span class="text-[10px] font-black tracking-widest text-slate-400 uppercase block mb-1">Select Features Pack Access Included:</span>
@@ -244,49 +231,33 @@
                     </div>
                     <button class="bg-rose-500 hover:bg-rose-600 text-white font-black text-xs px-5 py-2.5 rounded-xl transition shadow">Launch Package</button>
                 </div>
-
-                <!-- Admin Courses Store Cards Management Grid -->
-                <div class="space-y-4 w-full">
-                    <h3 class="text-xs font-black tracking-widest uppercase text-slate-400"><i class="fa-solid fa-cubes mr-1"></i> Active Courses Cards Log Manager</h3>
-                    
-                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 flex flex-col sm:flex-row gap-5 items-center w-full shadow-sm">
-                        <div class="w-full sm:w-52 h-36 bg-gradient-to-tr from-rose-500 to-red-600 text-white rounded-2xl flex flex-col justify-center items-center p-4 font-black shrink-0 shadow relative overflow-hidden">
-                            <i class="fa-solid fa-dna text-7xl absolute -bottom-4 -right-4 opacity-15"></i>
-                            <span class="text-base tracking-wider font-black uppercase">mNEET Pro</span>
-                            <span class="text-[9px] opacity-75 mt-1 font-bold">Live Management Mode</span>
-                        </div>
-                        <div class="flex-1 space-y-2.5 w-full">
-                            <div class="flex justify-between items-start flex-wrap gap-2">
-                                <h4 class="font-black text-sm md:text-base text-slate-900 dark:text-white leading-tight">mNEET Alpha Pro Complete Comprehensive 2026 Batch</h4>
-                                <span class="text-xl font-black text-rose-500">₹4,999</span>
-                            </div>
-                            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">Full features pack deployed containing reading modules, multiplayer combats, and detailed custom patterns test keys.</p>
-                            
-                            <div class="flex flex-wrap gap-3 text-[9px] font-black text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800/60 items-center w-full">
-                                <span>START: 01 AUG 2026</span>
-                                <span>END: MAY 2027</span>
-                                <div class="ml-auto flex items-center space-x-2 text-xs font-bold text-white">
-                                    <button class="bg-sky-500 px-3 py-1.5 rounded-xl hover:bg-sky-600 transition"><i class="fa-solid fa-pen"></i> Edit</button>
-                                    <button class="bg-amber-500 px-3 py-1.5 rounded-xl hover:bg-amber-600 transition"><i class="fa-solid fa-eye-slash"></i> Hide</button>
-                                    <button class="bg-rose-500 px-3 py-1.5 rounded-xl hover:bg-rose-600 transition"><i class="fa-solid fa-trash"></i> Delete</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
             </div>
         </main>
 
-        <!-- 4. BOTTOM ROW NAVIGATION -->
-        <nav id="adminBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3.5 flex justify-around items-center shadow-2xl transition-transform duration-300 lg:pl-80 w-full box-border">
-            <button onclick="window.location.href='admin-dashboard.html'" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
-            <button onclick="window.location.href='admin-ncert.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
-            <button onclick="window.location.href='admin-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
-            <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
-            <button onclick="window.location.href='admin-students.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Students</span></button>
+        <!-- ADMIN BOTTOM NAVIGATION BAR -->
+        <nav id="adminBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 px-2 py-3 flex justify-around items-center shadow-2xl w-full box-border lg:pl-80">
+            <button onclick="window.location.href='admin-dashboard.html'" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1">
+                <i class="fa-solid fa-house-user text-base"></i>
+                <span class="text-[9px] uppercase tracking-widest font-black">Home</span>
+            </button>
+            <button onclick="window.location.href='admin-test.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition">
+                <i class="fa-solid fa-vial-circle-check text-base"></i>
+                <span class="text-[9px] uppercase tracking-widest font-black">Test</span>
+            </button>
+            <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition">
+                <i class="fa-solid fa-stopwatch-20 text-base"></i>
+                <span class="text-[9px] uppercase tracking-widest font-black">Mock</span>
+            </button>
+            <button onclick="window.location.href='admin-challenge.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition">
+                <i class="fa-solid fa-fire text-base"></i>
+                <span class="text-[9px] uppercase tracking-widest font-black">Challenge</span>
+            </button>
+            <button onclick="window.location.href='admin-student.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition">
+                <i class="fa-solid fa-users-gear text-base"></i>
+                <span class="text-[9px] uppercase tracking-widest font-black">Students</span>
+            </button>
         </nav>
     </div>
 </body>
                         </html>
-    
+                    
