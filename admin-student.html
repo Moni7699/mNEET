@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>mNEET Admin - Student Management Hub</title>
+    <!-- Tailwind CSS Engine -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- FontAwesome Pro Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
+            authDomain: "mneet-spark.firebaseapp.com",
+            databaseURL: "https://mneet-spark-default-rtdb.firebaseio.com",
+            projectId: "mneet-spark",
+            storageBucket: "mneet-spark.firebasestorage.app",
+            messagingSenderId: "252201633700",
+            appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let selectedStudentData = null;
+        let allStudentsCache = [];
+
+        // View Navigation Switcher
+        window.navigateToStudentAdminView = function(viewId) {
+            ['view-student-directory', 'view-student-profile-analytics'].forEach(v => {
+                document.getElementById(v).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+        };
+
+        // Logout System Trigger
+        window.triggerAdminLogout = function() {
+            if(confirm("Are you sure you want to exit Student Management?")) {
+                signOut(auth).then(() => { window.location.href = "index.html"; });
+            }
+        };
+
+        // Add Manual Student Matrix
+        window.addNewStudentRecord = async function() {
+            const nameInput = document.getElementById('newStudentName');
+            const phoneInput = document.getElementById('newStudentPhone');
+            const batchSelect = document.getElementById('newStudentBatch');
+
+            const name = nameInput.value.trim();
+            const phone = phoneInput.value.trim();
+            if(!name || !phone) {
+                alert("Please fill in both Student Name and Phone Number!");
+                return;
+            }
+
+            await addDoc(collection(db, "students"), {
+                name,
+                phone,
+                batch: batchSelect.value,
+                bpCoins: 100, // Initial Signup Bonus Coins
+                isBlocked: false,
+                weakSubjects: ["Organic Chem", "Botany"],
+                joinedAt: Date.now()
+            });
+
+            nameInput.value = "";
+            phoneInput.value = "";
+            alert("✅ Student Enrolled Successfully!");
+        };
+
+        // Realtime Firestore Students Listener
+        window.initStudentsRealtimeDirectory = function() {
+            onSnapshot(query(collection(db, "students"), orderBy("joinedAt", "desc")), (snapshot) => {
+                allStudentsCache = [];
+                snapshot.forEach(docSnap => {
+                    allStudentsCache.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                window.renderStudentsList(allStudentsCache);
+            });
+        };
+
+        window.renderStudentsList = function(list) {
+            const container = document.getElementById('studentsListContainer');
+            container.innerHTML = "";
+
+            if(list.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-slate-400 font-bold text-xs">No Students Found in System.</div>`;
+                return;
+            }
+
+            list.forEach(s => {
+                const isBlocked = s.isBlocked || false;
+                container.innerHTML += `
+                    <div class="bg-white dark:bg-slate-900 border ${isBlocked ? 'border-rose-500/30 bg-rose-500/5' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
+                        <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.openStudentProfileAnalytics('${s.id}')">
+                            <div class="w-10 h-10 rounded-xl ${isBlocked ? 'bg-rose-500/20 text-rose-500' : 'bg-rose-500/10 text-rose-500'} flex items-center justify-center font-black">
+                                <i class="fa-solid ${isBlocked ? 'fa-user-slash' : 'fa-user-graduate'}"></i>
+                            </div>
+                            <div class="flex flex-col">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white">${s.name}</span>
+                                    ${isBlocked ? '<span class="text-[8px] bg-rose-500 text-white font-black px-1.5 py-0.5 rounded">BLOCKED</span>' : ''}
+                                </div>
+                                <span class="text-[10px] text-slate-400 font-bold">Batch: ${s.batch} | 📞 ${s.phone}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-1 bg-amber-500/10 text-amber-500 px-2.5 py-1 rounded-xl text-xs font-black">
+                                <i class="fa-solid fa-coins text-[10px]"></i>
+                                <span>${s.bpCoins || 0}</span>
+                            </div>
+                            <button onclick="window.openStudentProfileAnalytics('${s.id}')" class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 p-2 rounded-xl text-xs"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+        };
+
+        // Realtime Search Filter
+        window.filterStudentsList = function() {
+            const query = document.getElementById('studentSearchInput').value.toLowerCase().trim();
+            const filtered = allStudentsCache.filter(s => 
+                s.name.toLowerCase().includes(query) || s.phone.includes(query) || s.batch.toLowerCase().includes(query)
+            );
+            window.renderStudentsList(filtered);
+        };
+
+        window.addEventListener('DOMContentLoaded', () => window.initStudentsRealtimeDirectory());
+                                      // Open Student Master Profile & Analytics Studio
+        window.openStudentProfileAnalytics = function(id) {
+            const student = allStudentsCache.find(s => s.id === id);
+            if(!student) return;
+            selectedStudentData = student;
+
+            document.getElementById('profileHeaderName').innerText = student.name;
+            document.getElementById('profileBatchBadge').innerText = student.batch;
+            document.getElementById('profilePhoneText').innerText = "Phone: " + student.phone;
+            document.getElementById('profileCoinsDisplay').innerText = student.bpCoins || 0;
+
+            // Block/Unblock Button Toggle State
+            const blockBtn = document.getElementById('toggleBlockStatusBtn');
+            if(student.isBlocked) {
+                blockBtn.className = "w-full bg-emerald-500 text-white py-3 rounded-xl font-black shadow transition";
+                blockBtn.innerHTML = '<i class="fa-solid fa-user-check mr-1"></i> Unblock Student Account';
+            } else {
+                blockBtn.className = "w-full bg-rose-500 text-white py-3 rounded-xl font-black shadow transition";
+                blockBtn.innerHTML = '<i class="fa-solid fa-user-lock mr-1"></i> Block Student Account';
+            }
+
+            // Weakness Subjects Badges Render
+            const weakContainer = document.getElementById('profileWeaknessTags');
+            weakContainer.innerHTML = "";
+            (student.weakSubjects || ["Organic Chem", "Mechanics"]).forEach(w => {
+                weakContainer.innerHTML += `<span class="bg-rose-500/10 text-rose-500 border border-rose-500/20 text-[10px] font-black px-2.5 py-1 rounded-lg">⚠️ ${w}</span>`;
+            });
+
+            window.navigateToStudentAdminView('view-student-profile-analytics');
+        };
+
+        // BP Coin Manual Overrider Logic
+        window.modifyStudentCoins = async function(type) {
+            if(!selectedStudentData) return;
+            const amountInput = document.getElementById('coinAdjustmentAmount');
+            const amount = parseInt(amountInput.value) || 0;
+            if(amount <= 0) {
+                alert("Please enter a valid amount of BP Coins!");
+                return;
+            }
+
+            let currentCoins = selectedStudentData.bpCoins || 0;
+            let newCoins = type === 'add' ? currentCoins + amount : currentCoins - amount;
+            if(newCoins < 0) newCoins = 0;
+
+            await updateDoc(doc(db, "students", selectedStudentData.id), { bpCoins: newCoins });
+            selectedStudentData.bpCoins = newCoins;
+            document.getElementById('profileCoinsDisplay').innerText = newCoins;
+            amountInput.value = "";
+            alert(`✅ Coins Updated! New Balance: ${newCoins} BP Coins.`);
+        };
+
+        // Toggle Account Block Matrix
+        window.toggleAccountBlockStatus = async function() {
+            if(!selectedStudentData) return;
+            const newStatus = !selectedStudentData.isBlocked;
+            await updateDoc(doc(db, "students", selectedStudentData.id), { isBlocked: newStatus });
+            selectedStudentData.isBlocked = newStatus;
+            alert(newStatus ? "🚨 Student Account BLOCKED!" : "✅ Student Account UNBLOCKED!");
+            window.navigateToStudentAdminView('view-student-directory');
+        };
+
+        // Send Parent Performance Report via WhatsApp Direct Trigger
+        window.sendParentWhatsAppReport = function() {
+            if(!selectedStudentData) return;
+            const phone = selectedStudentData.phone;
+            const name = selectedStudentData.name;
+            const coins = selectedStudentData.bpCoins || 0;
+
+            const message = encodeURIComponent(
+                `Hello Parent,\n\nHere is the active mNEET performance report for ${name}:\n` +
+                `- Current BP Coins Balance: ${coins}\n` +
+                `- Target Exam: NEET 2026\n` +
+                `- Overall Engagement: Active\n\n` +
+                `Please encourage ${name} to maintain daily challenge streaks on the mNEET app!`
+            );
+
+            window.open(`https://wa.me/91${phone}?text=${message}`, '_blank');
+        };
+
+        // Delete Student Record
+        window.deleteStudentRecord = async function() {
+            if(!selectedStudentData) return;
+            if(confirm(`Are you sure you want to completely delete ${selectedStudentData.name}'s record?`)) {
+                await deleteDoc(doc(db, "students", selectedStudentData.id));
+                alert("Student Record Deleted.");
+                window.navigateToStudentAdminView('view-student-directory');
+            }
+        };
+
+        window.toggleTheme = () => document.documentElement.classList.toggle('dark');
+    </script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
+    <div id="studentAdminAppFrame" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+        
+        <!-- SCREEN 1: STUDENT DIRECTORY & ENROLLMENT HUB -->
+        <div id="view-student-directory" class="w-full flex-1 flex flex-col">
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full shadow-sm">
+                <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+                <h1 class="font-black text-lg md:text-xl text-slate-900 dark:text-white mx-auto">Students Control Center</h1>
+                <button onclick="window.triggerAdminLogout()" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-right-from-bracket text-lg"></i></button>
+            </header>
+
+            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-4 flex-1">
+                <!-- Add Student Form Matrix -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl space-y-3 shadow-sm text-xs font-bold">
+                    <span class="text-[10px] font-black uppercase text-slate-400 block tracking-wider"><i class="fa-solid fa-user-plus text-rose-500 mr-1"></i> Manual Student Enrollment</span>
+                    <input type="text" id="newStudentName" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none" placeholder="Student Full Name...">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="tel" id="newStudentPhone" class="bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:outline-none" placeholder="WhatsApp Phone No...">
+                        <select id="newStudentBatch" class="bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-slate-900 dark:text-white focus:outline-none">
+                            <option value="Class 11 Target">Class 11 Target</option>
+                            <option value="Class 12 Target">Class 12 Target</option>
+                            <option value="Dropper Batch">Dropper Batch</option>
+                        </select>
+                    </div>
+                    <button onclick="window.addNewStudentRecord()" class="w-full bg-rose-500 text-white py-2.5 rounded-xl font-black shadow active:scale-95 transition">Enroll Student</button>
+                </div>
+
+                <!-- Live Search Bar -->
+                <div class="relative">
+                    <input type="text" id="studentSearchInput" oninput="window.filterStudentsList()" class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl pl-10 pr-4 py-3 text-xs font-bold text-slate-900 dark:text-white focus:outline-none shadow-sm" placeholder="Search by name, phone, or batch...">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-xs"></i>
+                </div>
+
+                <!-- Students Roster Container -->
+                <div id="studentsListContainer" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: STUDENT MASTER PROFILE & ANALYTICS STUDIO -->
+        <div id="view-student-profile-analytics" class="w-full flex-1 flex flex-col hidden">
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full shadow-sm">
+                <button onclick="window.navigateToStudentAdminView('view-student-directory')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+                <h2 id="profileHeaderName" class="font-black text-sm md:text-base text-slate-900 dark:text-white mx-auto">Student Profile</h2>
+                <button onclick="window.deleteStudentRecord()" class="text-rose-500 p-2"><i class="fa-solid fa-trash text-base"></i></button>
+            </header>
+
+            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-4 flex-1">
+                <!-- Overview Header Card -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl space-y-3 shadow-sm text-center">
+                    <div class="w-16 h-16 bg-rose-500/10 text-rose-500 rounded-2xl flex items-center justify-center mx-auto text-2xl font-black">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <span id="profileBatchBadge" class="bg-slate-100 dark:bg-slate-800 text-slate-500 font-extrabold text-[10px] px-2.5 py-1 rounded-full uppercase tracking-wider mb-1">Batch Name</span>
+                        <span id="profilePhoneText" class="text-xs font-bold text-slate-400">Phone Number</span>
+                    </div>
+
+                    <!-- BP Coin Master Counter Box -->
+                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex justify-between items-center mt-2">
+                        <div class="flex items-center space-x-2 text-amber-500">
+                            <i class="fa-solid fa-coins text-xl"></i>
+                            <span class="text-xs font-black uppercase">BP Coins Balance</span>
+                        </div>
+                        <span id="profileCoinsDisplay" class="text-xl font-black font-mono text-amber-500">0</span>
+                    </div>
+                </div>
+
+                <!-- Manual Coin Override Control Panel -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl space-y-3 shadow-sm text-xs font-bold">
+                    <span class="text-[10px] font-black uppercase text-slate-400 block tracking-wider"><i class="fa-solid fa-sliders text-rose-500 mr-1"></i> Manual BP Coin Adjustment</span>
+                    <input type="number" id="coinAdjustmentAmount" class="w-full bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white font-mono focus:outline-none" placeholder="Enter coin amount (e.g. 50)...">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="window.modifyStudentCoins('add')" class="bg-emerald-500 text-white py-2.5 rounded-xl font-black shadow active:scale-95 transition"><i class="fa-solid fa-plus mr-1"></i> Add Coins</button>
+                        <button onclick="window.modifyStudentCoins('deduct')" class="bg-amber-500 text-white py-2.5 rounded-xl font-black shadow active:scale-95 transition"><i class="fa-solid fa-minus mr-1"></i> Deduct Coins</button>
+                    </div>
+                </div>
+
+                <!-- Subject Weakness Matrix Analytics Card -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl space-y-2.5 shadow-sm text-xs font-bold">
+                    <span class="text-[10px] font-black uppercase text-slate-400 block tracking-wider"><i class="fa-solid fa-chart-pie text-rose-500 mr-1"></i> Weakness Detection Matrix</span>
+                    <div id="profileWeaknessTags" class="flex flex-wrap gap-2 pt-1"></div>
+                </div>
+
+                <!-- Actions Hub: Block Account & WhatsApp Parent Trigger -->
+                <div class="space-y-2 pt-2">
+                    <button onclick="window.sendParentWhatsAppReport()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-black shadow transition flex items-center justify-center space-x-2">
+                        <i class="fa-brands fa-whatsapp text-lg"></i>
+                        <span>Send Parent Report via WhatsApp</span>
+                    </button>
+
+                    <button id="toggleBlockStatusBtn" onclick="window.toggleAccountBlockStatus()" class="w-full bg-rose-500 text-white py-3 rounded-xl font-black shadow transition">
+                        Block Student Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+                              
