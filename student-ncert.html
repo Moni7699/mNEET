@@ -38,7 +38,7 @@
         ];
         let currentPageIndex = 0;
 
-        // View Router Matrix Engine
+        // View Router Matrix Engine - Updated: Bottom Nav stays ONLY on main subjects view
         window.navigateToStudentView = function(viewId) {
             ['view-student-subjects', 'view-student-chapters', 'view-student-canvas'].forEach(v => {
                 document.getElementById(v).classList.add('hidden');
@@ -46,10 +46,10 @@
             document.getElementById(viewId).classList.remove('hidden');
 
             const bottomNav = document.getElementById('studentBottomNav');
-            if(viewId === 'view-student-canvas') {
-                bottomNav.style.display = 'none';
-            } else {
+            if(viewId === 'view-student-subjects') {
                 bottomNav.style.display = 'flex';
+            } else {
+                bottomNav.style.display = 'none'; // Auto hides on chapters & canvas screen
             }
         };
 
@@ -107,7 +107,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             window.initStudentSubjects();
         });
-                // Core Textbook A4 Viewport Processing Logic
+            // Core Textbook A4 Viewport Processing Logic
         window.renderStudentPage = function() {
             document.getElementById('pageCounterStrap').innerText = `Page ${currentPageIndex + 1} of ${mockBookPages.length}`;
             const frame = document.getElementById('studentBookPageBody');
@@ -192,7 +192,7 @@
     <div id="studentNcertApp" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
         
         <!-- SCREEN 1: ALL SUBJECTS VIEW -->
-        <div id="view-student-subjects" class="w-full flex-1 flex flex-col">
+        <div id="view-student-subjects" class="w-full flex-1 flex flex-col pb-20">
             <header class="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full shadow-sm">
                 <button onclick="window.location.href='student-dashboard.html'" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg text-slate-600"></i></button>
                 <h2 class="font-black text-sm md:text-base text-slate-800">All Subject</h2>
@@ -290,15 +290,14 @@
             </div>
         </div>
 
-        <!-- BOTTOM NAV STRAP (COMMUNICATION ROW MIRRORED PERFECTLY) -->
+        <!-- BOTTOM NAV STRAP (UPDATED: NO STUDENTS ICON, DISPLAY CONTROLLED BY ROUTER) -->
         <nav id="studentBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 px-2 py-3.5 flex justify-around items-center shadow-2xl lg:pl-80 w-full box-border">
             <button onclick="window.location.href='student-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-user text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
             <button onclick="window.navigateToStudentView('view-student-subjects')" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
-            <button onclick="window.location.href='student-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
+            <button onclick="window.location.href='student-test.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
             <button onclick="window.location.href='student-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
-            <button onclick="window.location.href='student-profile.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-user-gear text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Students</span></button>
         </nav>
     </div>
 </body>
 </html>
-                        
+    
