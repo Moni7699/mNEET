@@ -160,7 +160,7 @@
             if(file) reader.readAsDataURL(file);
         };
 
-        // FIREBASE REAL-TIME PAYLOAD COMMIT
+        // FIREBASE REAL-TIME PAYLOAD COMMIT (WITH COMPLETE FORM RESET FIX)
         window.commitQuestionPayload = async function() {
             const qText = document.getElementById('qArea').value.trim();
             const qType = document.getElementById('qTypeSelect').value;
@@ -188,12 +188,26 @@
 
             alert("🚀 Question Successfully Injected to Topic!");
             
-            // Clear Form
+            // COMPLETE RESET ALL INPUTS & IMAGES (FIXED)
             document.getElementById('qArea').value = "";
-            document.getElementById('qOptA').value = ""; document.getElementById('qOptB').value = "";
-            document.getElementById('qOptC').value = ""; document.getElementById('qOptD').value = "";
+            document.getElementById('qOptA').value = ""; 
+            document.getElementById('qOptB').value = "";
+            document.getElementById('qOptC').value = ""; 
+            document.getElementById('qOptD').value = "";
             document.getElementById('qSolutionText').value = "";
-            imgPreview.classList.add('hidden'); imgPreview.src = "";
+            
+            // Clear file upload input & preview
+            document.getElementById('qImgFile').value = "";
+            imgPreview.src = "";
+            imgPreview.classList.add('hidden');
+
+            // Reset Select Dropdowns
+            document.getElementById('qTypeSelect').value = "text";
+            document.getElementById('qDiffSelect').value = "Easy";
+            document.getElementById('qCorrectSelect').value = "A";
+
+            // Focus on Newly Created Question
+            currentActiveQuestionIndex = loadedQuestionsList.length;
         };
 
         // Realtime Listener for 150+ Questions
@@ -207,6 +221,9 @@
                 
                 window.renderQuickJumpGrid();
                 if(loadedQuestionsList.length > 0) {
+                    if(currentActiveQuestionIndex >= loadedQuestionsList.length) {
+                        currentActiveQuestionIndex = loadedQuestionsList.length - 1;
+                    }
                     window.showSingleQuestionView(currentActiveQuestionIndex);
                 } else {
                     document.getElementById('singleQuestionCardCanvas').innerHTML = `
@@ -438,5 +455,5 @@
         </nav>
     </div>
 </body>
-    </html>
+                </html>
                     
