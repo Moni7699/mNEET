@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mNEET Admin - Test Studio Hub</title>
+    <title>mNEET - Quiz Control Center</title>
+    <!-- Tailwind CSS Engine -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class' }
     </script>
+    <!-- FontAwesome Pro Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
@@ -30,42 +32,43 @@
         let currentSubjectId = "";
         let currentChapterId = "";
         let currentTopicId = "";
-        let activeStreamUnsubscribe = null;
+        
+        let loadedQuestionsList = [];
+        let currentActiveQuestionIndex = 0;
 
+        // Dynamic Router Engine
         window.navigateToTestView = function(viewId) {
-            const views = ['view-test-subjects', 'view-test-chapters', 'view-test-topics', 'view-test-questions'];
-            views.forEach(v => document.getElementById(v).classList.add('hidden'));
+            const screens = ['view-test-subjects', 'view-test-chapters', 'view-test-topics', 'view-test-questions'];
+            screens.forEach(s => document.getElementById(s).classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
 
-            const bottomNav = document.getElementById('quizBottomNav');
+            const nav = document.getElementById('quizBottomNav');
             if(viewId === 'view-test-questions') {
-                bottomNav.style.display = 'none';
+                nav.style.display = 'none'; // Question studio full screen mode
             } else {
-                bottomNav.style.display = 'flex';
+                nav.style.display = 'flex';
             }
         };
 
+        // LEVEL 1: SUBJECT CREATION
         window.createQuizSubject = async function() {
             const input = document.getElementById('quizSubInput');
             const name = input.value.trim();
             if(!name) return;
-            await addDoc(collection(db, "quiz_subjects"), { name, createdAt: Date.now(), hidden: false });
+            await addDoc(collection(db, "quiz_subjects"), { name, createdAt: Date.now() });
             input.value = "";
         };
 
         window.loadQuizSubjects = function() {
             onSnapshot(query(collection(db, "quiz_subjects"), orderBy("createdAt", "asc")), (snapshot) => {
                 const container = document.getElementById('quizSubListNode');
-                if(!container) return; container.innerHTML = "";
+                container.innerHTML = "";
                 snapshot.forEach(docSnap => {
                     const s = docSnap.data(); const id = docSnap.id;
                     container.innerHTML += `
-                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm">
-                            <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.enterQuizSubject('${id}', '${s.name.replace(/'/g, "\\'")}')">
-                                <i class="fa-solid fa-folder text-rose-500 text-lg"></i>
-                                <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white">${s.name}</span>
-                            </div>
-                            <button onclick="deleteDoc(doc(db, 'quiz_subjects', '${id}'))" class="text-rose-500 bg-rose-50 p-2 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
+                        <div onclick="window.enterQuizSubject('${id}', '${s.name.replace(/'/g, "\\'")}')" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm active:scale-[0.99] cursor-pointer hover:border-rose-500">
+                            <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-flask-vial text-rose-500 mr-2"></i>${s.name}</span>
+                            <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
                         </div>
                     `;
                 });
@@ -79,8 +82,8 @@
             window.loadQuizChapters();
         };
 
-        window.addEventListener('DOMContentLoaded', () => window.loadQuizSubjects());
-                window.createQuizChapter = async function() {
+        // LEVEL 2: CHAPTER CREATION
+        window.createQuizChapter = async function() {
             const input = document.getElementById('quizChapInput');
             const name = input.value.trim();
             if(!name || !currentSubjectId) return;
@@ -89,15 +92,14 @@
         };
 
         window.loadQuizChapters = function() {
-            if(activeStreamUnsubscribe) activeStreamUnsubscribe();
-            activeStreamUnsubscribe = onSnapshot(query(collection(db, `quiz_subjects/${currentSubjectId}/chapters`), orderBy("createdAt", "asc")), (snapshot) => {
+            onSnapshot(query(collection(db, `quiz_subjects/${currentSubjectId}/chapters`), orderBy("createdAt", "asc")), (snapshot) => {
                 const container = document.getElementById('quizChapListNode');
                 container.innerHTML = "";
                 snapshot.forEach(docSnap => {
                     const c = docSnap.data(); const id = docSnap.id;
                     container.innerHTML += `
-                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm" onclick="window.enterQuizChapter('${id}', '${c.name.replace(/'/g, "\\'")}')">
-                            <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white cursor-pointer">${c.name}</span>
+                        <div onclick="window.enterQuizChapter('${id}', '${c.name.replace(/'/g, "\\'")}')" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex justify-between items-center shadow-sm active:scale-[0.99] cursor-pointer hover:border-rose-500">
+                            <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white">${c.name}</span>
                             <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
                         </div>
                     `;
@@ -111,7 +113,7 @@
             window.navigateToTestView('view-test-topics');
             window.loadQuizTopics();
         };
-
+                // LEVEL 3: TOPIC CREATION
         window.createQuizTopic = async function() {
             const input = document.getElementById('quizTopicInput');
             const name = input.value.trim();
@@ -136,16 +138,163 @@
             });
         };
 
+        window.addEventListener('DOMContentLoaded', () => window.loadQuizSubjects());
+
+        // LEVEL 4: QUESTIONS BUILDER STUDIO
         window.enterQuizQuestionsStudio = function(id, name) {
             currentTopicId = id;
             document.getElementById('studioTopicHeaderTitle').innerText = name;
             window.navigateToTestView('view-test-questions');
+            window.listenRealtimeQuestions();
         };
 
-        window.commitQuestionPayload = function() {
-            alert("🚀 Question Added Successfully to Topic Hub!");
+        // Question Diagram FileReader
+        window.handleQuestionImgUpload = function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const img = document.getElementById('qPreviewImg');
+                img.src = reader.result;
+                img.classList.remove('hidden');
+            };
+            if(file) reader.readAsDataURL(file);
+        };
+
+        // FIREBASE REAL-TIME PAYLOAD COMMIT
+        window.commitQuestionPayload = async function() {
+            const qText = document.getElementById('qArea').value.trim();
+            const qType = document.getElementById('qTypeSelect').value;
+            const qDiff = document.getElementById('qDiffSelect').value;
+            
+            const optA = document.getElementById('qOptA').value.trim();
+            const optB = document.getElementById('qOptB').value.trim();
+            const optC = document.getElementById('qOptC').value.trim();
+            const optD = document.getElementById('qOptD').value.trim();
+            
+            const correctOpt = document.getElementById('qCorrectSelect').value;
+            const solutionText = document.getElementById('qSolutionText').value.trim();
+            
+            const imgPreview = document.getElementById('qPreviewImg');
+            const imgData = imgPreview.classList.contains('hidden') ? "" : imgPreview.src;
+
+            if(!qText) return alert("Please enter question text!");
+
+            const questionPath = `quiz_subjects/${currentSubjectId}/chapters/${currentChapterId}/topics/${currentTopicId}/questions`;
+            
+            await addDoc(collection(db, questionPath), {
+                qText, qType, qDiff, optA, optB, optC, optD, correctOpt, solutionText, imgData,
+                hidden: false, createdAt: Date.now()
+            });
+
+            alert("🚀 Question Successfully Injected to Topic!");
+            
+            // Clear Form
             document.getElementById('qArea').value = "";
-            window.navigateToTestView('view-test-topics');
+            document.getElementById('qOptA').value = ""; document.getElementById('qOptB').value = "";
+            document.getElementById('qOptC').value = ""; document.getElementById('qOptD').value = "";
+            document.getElementById('qSolutionText').value = "";
+            imgPreview.classList.add('hidden'); imgPreview.src = "";
+        };
+
+        // Realtime Listener for 150+ Questions
+        window.listenRealtimeQuestions = function() {
+            const questionPath = `quiz_subjects/${currentSubjectId}/chapters/${currentChapterId}/topics/${currentTopicId}/questions`;
+            onSnapshot(query(collection(db, questionPath), orderBy("createdAt", "asc")), (snapshot) => {
+                loadedQuestionsList = [];
+                snapshot.forEach(docSnap => {
+                    loadedQuestionsList.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                
+                window.renderQuickJumpGrid();
+                if(loadedQuestionsList.length > 0) {
+                    window.showSingleQuestionView(currentActiveQuestionIndex);
+                } else {
+                    document.getElementById('singleQuestionCardCanvas').innerHTML = `
+                        <div class="text-center py-10 text-slate-400 font-bold">
+                            <i class="fa-solid fa-box-open text-3xl mb-2 block"></i>
+                            No questions added to this topic yet.
+                        </div>
+                    `;
+                }
+            });
+        };
+
+        // Render Quick Matrix Modal Grid (1, 2, 3... 150)
+        window.renderQuickJumpGrid = function() {
+            const gridContainer = document.getElementById('quickJumpGridNode');
+            gridContainer.innerHTML = "";
+            loadedQuestionsList.forEach((q, idx) => {
+                gridContainer.innerHTML += `
+                    <button onclick="window.showSingleQuestionView(${idx}); window.toggleQuickGridModal(false);" class="w-9 h-9 rounded-xl font-black text-xs flex items-center justify-center transition border ${idx === currentActiveQuestionIndex ? 'bg-rose-500 text-white border-rose-500 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}">
+                        ${idx + 1}
+                    </button>
+                `;
+            });
+            document.getElementById('totalQuestionsCountBadge').innerText = `${loadedQuestionsList.length} Questions`;
+        };
+
+        window.toggleQuickGridModal = function(show) {
+            const modal = document.getElementById('quickGridModalFrame');
+            if(show) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
+        };
+
+        // Render 1 Question per Screen Matrix
+        window.showSingleQuestionView = function(index) {
+            if(index < 0 || index >= loadedQuestionsList.length) return;
+            currentActiveQuestionIndex = index;
+            const q = loadedQuestionsList[index];
+
+            const canvas = document.getElementById('singleQuestionCardCanvas');
+            canvas.innerHTML = `
+                <div class="bg-white dark:bg-slate-900 border ${q.hidden ? 'border-amber-500 opacity-60' : 'border-slate-200 dark:border-slate-800'} rounded-3xl p-5 shadow-xl space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <span class="bg-rose-500/10 text-rose-500 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">Question ${index + 1} of ${loadedQuestionsList.length}</span>
+                        <div class="flex items-center space-x-1">
+                            <span class="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[9px] font-black uppercase px-2 py-1 rounded-lg">${q.qDiff || 'Easy'}</span>
+                            <button onclick="window.toggleHideQuestion('${q.id}', ${q.hidden})" class="p-2 bg-amber-50 text-amber-500 rounded-xl text-xs"><i class="fa-solid ${q.hidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>
+                            <button onclick="window.deleteQuestionDoc('${q.id}')" class="p-2 bg-rose-50 text-rose-500 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="text-xs font-black text-slate-900 dark:text-white leading-relaxed">
+                        ${q.qText}
+                    </div>
+
+                    ${q.imgData ? `<img src="${q.imgData}" class="w-full max-h-48 object-contain rounded-xl border bg-slate-50">` : ''}
+
+                    <div class="grid grid-cols-2 gap-2 text-xs font-bold">
+                        <div class="p-2.5 rounded-xl border ${q.correctOpt === 'A' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-slate-50 dark:bg-slate-955 border-slate-200 dark:border-slate-800'}">A. ${q.optA || '-'}</div>
+                        <div class="p-2.5 rounded-xl border ${q.correctOpt === 'B' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-slate-50 dark:bg-slate-955 border-slate-200 dark:border-slate-800'}">B. ${q.optB || '-'}</div>
+                        <div class="p-2.5 rounded-xl border ${q.correctOpt === 'C' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-slate-50 dark:bg-slate-955 border-slate-200 dark:border-slate-800'}">C. ${q.optC || '-'}</div>
+                        <div class="p-2.5 rounded-xl border ${q.correctOpt === 'D' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' : 'bg-slate-50 dark:bg-slate-955 border-slate-200 dark:border-slate-800'}">D. ${q.optD || '-'}</div>
+                    </div>
+
+                    <div class="bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl space-y-1">
+                        <span class="text-[9px] font-black uppercase text-slate-400 block"><i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i> Solution Breakdown:</span>
+                        <p class="text-xs font-bold text-slate-600 dark:text-slate-300">${q.solutionText || 'No solution provided.'}</p>
+                    </div>
+
+                    <!-- Slide Controller Buttons -->
+                    <div class="flex justify-between items-center pt-2">
+                        <button onclick="window.showSingleQuestionView(${index - 1})" ${index === 0 ? 'disabled class="opacity-30 cursor-not-allowed"' : ''} class="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300"><i class="fa-solid fa-arrow-left mr-1"></i> Prev</button>
+                        <span class="text-[10px] font-black text-slate-400">Card ${index + 1}</span>
+                        <button onclick="window.showSingleQuestionView(${index + 1})" ${index === loadedQuestionsList.length - 1 ? 'disabled class="opacity-30 cursor-not-allowed"' : ''} class="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-black shadow">Next <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                    </div>
+                </div>
+            `;
+        };
+
+        window.toggleHideQuestion = async function(id, status) {
+            const questionPath = `quiz_subjects/${currentSubjectId}/chapters/${currentChapterId}/topics/${currentTopicId}/questions/${id}`;
+            await updateDoc(doc(db, questionPath), { hidden: !status });
+        };
+
+        window.deleteQuestionDoc = async function(id) {
+            if(confirm("Are you sure you want to delete this question permanently?")) {
+                const questionPath = `quiz_subjects/${currentSubjectId}/chapters/${currentChapterId}/topics/${currentTopicId}/questions/${id}`;
+                await deleteDoc(doc(db, questionPath));
+            }
         };
 
         window.toggleTheme = () => document.documentElement.classList.toggle('dark');
@@ -207,34 +356,87 @@
             <header class="bg-slate-950 text-white px-4 py-3 flex justify-between items-center border-b border-slate-800 w-full h-12 flex-shrink-0">
                 <button onclick="window.navigateToTestView('view-test-topics')" class="text-slate-400 font-bold text-xs"><i class="fa-solid fa-chevron-left"></i> Back</button>
                 <h2 id="studioTopicHeaderTitle" class="text-xs font-black uppercase tracking-wider text-slate-400 truncate max-w-[180px]">Questions Manager</h2>
-                <div class="w-8"></div>
+                <button onclick="window.toggleQuickGridModal(true)" class="bg-rose-500/20 text-rose-400 border border-rose-500/30 p-2 rounded-xl text-xs flex items-center space-x-1 font-black"><i class="fa-solid fa-grip"></i><span id="totalQuestionsCountBadge">0</span></button>
             </header>
-            <div class="flex-1 w-full bg-slate-800 p-4 overflow-y-auto box-border">
+
+            <div class="flex-1 w-full bg-slate-800 p-4 overflow-y-auto box-border space-y-4">
+                <!-- FORM BUILDER -->
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-xl mx-auto rounded-3xl p-5 space-y-4 shadow-2xl text-xs font-bold text-slate-700 dark:text-slate-300">
-                    <div>
-                        <textarea id="qArea" rows="3" class="w-full bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-3 focus:outline-none text-slate-900 dark:text-white font-bold" placeholder="Type core evaluation parameters..."></textarea>
-                    </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="text" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl text-slate-900 dark:text-white focus:outline-none" placeholder="Option A">
-                        <input type="text" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl text-slate-900 dark:text-white focus:outline-none" placeholder="Option B">
-                        <input type="text" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl text-slate-900 dark:text-white focus:outline-none" placeholder="Option C">
-                        <input type="text" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl text-slate-900 dark:text-white focus:outline-none" placeholder="Option D">
+                        <select id="qTypeSelect" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl focus:outline-none">
+                            <option value="text">Text Only Question</option>
+                            <option value="image">Image Attachment</option>
+                        </select>
+                        <select id="qDiffSelect" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl focus:outline-none">
+                            <option value="Easy">Difficulty: Easy</option>
+                            <option value="Medium">Difficulty: Medium</option>
+                            <option value="Hard">Difficulty: Hard</option>
+                        </select>
                     </div>
+
+                    <div>
+                        <textarea id="qArea" rows="3" class="w-full bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-xl p-3 focus:outline-none text-slate-900 dark:text-white font-bold" placeholder="Type evaluation parameters..."></textarea>
+                    </div>
+
+                    <!-- Image Attachment Input -->
+                    <div>
+                        <button onclick="document.getElementById('qImgFile').click()" class="bg-slate-50 dark:bg-slate-955 border border-dashed border-slate-300 dark:border-slate-800 w-full p-2.5 rounded-xl text-slate-400 text-center"><i class="fa-solid fa-image mr-1"></i> Attach Diagram Elements</button>
+                        <input type="file" id="qImgFile" accept="image/*" class="hidden" onchange="window.handleQuestionImgUpload(event)">
+                        <img id="qPreviewImg" class="hidden w-full h-28 object-contain mt-2 border rounded-xl bg-slate-50">
+                    </div>
+
+                    <!-- Options Cluster -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="qOptA" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl text-slate-900 dark:text-white focus:outline-none" placeholder="Option A">
+                        <input type="text" id="qOptB" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl text-slate-900 dark:text-white focus:outline-none" placeholder="Option B">
+                        <input type="text" id="qOptC" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl text-slate-900 dark:text-white focus:outline-none" placeholder="Option C">
+                        <input type="text" id="qOptD" class="bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl text-slate-900 dark:text-white focus:outline-none" placeholder="Option D">
+                    </div>
+
+                    <!-- Answer Key Selector -->
+                    <div class="flex flex-col">
+                        <span class="text-[9px] text-slate-400 mb-0.5">CORRECT ANSWER KEY</span>
+                        <select id="qCorrectSelect" class="w-full bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl text-slate-800 dark:text-white focus:outline-none font-bold">
+                            <option value="A">Option A</option>
+                            <option value="B">Option B</option>
+                            <option value="C">Option C</option>
+                            <option value="D">Option D</option>
+                        </select>
+                    </div>
+
+                    <!-- Solution Breakdown -->
+                    <div>
+                        <input type="text" id="qSolutionText" class="w-full bg-slate-50 dark:bg-slate-955 border p-2.5 rounded-xl text-slate-900 dark:text-white focus:outline-none" placeholder="Type solution text breakdown elements...">
+                    </div>
+
                     <button onclick="window.commitQuestionPayload()" class="w-full bg-rose-500 text-white py-3 rounded-xl font-black shadow active:scale-95 transition">Deploy Question Node</button>
                 </div>
+
+                <!-- SINGLE QUESTION SLIDER VIEW CANVAS -->
+                <div id="singleQuestionCardCanvas" class="w-full max-w-xl mx-auto"></div>
             </div>
         </div>
 
-        <!-- BOTTOM STRAP -->
-        <nav id="quizBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3.5 flex justify-around items-center shadow-2xl w-full box-border">
-            <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] font-black">Home</span></button>
-            <button onclick="window.location.href='admin-ncert.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] font-black">Study</span></button>
-            <button onclick="window.navigateToTestView('view-test-subjects')" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] font-black">Test</span></button>
-            <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] font-black">Mock</span></button>
-            <button onclick="window.location.href='admin-students.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[9px] font-black">Students</span></button>
+        <!-- QUICK JUMP MODAL MATRIX (1, 2, 3... 150) -->
+        <div id="quickGridModalFrame" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-3xl p-5 space-y-4 shadow-2xl">
+                <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
+                    <h3 class="font-black text-xs uppercase tracking-wider text-slate-800 dark:text-white"><i class="fa-solid fa-list-ol mr-1 text-rose-500"></i> Jump To Question</h3>
+                    <button onclick="window.toggleQuickGridModal(false)" class="p-1 text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                <div id="quickJumpGridNode" class="grid grid-cols-6 gap-2 max-h-64 overflow-y-auto p-1"></div>
+            </div>
+        </div>
+
+        <!-- UNIVERSAL BOTTOM NAVIGATION STRAP -->
+        <nav id="quizBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3 flex justify-around items-center shadow-2xl w-full box-border">
+            <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-house-user text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
+            <button onclick="window.location.href='admin-ncert.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
+            <button onclick="window.navigateToTestView('view-test-subjects')" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
+            <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
+            <button onclick="window.location.href='admin-students.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-users-gear text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Students</span></button>
         </nav>
     </div>
 </body>
-</html>
-
-            
+    </html>
+                    
