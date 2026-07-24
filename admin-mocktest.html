@@ -14,7 +14,7 @@
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
         import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -31,7 +31,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        let activeTestType = localStorage.getItem('mneet_mock_type') || "part"; // 'part' or 'full'
+        let activeTestType = localStorage.getItem('mneet_mock_type') || "part";
         let activeTestId = localStorage.getItem('mneet_mock_id') || "";
         let activeTestName = localStorage.getItem('mneet_mock_name') || "";
         
@@ -65,7 +65,6 @@
             }
         };
 
-        // Handle Refresh / Hash Changes Automatically
         window.handleHashRoute = function() {
             const hash = window.location.hash;
             if (hash === '#planner') {
@@ -88,14 +87,12 @@
             window.handleHashRoute();
         });
 
-        // Firebase Logout Mechanism
         window.triggerAdminLogout = function() {
             if(confirm("Are you sure you want to Logout?")) {
                 signOut(auth).then(() => { window.location.href = "index.html"; });
             }
         };
 
-        // UI State Switch triggers from Dashboard Cards
         window.openMockComponent = function(type) {
             activeTestType = type;
             localStorage.setItem('mneet_mock_type', type);
@@ -108,7 +105,6 @@
             }
         };
 
-        // CRUD Matrix for Test Names (Part / Full)
         window.createMockTestName = async function() {
             const input = document.getElementById('testNameInput');
             const name = input.value.trim();
@@ -159,18 +155,19 @@
                 await deleteDoc(doc(db, `mock_${activeTestType}_tests`, id));
             }
         };
-                // Question Studio Builder Layer Routing
+            
+        // Question Studio Builder Layer Routing
         window.openQuestionStudio = function(id, name) {
             activeTestId = id;
             activeTestName = name;
             localStorage.setItem('mneet_mock_id', id);
             localStorage.setItem('mneet_mock_name', name);
             document.getElementById('studioTestHeaderTitle').innerText = name;
+            window.resetMockQuestionForm();
             window.navigateToMockView('view-question-builder');
             window.listenRealtimeMockQuestions();
         };
 
-        // Dynamic File Reader for Question Images
         window.loadStudioImagePreview = function(e) {
             const file = e.target.files[0];
             const reader = new FileReader();
@@ -182,7 +179,6 @@
             if(file) reader.readAsDataURL(file);
         };
 
-        // FIREBASE DEPLOY / UPDATE PAYLOAD
         window.deployMockQuestionPayload = async function() {
             const qText = document.getElementById('questionTextarea').value.trim();
             const optA = document.getElementById('mockOptA').value.trim();
@@ -227,7 +223,9 @@
             document.getElementById('mockOptD').value = "";
             document.getElementById('mockSolutionText').value = "";
 
-            document.getElementById('studioFileField').value = "";
+            const fileInput = document.getElementById('studioFileField');
+            if(fileInput) fileInput.value = "";
+            
             const imgPreview = document.getElementById('studioImgPreview');
             imgPreview.src = "";
             imgPreview.classList.add('hidden');
@@ -243,7 +241,6 @@
             }
         };
 
-        // Populate Form for Editing
         window.editMockQuestionDoc = function(id) {
             const q = loadedMockQuestionsList.find(item => item.id === id);
             if(!q) return;
@@ -276,7 +273,6 @@
             document.getElementById('view-question-builder').children[1].scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        // Realtime Listener for 150+ Questions
         window.listenRealtimeMockQuestions = function() {
             if(!activeTestType || !activeTestId) return;
             if(unsubscribeMockQuestions) unsubscribeMockQuestions();
@@ -305,7 +301,6 @@
             });
         };
 
-        // Quick Navigation Matrix Modal
         window.renderMockQuickJumpGrid = function() {
             const gridContainer = document.getElementById('mockQuickGridNode');
             gridContainer.innerHTML = "";
@@ -325,7 +320,6 @@
             else modal.classList.add('hidden');
         };
 
-        // Render 1 Question Per Screen View Card
         window.showSingleMockQuestionView = function(index) {
             if(index < 0 || index >= loadedMockQuestionsList.length) return;
             currentMockActiveIndex = index;
@@ -361,7 +355,6 @@
                         <p class="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words">${q.solutionText || 'No solution provided.'}</p>
                     </div>
 
-                    <!-- Navigation Controls -->
                     <div class="flex justify-between items-center pt-2">
                         <button onclick="window.showSingleMockQuestionView(${index - 1})" ${index === 0 ? 'disabled class="opacity-30 cursor-not-allowed"' : ''} class="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-black text-slate-700 dark:text-slate-200"><i class="fa-solid fa-arrow-left mr-1"></i> Prev</button>
                         <span class="text-[10px] font-black text-slate-400">Card ${index + 1}</span>
@@ -386,7 +379,7 @@
         window.toggleTheme = () => document.documentElement.classList.toggle('dark');
     </script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
+    <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
     <div id="mockAppPortal" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
         
         <!-- SCREEN 1: MAIN MOCK DASHBOARD HUB -->
@@ -537,5 +530,5 @@
         </nav>
     </div>
 </body>
-                    </html>
-                            
+                            </html>
+                                                                                                                                
