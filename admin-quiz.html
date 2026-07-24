@@ -167,7 +167,7 @@
             if(file) reader.readAsDataURL(file);
         };
 
-        // FIREBASE REAL-TIME PAYLOAD COMMIT & UPDATE
+        // FIREBASE REAL-TIME PAYLOAD COMMIT & UPDATE (FIXED)
         window.commitQuestionPayload = async function() {
             const qText = document.getElementById('qArea').value.trim();
             const qType = document.getElementById('qTypeSelect').value;
@@ -185,30 +185,43 @@
             const imgData = imgPreview.classList.contains('hidden') ? "" : imgPreview.src;
 
             if(!qText) return alert("Please enter question text!");
+            if(!currentSubjectId || !currentChapterId || !currentTopicId) {
+                return alert("Topic selection lost. Please re-select the topic!");
+            }
 
             const questionPath = `quiz_subjects/${currentSubjectId}/chapters/${currentChapterId}/topics/${currentTopicId}/questions`;
             
             const payload = {
-                qText, qType, qDiff, optA, optB, optC, optD, correctOpt, solutionText, imgData
+                qText,
+                qType,
+                qDiff,
+                optA,
+                optB,
+                optC,
+                optD,
+                correctOpt,
+                solutionText,
+                imgData
             };
 
-            if(editingQuestionId) {
-                // Update Existing Document
-                await updateDoc(doc(db, `${questionPath}/${editingQuestionId}`), payload);
-                alert("✏️ Question Updated Successfully!");
-                editingQuestionId = null;
-                document.getElementById('deployBtn').innerText = "Deploy Question Node";
-                document.getElementById('deployBtn').classList.replace('bg-emerald-500', 'bg-rose-500');
-            } else {
-                // Add New Document
-                payload.hidden = false;
-                payload.createdAt = Date.now();
-                await addDoc(collection(db, questionPath), payload);
-                alert("🚀 Question Successfully Injected to Topic!");
-                currentActiveQuestionIndex = loadedQuestionsList.length;
+            try {
+                if(editingQuestionId) {
+                    // Update Existing Question Document
+                    await updateDoc(doc(db, `${questionPath}/${editingQuestionId}`), payload);
+                    alert("✏️ Question Updated Successfully!");
+                } else {
+                    // Add New Question Document
+                    payload.hidden = false;
+                    payload.createdAt = Date.now();
+                    await addDoc(collection(db, questionPath), payload);
+                    alert("🚀 Question Successfully Saved to Firebase!");
+                    currentActiveQuestionIndex = loadedQuestionsList.length;
+                }
+                window.resetQuestionForm();
+            } catch (error) {
+                console.error("Firebase Error: ", error);
+                alert("Error saving question: " + error.message);
             }
-            
-            window.resetQuestionForm();
         };
 
         window.resetQuestionForm = function() {
@@ -230,9 +243,11 @@
 
             editingQuestionId = null;
             const btn = document.getElementById('deployBtn');
-            btn.innerText = "Deploy Question Node";
-            btn.classList.remove('bg-emerald-500');
-            btn.classList.add('bg-rose-500');
+            if(btn) {
+                btn.innerText = "Deploy Question Node";
+                btn.classList.remove('bg-emerald-500');
+                btn.classList.add('bg-rose-500');
+            }
         };
 
         // Populate Form for Editing
@@ -261,11 +276,12 @@
             }
 
             const btn = document.getElementById('deployBtn');
-            btn.innerText = "Update Question Node";
-            btn.classList.remove('bg-rose-500');
-            btn.classList.add('bg-emerald-500');
+            if(btn) {
+                btn.innerText = "Update Question Node";
+                btn.classList.remove('bg-rose-500');
+                btn.classList.add('bg-emerald-500');
+            }
 
-            // Scroll up smoothly to form
             document.getElementById('view-test-questions').children[1].scrollTo({ top: 0, behavior: 'smooth' });
         };
 
@@ -380,7 +396,7 @@
         window.toggleTheme = () => document.documentElement.classList.toggle('dark');
     </script>
 </head>
-    <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
     <div id="quizAppPortal" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
         
         <!-- SCREEN 1: SUBJECTS -->
@@ -518,5 +534,5 @@
         </nav>
     </div>
 </body>
-                </html>
-    
+    </html>
+            
