@@ -31,17 +31,21 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        let activeTestType = ""; // 'part' or 'full'
-        let activeTestId = "";
+        let activeTestType = localStorage.getItem('mneet_mock_type') || ""; // 'part' or 'full'
+        let activeTestId = localStorage.getItem('mneet_mock_id') || "";
+        
         let chaptersUnsubscribe = null;
+        let unsubscribeMockQuestions = null;
+        let loadedMockQuestionsList = [];
+        let currentMockActiveIndex = 0;
+        let editingMockQuestionId = null;
 
-        // Dynamic State Router with Hash Support for Refresh Safety
+        // Dynamic State Router
         window.navigateToMockView = function(viewId) {
             const screens = ['main-mock-dashboard', 'view-planner', 'view-test-list', 'view-question-builder'];
             screens.forEach(s => document.getElementById(s).classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
 
-            // Hide bottom rows perfectly if user opens full screen studio
             const bottomNav = document.getElementById('mockBottomNav');
             if(viewId === 'view-question-builder') {
                 bottomNav.style.display = 'none';
@@ -60,6 +64,7 @@
         // UI State Switch triggers from Dashboard Cards
         window.openMockComponent = function(type) {
             activeTestType = type;
+            localStorage.setItem('mneet_mock_type', type);
             if(type === 'planner') {
                 window.navigateToMockView('view-planner');
             } else {
@@ -73,7 +78,7 @@
         window.createMockTestName = async function() {
             const input = document.getElementById('testNameInput');
             const name = input.value.trim();
-            if(!name) return;
+            if(!name || !activeTestType) return;
             await addDoc(collection(db, `mock_${activeTestType}_tests`), {
                 name,
                 createdAt: Date.now(),
@@ -85,6 +90,7 @@
         };
 
         window.loadMockTestsData = function() {
+            if(!activeTestType) return;
             if(chaptersUnsubscribe) chaptersUnsubscribe();
             
             chaptersUnsubscribe = onSnapshot(query(collection(db, `mock_${activeTestType}_tests`), orderBy("createdAt", "desc")), (snapshot) => {
@@ -94,17 +100,17 @@
                     const t = docSnap.data();
                     const id = docSnap.id;
                     container.innerHTML += `
-                        <div class="bg-white dark:bg-slate-900 border ${t.hidden ? 'opacity-40 border-slate-300' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
+                        <div class="bg-white dark:bg-slate-900 border ${t.hidden ? 'opacity-40 border-slate-300 dark:border-slate-800' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
                             <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.openQuestionStudio('${id}', '${t.name.replace(/'/g, "\\'")}')">
                                 <i class="fa-solid fa-file-signature text-rose-500 text-lg"></i>
                                 <div class="flex flex-col">
                                     <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white ${t.hidden ? 'line-through' : ''}">${t.name}</span>
-                                    <span class="text-[10px] text-slate-400 font-bold">Rules: ${t.duration} Mins | ${t.marking}</span>
+                                    <span class="text-[10px] text-slate-400 font-bold">Rules: ${t.duration || 200} Mins | ${t.marking || '+4 / -1'}</span>
                                 </div>
                             </div>
                             <div class="flex items-center space-x-1.5">
-                                <button onclick="window.toggleHideTest('${id}', ${t.hidden})" class="bg-amber-50 text-amber-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-eye-slash"></i></button>
-                                <button onclick="window.deleteMockTest('${id}')" class="bg-rose-50 text-rose-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
+                                <button onclick="window.toggleHideTest('${id}', ${t.hidden})" class="bg-amber-50 dark:bg-amber-950/40 text-amber-500 p-2 rounded-xl text-xs"><i class="fa-solid ${t.hidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>
+                                <button onclick="window.deleteMockTest('${id}')" class="bg-rose-50 dark:bg-rose-950/40 text-rose-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
                             </div>
                         </div>
                     `;
@@ -121,14 +127,16 @@
                 await deleteDoc(doc(db, `mock_${activeTestType}_tests`, id));
             }
         };
-          // Question Studio Builder Layer Routing
+                // Question Studio Builder Layer Routing
         window.openQuestionStudio = function(id, name) {
             activeTestId = id;
+            localStorage.setItem('mneet_mock_id', id);
             document.getElementById('studioTestHeaderTitle').innerText = name;
             window.navigateToMockView('view-question-builder');
+            window.listenRealtimeMockQuestions();
         };
 
-        // Dynamic File Reader for Question Images inside Studio
+        // Dynamic File Reader for Question Images
         window.loadStudioImagePreview = function(e) {
             const file = e.target.files[0];
             const reader = new FileReader();
@@ -140,11 +148,205 @@
             if(file) reader.readAsDataURL(file);
         };
 
-        window.deployMockQuestionPayload = function() {
-            alert("🚀 Question Deployed into Firebase Cluster Hierarchy Successfully!");
+        // FIREBASE DEPLOY / UPDATE PAYLOAD
+        window.deployMockQuestionPayload = async function() {
+            const qText = document.getElementById('questionTextarea').value.trim();
+            const optA = document.getElementById('mockOptA').value.trim();
+            const optB = document.getElementById('mockOptB').value.trim();
+            const optC = document.getElementById('mockOptC').value.trim();
+            const optD = document.getElementById('mockOptD').value.trim();
+            const correctOpt = document.getElementById('mockCorrectSelect').value;
+            const solutionText = document.getElementById('mockSolutionText').value.trim();
+
+            const imgPreview = document.getElementById('studioImgPreview');
+            const imgData = imgPreview.classList.contains('hidden') ? "" : imgPreview.src;
+
+            if(!qText) return alert("Please enter question text!");
+            if(!activeTestType || !activeTestId) return alert("Session lost. Please select test again.");
+
+            const questionPath = `mock_${activeTestType}_tests/${activeTestId}/questions`;
+            const payload = { qText, optA, optB, optC, optD, correctOpt, solutionText, imgData };
+
+            try {
+                if(editingMockQuestionId) {
+                    await updateDoc(doc(db, `${questionPath}/${editingMockQuestionId}`), payload);
+                    alert("✏️ Question Updated Successfully!");
+                } else {
+                    payload.hidden = false;
+                    payload.createdAt = Date.now();
+                    await addDoc(collection(db, questionPath), payload);
+                    alert("🚀 Question Successfully Deployed to Mock Cluster!");
+                    currentMockActiveIndex = loadedMockQuestionsList.length;
+                }
+                window.resetMockQuestionForm();
+            } catch (err) {
+                console.error("Error: ", err);
+                alert("Error saving question: " + err.message);
+            }
+        };
+
+        window.resetMockQuestionForm = function() {
             document.getElementById('questionTextarea').value = "";
-            document.getElementById('studioImgPreview').classList.add('hidden');
-            window.navigateToMockView('view-test-list');
+            document.getElementById('mockOptA').value = "";
+            document.getElementById('mockOptB').value = "";
+            document.getElementById('mockOptC').value = "";
+            document.getElementById('mockOptD').value = "";
+            document.getElementById('mockSolutionText').value = "";
+
+            document.getElementById('studioFileField').value = "";
+            const imgPreview = document.getElementById('studioImgPreview');
+            imgPreview.src = "";
+            imgPreview.classList.add('hidden');
+
+            document.getElementById('mockCorrectSelect').value = "A";
+            editingMockQuestionId = null;
+
+            const btn = document.getElementById('deployMockBtn');
+            if(btn) {
+                btn.innerText = "Deploy & Lock Question";
+                btn.classList.remove('bg-emerald-500');
+                btn.classList.add('bg-rose-500');
+            }
+        };
+
+        // Populate Form for Editing
+        window.editMockQuestionDoc = function(id) {
+            const q = loadedMockQuestionsList.find(item => item.id === id);
+            if(!q) return;
+
+            editingMockQuestionId = id;
+            document.getElementById('questionTextarea').value = q.qText || "";
+            document.getElementById('mockOptA').value = q.optA || "";
+            document.getElementById('mockOptB').value = q.optB || "";
+            document.getElementById('mockOptC').value = q.optC || "";
+            document.getElementById('mockOptD').value = q.optD || "";
+            document.getElementById('mockCorrectSelect').value = q.correctOpt || "A";
+            document.getElementById('mockSolutionText').value = q.solutionText || "";
+
+            const imgPreview = document.getElementById('studioImgPreview');
+            if(q.imgData) {
+                imgPreview.src = q.imgData;
+                imgPreview.classList.remove('hidden');
+            } else {
+                imgPreview.src = "";
+                imgPreview.classList.add('hidden');
+            }
+
+            const btn = document.getElementById('deployMockBtn');
+            if(btn) {
+                btn.innerText = "Update Question Node";
+                btn.classList.remove('bg-rose-500');
+                btn.classList.add('bg-emerald-500');
+            }
+
+            document.getElementById('view-question-builder').children[2].scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // Realtime Listener for 150+ Questions
+        window.listenRealtimeMockQuestions = function() {
+            if(!activeTestType || !activeTestId) return;
+            if(unsubscribeMockQuestions) unsubscribeMockQuestions();
+
+            const questionPath = `mock_${activeTestType}_tests/${activeTestId}/questions`;
+            unsubscribeMockQuestions = onSnapshot(query(collection(db, questionPath), orderBy("createdAt", "asc")), (snapshot) => {
+                loadedMockQuestionsList = [];
+                snapshot.forEach(docSnap => {
+                    loadedMockQuestionsList.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                window.renderMockQuickJumpGrid();
+                if(loadedMockQuestionsList.length > 0) {
+                    if(currentMockActiveIndex >= loadedMockQuestionsList.length) {
+                        currentMockActiveIndex = loadedMockQuestionsList.length - 1;
+                    }
+                    window.showSingleMockQuestionView(currentMockActiveIndex);
+                } else {
+                    document.getElementById('singleMockQuestionCanvas').innerHTML = `
+                        <div class="text-center py-10 text-slate-400 font-bold">
+                            <i class="fa-solid fa-box-open text-3xl mb-2 block"></i>
+                            No questions deployed in this mock test yet.
+                        </div>
+                    `;
+                }
+            });
+        };
+
+        // Quick Navigation Matrix Modal
+        window.renderMockQuickJumpGrid = function() {
+            const gridContainer = document.getElementById('mockQuickGridNode');
+            gridContainer.innerHTML = "";
+            loadedMockQuestionsList.forEach((q, idx) => {
+                gridContainer.innerHTML += `
+                    <button onclick="window.showSingleMockQuestionView(${idx}); window.toggleMockGridModal(false);" class="w-9 h-9 rounded-xl font-black text-xs flex items-center justify-center transition border ${idx === currentMockActiveIndex ? 'bg-rose-500 text-white border-rose-500 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}">
+                        ${idx + 1}
+                    </button>
+                `;
+            });
+            document.getElementById('mockTotalCountBadge').innerText = `${loadedMockQuestionsList.length} Questions`;
+        };
+
+        window.toggleMockGridModal = function(show) {
+            const modal = document.getElementById('mockGridModalFrame');
+            if(show) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
+        };
+
+        // Render 1 Question Per Screen View Card
+        window.showSingleMockQuestionView = function(index) {
+            if(index < 0 || index >= loadedMockQuestionsList.length) return;
+            currentMockActiveIndex = index;
+            const q = loadedMockQuestionsList[index];
+
+            const canvas = document.getElementById('singleMockQuestionCanvas');
+            canvas.innerHTML = `
+                <div class="bg-white dark:bg-slate-900 border ${q.hidden ? 'border-amber-500 opacity-60' : 'border-slate-200 dark:border-slate-800'} rounded-3xl p-5 shadow-xl space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <span class="bg-rose-500/10 text-rose-500 text-[10px] font-black uppercase px-2.5 py-1 rounded-full">Question ${index + 1} of ${loadedMockQuestionsList.length}</span>
+                        <div class="flex items-center space-x-1">
+                            <button onclick="window.editMockQuestionDoc('${q.id}')" class="p-2 bg-blue-50 dark:bg-blue-950/40 text-blue-500 rounded-xl text-xs"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="window.toggleHideMockQuestion('${q.id}', ${q.hidden})" class="p-2 bg-amber-50 dark:bg-amber-950/40 text-amber-500 rounded-xl text-xs"><i class="fa-solid ${q.hidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>
+                            <button onclick="window.deleteMockQuestionDoc('${q.id}')" class="p-2 bg-rose-50 dark:bg-rose-950/40 text-rose-500 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="text-xs md:text-sm font-bold text-slate-900 dark:text-slate-100 leading-relaxed whitespace-pre-wrap break-words overflow-hidden">
+                        ${q.qText}
+                    </div>
+
+                    ${q.imgData ? `<img src="${q.imgData}" class="w-full max-h-52 object-contain rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">` : ''}
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-bold">
+                        <div class="p-2.5 rounded-xl border break-words ${q.correctOpt === 'A' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/60 text-slate-800 dark:text-slate-200'}">A. ${q.optA || '-'}</div>
+                        <div class="p-2.5 rounded-xl border break-words ${q.correctOpt === 'B' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/60 text-slate-800 dark:text-slate-200'}">B. ${q.optB || '-'}</div>
+                        <div class="p-2.5 rounded-xl border break-words ${q.correctOpt === 'C' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/60 text-slate-800 dark:text-slate-200'}">C. ${q.optC || '-'}</div>
+                        <div class="p-2.5 rounded-xl border break-words ${q.correctOpt === 'D' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/60 text-slate-800 dark:text-slate-200'}">D. ${q.optD || '-'}</div>
+                    </div>
+
+                    <div class="bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl space-y-1">
+                        <span class="text-[9px] font-black uppercase text-slate-400 block"><i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i> Solution Breakdown:</span>
+                        <p class="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words">${q.solutionText || 'No solution provided.'}</p>
+                    </div>
+
+                    <!-- Navigation Controls -->
+                    <div class="flex justify-between items-center pt-2">
+                        <button onclick="window.showSingleMockQuestionView(${index - 1})" ${index === 0 ? 'disabled class="opacity-30 cursor-not-allowed"' : ''} class="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-black text-slate-700 dark:text-slate-200"><i class="fa-solid fa-arrow-left mr-1"></i> Prev</button>
+                        <span class="text-[10px] font-black text-slate-400">Card ${index + 1}</span>
+                        <button onclick="window.showSingleMockQuestionView(${index + 1})" ${index === loadedMockQuestionsList.length - 1 ? 'disabled class="opacity-30 cursor-not-allowed"' : ''} class="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-black shadow">Next <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                    </div>
+                </div>
+            `;
+        };
+
+        window.toggleHideMockQuestion = async function(id, status) {
+            const questionPath = `mock_${activeTestType}_tests/${activeTestId}/questions/${id}`;
+            await updateDoc(doc(db, questionPath), { hidden: !status });
+        };
+
+        window.deleteMockQuestionDoc = async function(id) {
+            if(confirm("Are you sure you want to delete this question permanently?")) {
+                const questionPath = `mock_${activeTestType}_tests/${activeTestId}/questions/${id}`;
+                await deleteDoc(doc(db, questionPath));
+            }
         };
 
         window.toggleTheme = () => document.documentElement.classList.toggle('dark');
@@ -153,9 +355,7 @@
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
     <div id="mockAppPortal" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
         
-        <!-- ======================================================= -->
-        <!-- SCREEN 1: MAIN MOCK DASHBOARD HUB                       -->
-        <!-- ======================================================= -->
+        <!-- SCREEN 1: MAIN MOCK DASHBOARD HUB -->
         <div id="main-mock-dashboard" class="w-full flex-1 flex flex-col">
             <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
                 <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-chevron-left text-lg"></i></button>
@@ -163,7 +363,6 @@
                 <button onclick="window.triggerAdminLogout()" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-right-from-bracket text-lg"></i></button>
             </header>
 
-            <!-- 4 Grid Premium Interactive Cards Matrix Matrix -->
             <div class="w-full px-4 md:px-6 py-6 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto flex-1 items-start">
                 <div onclick="openMockComponent('planner')" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm hover:border-rose-500 transition cursor-pointer flex flex-col justify-between min-h-[140px]">
                     <div class="w-10 h-10 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500 mb-2"><i class="fa-solid fa-calendar-check text-xl"></i></div>
@@ -199,9 +398,7 @@
             </div>
         </div>
 
-        <!-- ======================================================= -->
-        <!-- SCREEN 2: MOCK TEST PLANNER (PDF UPLOADER ARCHITECTURE) -->
-        <!-- ======================================================= -->
+        <!-- SCREEN 2: MOCK TEST PLANNER -->
         <div id="view-planner" class="w-full flex-1 flex flex-col hidden">
             <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full">
                 <button onclick="window.navigateToMockView('main-mock-dashboard')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg"></i></button>
@@ -211,16 +408,14 @@
             <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-4">
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl space-y-3 shadow-sm">
                     <span class="text-[10px] font-black uppercase text-slate-400 block tracking-wider"><i class="fa-solid fa-cloud-arrow-up text-rose-500 mr-1"></i> Upload Planner PDF</span>
-                    <input type="text" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none" placeholder="Enter Planner Description (e.g. May Schedule Map)">
-                    <input type="file" accept=".pdf" class="w-full bg-slate-100 dark:bg-slate-950 border rounded-xl p-2 text-xs font-bold text-slate-400">
+                    <input type="text" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white focus:outline-none" placeholder="Enter Planner Description (e.g. May Schedule Map)">
+                    <input type="file" accept=".pdf" class="w-full bg-slate-100 dark:bg-slate-800 border rounded-xl p-2 text-xs font-bold text-slate-400">
                     <button onclick="alert('PDF Uploaded & Synced with student timeline!')" class="w-full bg-rose-500 text-white text-xs font-black py-3 rounded-xl shadow active:scale-95 transition">Deploy Target Planner PDF</button>
                 </div>
             </div>
         </div>
 
-        <!-- ======================================================= -->
-        <!-- SCREEN 3: TEST NAME LISTS & CREATION INTERFACE          -->
-        <!-- ======================================================= -->
+        <!-- SCREEN 3: TEST NAME LISTS -->
         <div id="view-test-list" class="w-full flex-1 flex flex-col hidden">
             <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full">
                 <button onclick="window.navigateToMockView('main-mock-dashboard')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg"></i></button>
@@ -229,53 +424,50 @@
             </header>
             <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-4 flex-1">
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex items-center gap-2 shadow-sm">
-                    <input type="text" id="testNameInput" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs font-black text-slate-800 dark:text-white focus:outline-none" placeholder="Create Test Title Configuration...">
+                    <input type="text" id="testNameInput" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-black text-slate-800 dark:text-white focus:outline-none" placeholder="Create Test Title Configuration...">
                     <button onclick="window.createMockTestName()" class="bg-rose-500 text-white font-black text-xs px-5 py-2.5 rounded-xl whitespace-nowrap active:scale-95 transition">Create Test</button>
                 </div>
                 <div id="mockTestCardsNode" class="space-y-3"></div>
             </div>
         </div>
 
-        <!-- ======================================================= -->
-        <!-- SCREEN 4: FULL SCREEN INTERACTIVE QUESTION BUILDER      -->
-        <!-- ======================================================= -->
+        <!-- SCREEN 4: FULL SCREEN QUESTION BUILDER STUDIO -->
         <div id="view-question-builder" class="fixed inset-0 bg-slate-900 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
             <header class="bg-slate-950 text-white px-4 py-3 flex justify-between items-center border-b border-slate-800 w-full h-12 flex-shrink-0">
                 <button onclick="window.navigateToMockView('view-test-list')" class="text-slate-400 font-bold text-xs"><i class="fa-solid fa-chevron-left"></i> Back</button>
                 <h2 id="studioTestHeaderTitle" class="text-xs font-black uppercase tracking-wider text-slate-400 truncate max-w-[180px]">Question Canvas Studio</h2>
-                <div class="w-8"></div>
+                <button onclick="window.toggleMockGridModal(true)" class="bg-rose-500/20 text-rose-400 border border-rose-500/30 p-2 rounded-xl text-xs flex items-center space-x-1 font-black"><i class="fa-solid fa-grip"></i><span id="mockTotalCountBadge">0</span></button>
             </header>
 
-            <!-- Test Configurations Parameter Slots Map -->
             <div class="bg-slate-950 px-4 py-2 grid grid-cols-2 gap-2 border-b border-slate-800 text-[10px] font-bold text-slate-400 flex-shrink-0">
                 <div class="flex items-center space-x-1"><span class="uppercase">Duration:</span><input type="number" class="w-14 bg-slate-900 border border-slate-700 text-white rounded p-0.5 text-center focus:outline-none" value="200"><span>Mins</span></div>
                 <div class="flex items-center space-x-1"><span class="uppercase">Marking:</span><input type="text" class="w-20 bg-slate-900 border border-slate-700 text-white rounded p-0.5 text-center focus:outline-none" value="+4 / -1"></div>
             </div>
 
-            <div class="flex-1 w-full bg-slate-800 p-4 overflow-y-auto box-border">
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-xl mx-auto rounded-3xl p-5 space-y-4 shadow-xl text-xs font-bold text-slate-700 dark:text-slate-300">
+            <div class="flex-1 w-full bg-slate-950 p-4 overflow-y-auto box-border space-y-4">
+                <!-- FORM BUILDER -->
+                <div class="bg-slate-900 border border-slate-800 w-full max-w-xl mx-auto rounded-3xl p-5 space-y-4 shadow-2xl text-xs font-bold text-slate-200">
                     <div>
                         <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">MCQ Question Content Parameters</span>
-                        <textarea id="questionTextarea" rows="3" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 focus:outline-none text-slate-900 dark:text-white font-bold" placeholder="Type core evaluation parameters..."></textarea>
+                        <textarea id="questionTextarea" rows="4" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 focus:outline-none text-slate-100 placeholder-slate-400 font-medium leading-relaxed whitespace-pre-wrap break-words" placeholder="Type evaluation parameters..."></textarea>
                     </div>
 
                     <div>
-                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Optional Question Diagram Element</span>
-                        <button onclick="document.getElementById('studioFileField').click()" class="bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-300 dark:border-slate-800 w-full p-2.5 rounded-xl text-slate-400 text-center"><i class="fa-solid fa-image mr-1"></i> Attach Diagram Image</button>
+                        <button onclick="document.getElementById('studioFileField').click()" class="bg-slate-800 border border-dashed border-slate-700 w-full p-2.5 rounded-xl text-slate-300 text-center hover:bg-slate-700/50 transition"><i class="fa-solid fa-image mr-1"></i> Attach Diagram Image</button>
                         <input type="file" id="studioFileField" accept="image/*" class="hidden" onchange="window.loadStudioImagePreview(event)">
-                        <img id="studioImgPreview" class="hidden w-full h-28 object-contain mt-2 border rounded-xl bg-slate-50">
+                        <img id="studioImgPreview" class="hidden w-full h-32 object-contain mt-2 border border-slate-700 rounded-xl bg-slate-950">
                     </div>
 
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="text" class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option A">
-                        <input type="text" class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option B">
-                        <input type="text" class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option C">
-                        <input type="text" class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Option D">
+                        <input type="text" id="mockOptA" class="bg-slate-800 border border-slate-700 p-2.5 rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none" placeholder="Option A">
+                        <input type="text" id="mockOptB" class="bg-slate-800 border border-slate-700 p-2.5 rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none" placeholder="Option B">
+                        <input type="text" id="mockOptC" class="bg-slate-800 border border-slate-700 p-2.5 rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none" placeholder="Option C">
+                        <input type="text" id="mockOptD" class="bg-slate-800 border border-slate-700 p-2.5 rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none" placeholder="Option D">
                     </div>
 
-                    <div>
-                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Correct Choice Matrix Mapping</span>
-                        <select class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-slate-800 dark:text-white focus:outline-none">
+                    <div class="flex flex-col">
+                        <span class="text-[9px] text-slate-400 mb-0.5 uppercase tracking-wider">Correct Choice Matrix Mapping</span>
+                        <select id="mockCorrectSelect" class="w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl text-slate-100 focus:outline-none font-bold">
                             <option value="A">Option A</option>
                             <option value="B">Option B</option>
                             <option value="C">Option C</option>
@@ -284,19 +476,30 @@
                     </div>
 
                     <div>
-                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Solution Explanation Parameters</span>
-                        <input type="text" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl focus:outline-none text-slate-900 dark:text-white" placeholder="Type solution text layout parameters...">
+                        <textarea id="mockSolutionText" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 focus:outline-none text-slate-100 placeholder-slate-400 font-medium leading-relaxed whitespace-pre-wrap break-words" placeholder="Type solution explanation parameters..."></textarea>
                     </div>
 
-                    <button onclick="window.deployMockQuestionPayload()" class="w-full bg-rose-500 hover:bg-rose-600 text-white py-3 rounded-xl font-black shadow active:scale-95 transition">Deploy & Lock Question</button>
+                    <button id="deployMockBtn" onclick="window.deployMockQuestionPayload()" class="w-full bg-rose-500 hover:bg-rose-600 text-white py-3 rounded-xl font-black shadow active:scale-95 transition">Deploy & Lock Question</button>
                 </div>
+
+                <!-- SINGLE QUESTION CANVAS SLIDER -->
+                <div id="singleMockQuestionCanvas" class="w-full max-w-xl mx-auto"></div>
             </div>
         </div>
 
-        <!-- ======================================================= -->
-        <!-- BOTTOM STANDARD FIXED COMPONENT ROW                     -->
-        <!-- ======================================================= -->
-        <nav id="mockBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3.5 flex justify-around items-center shadow-2xl lg:pl-80 w-full box-border">
+        <!-- QUICK JUMP MODAL MATRIX (1, 2, 3... 150) -->
+        <div id="mockGridModalFrame" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-md rounded-3xl p-5 space-y-4 shadow-2xl">
+                <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
+                    <h3 class="font-black text-xs uppercase tracking-wider text-slate-800 dark:text-white"><i class="fa-solid fa-list-ol mr-1 text-rose-500"></i> Jump To Question</h3>
+                    <button onclick="window.toggleMockGridModal(false)" class="p-1 text-slate-400"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                <div id="mockQuickGridNode" class="grid grid-cols-6 gap-2 max-h-64 overflow-y-auto p-1"></div>
+            </div>
+        </div>
+
+        <!-- UNIVERSAL BOTTOM NAVIGATION STRAP -->
+        <nav id="mockBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3.5 flex justify-around items-center shadow-2xl w-full box-border">
             <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
             <button onclick="window.location.href='admin-ncert.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
             <button onclick="window.location.href='admin-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
@@ -305,5 +508,5 @@
         </nav>
     </div>
 </body>
-</html>
-                  
+    </html>
+                        
