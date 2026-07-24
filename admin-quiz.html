@@ -36,7 +36,7 @@
         let loadedQuestionsList = [];
         let currentActiveQuestionIndex = 0;
         let unsubscribeQuestions = null;
-        let editingQuestionId = null; // Track edit state
+        let editingQuestionId = null;
 
         // Dynamic Router Engine
         window.navigateToTestView = function(viewId) {
@@ -46,7 +46,7 @@
 
             const nav = document.getElementById('quizBottomNav');
             if(viewId === 'view-test-questions') {
-                nav.style.display = 'none'; // Question studio full screen mode
+                nav.style.display = 'none';
             } else {
                 nav.style.display = 'flex';
             }
@@ -151,6 +151,7 @@
             currentTopicId = id;
             localStorage.setItem('mneet_top_id', id);
             document.getElementById('studioTopicHeaderTitle').innerText = name;
+            window.resetQuestionForm();
             window.navigateToTestView('view-test-questions');
             window.listenRealtimeQuestions();
         };
@@ -167,7 +168,7 @@
             if(file) reader.readAsDataURL(file);
         };
 
-        // FIREBASE REAL-TIME PAYLOAD COMMIT & UPDATE (FIXED)
+        // FIREBASE REAL-TIME PAYLOAD COMMIT & UPDATE
         window.commitQuestionPayload = async function() {
             const qText = document.getElementById('qArea').value.trim();
             const qType = document.getElementById('qTypeSelect').value;
@@ -185,42 +186,26 @@
             const imgData = imgPreview.classList.contains('hidden') ? "" : imgPreview.src;
 
             if(!qText) return alert("Please enter question text!");
-            if(!currentSubjectId || !currentChapterId || !currentTopicId) {
-                return alert("Topic selection lost. Please re-select the topic!");
-            }
+            if(!currentSubjectId || !currentChapterId || !currentTopicId) return alert("Session lost. Please select topic again.");
 
             const questionPath = `quiz_subjects/${currentSubjectId}/chapters/${currentChapterId}/topics/${currentTopicId}/questions`;
-            
-            const payload = {
-                qText,
-                qType,
-                qDiff,
-                optA,
-                optB,
-                optC,
-                optD,
-                correctOpt,
-                solutionText,
-                imgData
-            };
+            const payload = { qText, qType, qDiff, optA, optB, optC, optD, correctOpt, solutionText, imgData };
 
             try {
                 if(editingQuestionId) {
-                    // Update Existing Question Document
                     await updateDoc(doc(db, `${questionPath}/${editingQuestionId}`), payload);
                     alert("✏️ Question Updated Successfully!");
                 } else {
-                    // Add New Question Document
                     payload.hidden = false;
                     payload.createdAt = Date.now();
                     await addDoc(collection(db, questionPath), payload);
-                    alert("🚀 Question Successfully Saved to Firebase!");
+                    alert("🚀 Question Successfully Injected to Topic!");
                     currentActiveQuestionIndex = loadedQuestionsList.length;
                 }
                 window.resetQuestionForm();
-            } catch (error) {
-                console.error("Firebase Error: ", error);
-                alert("Error saving question: " + error.message);
+            } catch (err) {
+                console.error("Firebase Error: ", err);
+                alert("Error saving question: " + err.message);
             }
         };
 
@@ -232,7 +217,9 @@
             document.getElementById('qOptD').value = "";
             document.getElementById('qSolutionText').value = "";
             
-            document.getElementById('qImgFile').value = "";
+            const fileInput = document.getElementById('qImgFile');
+            if(fileInput) fileInput.value = "";
+            
             const imgPreview = document.getElementById('qPreviewImg');
             imgPreview.src = "";
             imgPreview.classList.add('hidden');
@@ -250,7 +237,6 @@
             }
         };
 
-        // Populate Form for Editing
         window.editQuestionDoc = function(id) {
             const q = loadedQuestionsList.find(item => item.id === id);
             if(!q) return;
@@ -285,7 +271,6 @@
             document.getElementById('view-test-questions').children[1].scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        // Realtime Listener
         window.listenRealtimeQuestions = function() {
             if(!currentSubjectId || !currentChapterId || !currentTopicId) return;
             if(unsubscribeQuestions) unsubscribeQuestions();
@@ -314,7 +299,6 @@
             });
         };
 
-        // Render Quick Matrix Modal Grid
         window.renderQuickJumpGrid = function() {
             const gridContainer = document.getElementById('quickJumpGridNode');
             gridContainer.innerHTML = "";
@@ -334,7 +318,6 @@
             else modal.classList.add('hidden');
         };
 
-        // Render 1 Question per Screen Matrix
         window.showSingleQuestionView = function(index) {
             if(index < 0 || index >= loadedQuestionsList.length) return;
             currentActiveQuestionIndex = index;
@@ -371,7 +354,6 @@
                         <p class="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words">${q.solutionText || 'No solution provided.'}</p>
                     </div>
 
-                    <!-- Slide Controller Buttons -->
                     <div class="flex justify-between items-center pt-2">
                         <button onclick="window.showSingleQuestionView(${index - 1})" ${index === 0 ? 'disabled class="opacity-30 cursor-not-allowed"' : ''} class="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-black text-slate-700 dark:text-slate-200"><i class="fa-solid fa-arrow-left mr-1"></i> Prev</button>
                         <span class="text-[10px] font-black text-slate-400">Card ${index + 1}</span>
@@ -396,7 +378,7 @@
         window.toggleTheme = () => document.documentElement.classList.toggle('dark');
     </script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
+    <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
     <div id="quizAppPortal" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
         
         <!-- SCREEN 1: SUBJECTS -->
@@ -534,5 +516,5 @@
         </nav>
     </div>
 </body>
-    </html>
-            
+                                                                                                                 </html>
+                
