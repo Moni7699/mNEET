@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>mNEET Admin - Student Rank Matrix</title>
+    <!-- Tailwind CSS with Dark support -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
+            authDomain: "mneet-spark.firebaseapp.com",
+            databaseURL: "https://mneet-spark-default-rtdb.firebaseio.com",
+            projectId: "mneet-spark",
+            storageBucket: "mneet-spark.firebasestorage.app",
+            messagingSenderId: "252201633700",
+            appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let activeRankModule = localStorage.getItem('mneet_rank_module') || "quiz"; // 'quiz', 'mock', 'challenge'
+        let unsubscribeRankListener = null;
+        let loadedRankDataList = [];
+
+        window.navigateToRankView = function(moduleName, updateHash = true) {
+            activeRankModule = moduleName;
+            localStorage.setItem('mneet_rank_module', moduleName);
+
+            const btnQuiz = document.getElementById('tabRankQuiz');
+            const btnMock = document.getElementById('tabRankMock');
+            const btnChallenge = document.getElementById('tabRankChallenge');
+
+            [btnQuiz, btnMock, btnChallenge].forEach(b => {
+                if(b) b.className = "flex-1 py-2.5 rounded-xl text-xs font-black text-slate-400 hover:text-white transition";
+            });
+
+            if(moduleName === 'quiz' && btnQuiz) btnQuiz.className = "flex-1 py-2.5 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition";
+            if(moduleName === 'mock' && btnMock) btnMock.className = "flex-1 py-2.5 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition";
+            if(moduleName === 'challenge' && btnChallenge) btnChallenge.className = "flex-1 py-2.5 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition";
+
+            if (updateHash) {
+                window.location.hash = `#${moduleName}`;
+            }
+
+            window.listenRealtimeRankings();
+        };
+
+        window.handleHashRoute = function() {
+            const hash = window.location.hash.replace('#', '');
+            if (['quiz', 'mock', 'challenge'].includes(hash)) {
+                window.navigateToRankView(hash, false);
+            } else {
+                window.navigateToRankView(activeRankModule, false);
+            }
+        };
+
+        window.addEventListener('hashchange', window.handleHashRoute);
+        window.addEventListener('DOMContentLoaded', () => {
+            window.handleHashRoute();
+        });
+
+        window.triggerAdminLogout = function() {
+            if(confirm("Are you sure you want to Logout?")) {
+                signOut(auth).then(() => { window.location.href = "index.html"; });
+            }
+        };
+                  // Real-time Ranking Fetcher & Auto Leaderboard Logic
+        window.listenRealtimeRankings = function() {
+            if(unsubscribeRankListener) unsubscribeRankListener();
+
+            const collectionMap = {
+                'quiz': 'rank_quiz_results',
+                'mock': 'rank_mock_results',
+                'challenge': 'rank_challenge_results'
+            };
+
+            const targetCol = collectionMap[activeRankModule] || 'rank_quiz_results';
+
+            unsubscribeRankListener = onSnapshot(query(collection(db, targetCol), orderBy("score", "desc")), (snapshot) => {
+                loadedRankDataList = [];
+                snapshot.forEach(docSnap => {
+                    loadedRankDataList.push({ id: docSnap.id, ...docSnap.data() });
+                });
+
+                // Secondary sort: same score -> lower timeTaken gets higher rank
+                loadedRankDataList.sort((a, b) => {
+                    if (b.score === a.score) {
+                        return (a.timeTaken || 0) - (b.timeTaken || 0);
+                    }
+                    return b.score - a.score;
+                });
+
+                window.renderRankLeaderboardNode(loadedRankDataList);
+            }, (err) => {
+                console.error("Rank fetch error: ", err);
+                document.getElementById('rankLeaderboardNode').innerHTML = `
+                    <div class="text-center py-12 text-slate-400 font-bold text-xs">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-500 text-2xl mb-2 block"></i>
+                        No live rank submission data available for this category.
+                    </div>
+                `;
+            });
+        };
+
+        window.renderRankLeaderboardNode = function(dataList) {
+            const container = document.getElementById('rankLeaderboardNode');
+            container.innerHTML = "";
+
+            if(dataList.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-400 font-bold text-xs">
+                        <i class="fa-solid fa-trophy-slash text-2xl mb-2 block text-slate-600"></i>
+                        No student performance records found for ${activeRankModule.toUpperCase()}.
+                    </div>
+                `;
+                return;
+            }
+
+            dataList.forEach((item, index) => {
+                const rankNum = index + 1;
+                let badgeStyle = "";
+                let rankBadgeIcon = `<span class="font-black text-xs text-slate-400">#${rankNum}</span>`;
+
+                if(rankNum === 1) {
+                    badgeStyle = "border-amber-500/50 bg-amber-500/10";
+                    rankBadgeIcon = `<div class="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 font-black flex items-center justify-center text-sm shadow-lg shadow-amber-500/20"><i class="fa-solid fa-crown"></i></div>`;
+                } else if(rankNum === 2) {
+                    badgeStyle = "border-slate-400/50 bg-slate-400/10";
+                    rankBadgeIcon = `<div class="w-8 h-8 rounded-xl bg-slate-300 text-slate-950 font-black flex items-center justify-center text-sm shadow"><i class="fa-solid fa-medal"></i></div>`;
+                } else if(rankNum === 3) {
+                    badgeStyle = "border-amber-700/50 bg-amber-700/10";
+                    rankBadgeIcon = `<div class="w-8 h-8 rounded-xl bg-amber-700 text-white font-black flex items-center justify-center text-sm shadow"><i class="fa-solid fa-award"></i></div>`;
+                } else {
+                    badgeStyle = "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900";
+                    rankBadgeIcon = `<div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black flex items-center justify-center text-xs">${rankNum}</div>`;
+                }
+
+                const totalQ = item.totalQuestions || 1;
+                const correctQ = item.correct || 0;
+                const accuracyPct = Math.round((correctQ / totalQ) * 100);
+
+                container.innerHTML += `
+                    <div class="border ${badgeStyle} rounded-3xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 transition ${item.hidden ? 'opacity-40' : ''}">
+                        <div class="flex items-center space-x-3 flex-1">
+                            ${rankBadgeIcon}
+                            <div class="flex flex-col">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white">${item.studentName || 'Student Name'}</span>
+                                    <span class="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-md font-bold">ID: ${item.studentId || 'N/A'}</span>
+                                </div>
+                                <span class="text-[10px] text-slate-400 font-bold mt-0.5">${item.testTitle || 'General Test Assessment'}</span>
+                            </div>
+                        </div>
+
+                        <!-- Performance Metrics Split -->
+                        <div class="grid grid-cols-4 gap-2 w-full md:w-auto text-center border-t md:border-t-0 border-slate-100 dark:border-slate-800 pt-3 md:pt-0">
+                            <div class="bg-slate-50 dark:bg-slate-950 p-2 rounded-2xl border border-slate-200/50 dark:border-slate-800">
+                                <span class="text-[8px] uppercase tracking-wider text-slate-400 block font-black">Score</span>
+                                <span class="text-xs font-black text-emerald-500">${item.score || 0}</span>
+                            </div>
+                            <div class="bg-slate-50 dark:bg-slate-950 p-2 rounded-2xl border border-slate-200/50 dark:border-slate-800">
+                                <span class="text-[8px] uppercase tracking-wider text-slate-400 block font-black">Accuracy</span>
+                                <span class="text-xs font-black text-rose-500">${accuracyPct}%</span>
+                            </div>
+                            <div class="bg-slate-50 dark:bg-slate-950 p-2 rounded-2xl border border-slate-200/50 dark:border-slate-800">
+                                <span class="text-[8px] uppercase tracking-wider text-slate-400 block font-black">Correct</span>
+                                <span class="text-xs font-black text-sky-500">${correctQ}/${totalQ}</span>
+                            </div>
+                            <div class="bg-slate-50 dark:bg-slate-950 p-2 rounded-2xl border border-slate-200/50 dark:border-slate-800">
+                                <span class="text-[8px] uppercase tracking-wider text-slate-400 block font-black">Time</span>
+                                <span class="text-xs font-black text-amber-500">${item.timeTaken || 0}m</span>
+                            </div>
+                        </div>
+
+                        <button onclick="window.toggleHideStudentRank('${item.id}', ${item.hidden})" class="self-end md:self-center p-2 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-amber-500 rounded-xl text-xs">
+                            <i class="fa-solid ${item.hidden ? 'fa-eye' : 'fa-eye-slash'}"></i>
+                        </button>
+                    </div>
+                `;
+            });
+        };
+
+        window.toggleHideStudentRank = async function(docId, currentStatus) {
+            const collectionMap = {
+                'quiz': 'rank_quiz_results',
+                'mock': 'rank_mock_results',
+                'challenge': 'rank_challenge_results'
+            };
+            const targetCol = collectionMap[activeRankModule] || 'rank_quiz_results';
+            await updateDoc(doc(db, targetCol, docId), { hidden: !currentStatus });
+        };
+
+        window.filterStudentRankByName = function() {
+            const queryText = document.getElementById('rankSearchInput').value.toLowerCase().trim();
+            if(!queryText) {
+                window.renderRankLeaderboardNode(loadedRankDataList);
+                return;
+            }
+            const filtered = loadedRankDataList.filter(item => {
+                const name = (item.studentName || '').toLowerCase();
+                const id = (item.studentId || '').toLowerCase();
+                return name.includes(queryText) || id.includes(queryText);
+            });
+            window.renderRankLeaderboardNode(filtered);
+        };
+
+        window.toggleTheme = () => document.documentElement.classList.toggle('dark');
+    </script>
+</head>
+  <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300">
+    <div id="rankAppPortal" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+        
+        <!-- HEADER ROW -->
+        <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
+            <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+            <h1 class="font-black text-lg md:text-xl tracking-wide text-slate-900 dark:text-white mx-auto"><i class="fa-solid fa-ranking-star text-amber-500 mr-2"></i>Rank Matrix</h1>
+            <button onclick="window.triggerAdminLogout()" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-right-from-bracket text-lg"></i></button>
+        </header>
+
+        <!-- MAIN CONTAINER -->
+        <div class="w-full px-4 py-4 max-w-2xl mx-auto space-y-4 flex-1">
+            
+            <!-- MODULE FILTER STRAP (Quiz / Mock / Challenge) -->
+            <div class="bg-slate-200 dark:bg-slate-900 p-1.5 rounded-2xl flex items-center gap-1 border border-slate-300 dark:border-slate-800">
+                <button id="tabRankQuiz" onclick="window.navigateToRankView('quiz')" class="flex-1 py-2.5 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition"><i class="fa-solid fa-vial-circle-check mr-1"></i> Quiz</button>
+                <button id="tabRankMock" onclick="window.navigateToRankView('mock')" class="flex-1 py-2.5 rounded-xl text-xs font-black text-slate-400 hover:text-white transition"><i class="fa-solid fa-stopwatch-20 mr-1"></i> Mock Test</button>
+                <button id="tabRankChallenge" onclick="window.navigateToRankView('challenge')" class="flex-1 py-2.5 rounded-xl text-xs font-black text-slate-400 hover:text-white transition"><i class="fa-solid fa-trophy mr-1"></i> Challenge</button>
+            </div>
+
+            <!-- SEARCH BAR -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl flex items-center gap-2 shadow-sm">
+                <i class="fa-solid fa-magnifying-glass text-slate-400 ml-2"></i>
+                <input type="text" id="rankSearchInput" oninput="window.filterStudentRankByName()" class="w-full bg-transparent text-xs font-bold text-slate-800 dark:text-white focus:outline-none" placeholder="Search student by name or enrollment ID...">
+            </div>
+
+            <!-- LEADERBOARD DATA CARDS NODE -->
+            <div id="rankLeaderboardNode" class="space-y-3"></div>
+        </div>
+
+        <!-- UNIVERSAL BOTTOM NAVIGATION STRAP -->
+        <nav id="rankBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3.5 flex justify-around items-center shadow-2xl w-full box-border">
+            <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
+            <button onclick="window.location.href='admin-ncert.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
+            <button onclick="window.location.href='admin-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
+            <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
+            <button onclick="window.location.href='admin-rank.html'" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-ranking-star text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Rank</span></button>
+        </nav>
+    </div>
+</body>
+              </html>
+  
