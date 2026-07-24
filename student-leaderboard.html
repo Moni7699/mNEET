@@ -2,31 +2,289 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>National Ranks - mNEET</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>mNEET - Student Tier Leaderboard</title>
+    <!-- Tailwind CSS with Dark support -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { darkMode: 'class' }</script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
+            authDomain: "mneet-spark.firebaseapp.com",
+            databaseURL: "https://mneet-spark-default-rtdb.firebaseio.com",
+            projectId: "mneet-spark",
+            storageBucket: "mneet-spark.firebasestorage.app",
+            messagingSenderId: "252201633700",
+            appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let activeCategory = localStorage.getItem('mneet_student_rank_cat') || 'quiz';
+        let activeTier = localStorage.getItem('mneet_student_active_tier') || 'silver';
+        let currentUserId = null;
+        let unsubscribeLeaderboard = null;
+        let currentLeaderboardData = [];
+
+        const TIER_CONFIG = {
+            'bronze': { name: 'Bronze Tier', icon: 'fa-certificate', color: 'text-amber-700', bg: 'bg-amber-700/10 border-amber-700/30' },
+            'silver': { name: 'Silver Tier', icon: 'fa-medal', color: 'text-slate-300', bg: 'bg-slate-300/10 border-slate-300/30' },
+            'gold': { name: 'Gold Tier', icon: 'fa-crown', color: 'text-amber-400', bg: 'bg-amber-400/10 border-amber-400/30' },
+            'platinum': { name: 'Platinum Tier', icon: 'fa-shield-halved', color: 'text-cyan-400', bg: 'bg-cyan-400/10 border-cyan-400/30' },
+            'diamond': { name: 'Diamond Tier', icon: 'fa-gem', color: 'text-blue-400', bg: 'bg-blue-400/10 border-blue-400/30' },
+            'master': { name: 'Master Tier', icon: 'fa-flask', color: 'text-purple-400', bg: 'bg-purple-400/10 border-purple-400/30' },
+            'grandmaster': { name: 'Grandmaster Tier', icon: 'fa-scroll', color: 'text-rose-400', bg: 'bg-rose-400/10 border-rose-400/30' },
+            'challenger': { name: 'Challenger Tier', icon: 'fa-bolt', color: 'text-yellow-300', bg: 'bg-yellow-300/10 border-yellow-300/30' },
+            'legend': { name: 'Legend Tier', icon: 'fa-star', color: 'text-emerald-400', bg: 'bg-emerald-400/10 border-emerald-400/30' },
+            'mythic': { name: 'Mythic Tier', icon: 'fa-fire', color: 'text-orange-500', bg: 'bg-orange-500/10 border-orange-500/30' }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUserId = user.uid;
+            }
+            window.switchRankCategory(activeCategory);
+        });
+
+        window.switchRankCategory = function(cat) {
+            activeCategory = cat;
+            localStorage.setItem('mneet_student_rank_cat', cat);
+
+            const btnQuiz = document.getElementById('tabCatQuiz');
+            const btnMock = document.getElementById('tabCatMock');
+            const btnChallenge = document.getElementById('tabCatChallenge');
+
+            [btnQuiz, btnMock, btnChallenge].forEach(b => {
+                if(b) b.className = "flex-1 py-2 rounded-xl text-xs font-black text-slate-400 hover:text-white transition";
+            });
+
+            if(cat === 'quiz' && btnQuiz) btnQuiz.className = "flex-1 py-2 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition";
+            if(cat === 'mock' && btnMock) btnMock.className = "flex-1 py-2 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition";
+            if(cat === 'challenge' && btnChallenge) btnChallenge.className = "flex-1 py-2 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition";
+
+            window.switchTier(activeTier);
+        };
+
+        window.switchTier = function(tierKey) {
+            activeTier = tierKey;
+            localStorage.setItem('mneet_student_active_tier', tierKey);
+            window.renderTierSelectorBar();
+            window.listenRealtimeStudentLeaderboard();
+        };
+
+        window.renderTierSelectorBar = function() {
+            const container = document.getElementById('tierSelectorNode');
+            if(!container) return;
+            container.innerHTML = "";
+
+            Object.keys(TIER_CONFIG).forEach(key => {
+                const conf = TIER_CONFIG[key];
+                const isActive = key === activeTier;
+                container.innerHTML += `
+                    <button onclick="window.switchTier('${key}')" class="flex-shrink-0 px-3 py-1.5 rounded-xl text-[11px] font-black border transition flex items-center space-x-1.5 ${isActive ? 'bg-slate-800 border-rose-500 text-white shadow-md scale-105' : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200'}">
+                        <i class="fa-solid ${conf.icon} ${conf.color}"></i>
+                        <span>${conf.name.replace(' Tier', '')}</span>
+                    </button>
+                `;
+            });
+        };
+                // Fetcher & 1/3rd Promotion/Demotion Calculation Engine
+        window.listenRealtimeStudentLeaderboard = function() {
+            if(unsubscribeLeaderboard) unsubscribeLeaderboard();
+
+            const collectionMap = {
+                'quiz': 'rank_quiz_results',
+                'mock': 'rank_mock_results',
+                'challenge': 'rank_challenge_results'
+            };
+
+            const targetCol = collectionMap[activeCategory] || 'rank_quiz_results';
+
+            unsubscribeLeaderboard = onSnapshot(query(collection(db, targetCol), orderBy("score", "desc")), (snapshot) => {
+                currentLeaderboardData = [];
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if(!data.hidden) {
+                        const studentTier = (data.tier || 'silver').toLowerCase();
+                        if(studentTier === activeTier) {
+                            currentLeaderboardData.push({ id: docSnap.id, ...data });
+                        }
+                    }
+                });
+
+                // Secondary sort: Score descending, Time ascending
+                currentLeaderboardData.sort((a, b) => {
+                    if (b.score === a.score) {
+                        return (a.timeTaken || 0) - (b.timeTaken || 0);
+                    }
+                    return b.score - a.score;
+                });
+
+                window.renderLinearOrderedLeaderboard();
+            }, (err) => {
+                console.error("Leaderboard fetch error: ", err);
+            });
+        };
+
+        window.renderLinearOrderedLeaderboard = function() {
+            const container = document.getElementById('linearLeaderboardNode');
+            if(!container) return;
+            container.innerHTML = "";
+
+            const total = currentLeaderboardData.length;
+            const currentConf = TIER_CONFIG[activeTier] || TIER_CONFIG['silver'];
+
+            document.getElementById('currentTierHeaderTitle').innerHTML = `
+                <i class="fa-solid ${currentConf.icon} ${currentConf.color} text-lg mr-2"></i>
+                <span>${currentConf.name} Division</span>
+                <span class="text-[10px] ml-2 text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full font-bold">${total} Students</span>
+            `;
+
+            if(total === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-16 text-slate-400 font-bold text-xs space-y-2">
+                        <i class="fa-solid fa-users-slash text-3xl block text-slate-600"></i>
+                        <p>No active students in ${currentConf.name} for ${activeCategory.toUpperCase()}.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // 1/3 Split Calculations
+            const promoCutoff = Math.max(1, Math.floor(total / 3)); 
+            const demoCutoff = total - Math.max(1, Math.floor(total / 3)); 
+
+            currentLeaderboardData.forEach((item, index) => {
+                const rankNum = index + 1;
+                const isMe = currentUserId && (item.studentUid === currentUserId || item.studentId === currentUserId);
+
+                // Zone Classification
+                let zoneStatusTag = "";
+                let cardStyle = "border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900";
+
+                if (rankNum <= promoCutoff) {
+                    zoneStatusTag = `<span class="text-[8px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full"><i class="fa-solid fa-arrow-up mr-1"></i>Promoting</span>`;
+                } else if (rankNum > demoCutoff) {
+                    zoneStatusTag = `<span class="text-[8px] font-black text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2 py-0.5 rounded-full"><i class="fa-solid fa-arrow-down mr-1"></i>Demotion Risk</span>`;
+                } else {
+                    zoneStatusTag = `<span class="text-[8px] font-black text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full"><i class="fa-solid fa-shield mr-1"></i>Safe Zone</span>`;
+                }
+
+                if(isMe) {
+                    cardStyle = "border-rose-500/80 bg-rose-500/5 shadow-lg shadow-rose-500/10 ring-1 ring-rose-500/40";
+                }
+
+                const totalQ = item.totalQuestions || 1;
+                const correctQ = item.correct || 0;
+                const accuracyPct = Math.round((correctQ / totalQ) * 100);
+
+                container.innerHTML += `
+                    <div class="border ${cardStyle} rounded-2xl p-3.5 flex items-center justify-between gap-3 transition">
+                        <div class="flex items-center space-x-3 min-w-0 flex-1">
+                            <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-black text-xs flex items-center justify-center flex-shrink-0">
+                                ${rankNum}
+                            </div>
+
+                            <div class="flex flex-col min-w-0">
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-black text-xs text-slate-900 dark:text-slate-100 truncate">${item.studentName || 'Anonymous Student'}</span>
+                                    ${isMe ? '<span class="text-[8px] font-black bg-rose-500 text-white px-1.5 py-0.5 rounded uppercase">You</span>' : ''}
+                                </div>
+                                <div class="flex items-center space-x-2 mt-0.5">
+                                    ${zoneStatusTag}
+                                    <span class="text-[9px] text-slate-400 font-bold"><i class="fa-solid fa-clock text-[8px] mr-0.5"></i>${item.timeTaken || 0}m</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-3 flex-shrink-0 text-right">
+                            <div class="flex flex-col">
+                                <span class="text-xs font-black text-emerald-500">${item.score || 0} pts</span>
+                                <span class="text-[9px] font-bold text-slate-400">${accuracyPct}% Acc</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Add Zone Split Dividers for Clarity
+                if (rankNum === promoCutoff && total > 2) {
+                    container.innerHTML += `
+                        <div class="flex items-center space-x-2 my-2 opacity-60">
+                            <div class="h-px bg-emerald-500/50 flex-1"></div>
+                            <span class="text-[9px] font-black uppercase tracking-wider text-emerald-400">1/3 Promotion Boundary</span>
+                            <div class="h-px bg-emerald-500/50 flex-1"></div>
+                        </div>
+                    `;
+                }
+
+                if (rankNum === demoCutoff && total > 2 && demoCutoff > promoCutoff) {
+                    container.innerHTML += `
+                        <div class="flex items-center space-x-2 my-2 opacity-60">
+                            <div class="h-px bg-rose-500/50 flex-1"></div>
+                            <span class="text-[9px] font-black uppercase tracking-wider text-rose-400">1/3 Demotion Zone Line</span>
+                            <div class="h-px bg-rose-500/50 flex-1"></div>
+                        </div>
+                    `;
+                }
+            });
+        };
+    </script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen">
-    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center space-x-3">
-        <button onclick="window.location.href='student-dashboard.html'" class="text-slate-400 text-sm font-bold"><i class="fa-solid fa-arrow-left"></i> Back</button>
-        <h2 class="font-black text-lg text-slate-900 dark:text-white">Medical Hierarchy Matrix</h2>
-    </header>
-    <div class="max-w-2xl mx-auto p-4 md:p-6 space-y-6">
-        <!-- 3 Category Tags -->
-        <div class="grid grid-cols-3 gap-2">
-            <div class="bg-emerald-500/10 border border-emerald-500/20 text-center p-3 rounded-xl font-black text-[10px] text-emerald-500 uppercase tracking-wide">🏆 Promotion<br><span class="text-[9px] font-medium lowercase text-slate-400">"Future Surgeon"</span></div>
-            <div class="bg-sky-500/10 border border-sky-500/20 text-center p-3 rounded-xl font-black text-[10px] text-sky-500 uppercase tracking-wide">➖ Stay Zone<br><span class="text-[9px] font-medium lowercase text-slate-400">"Intern Capsule"</span></div>
-            <div class="bg-rose-500/10 border border-rose-500/20 text-center p-3 rounded-xl font-black text-[10px] text-rose-500 uppercase tracking-wide">⚠️ Demotion<br><span class="text-[9px] font-medium lowercase text-slate-400">"Amoeba Trainee"</span></div>
-        </div>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300 pb-20">
+    <div id="studentLeaderboardPortal" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
         
-        <!-- Leaderboard List -->
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl space-y-2">
-            <div class="flex justify-between p-3 bg-sky-500/10 border border-sky-500 rounded-xl items-center font-bold text-xs text-sky-500"><span>#42 You (Highlight status)</span> <span>🪙 100 bP</span></div>
-            <div class="flex justify-between p-3 bg-slate-100 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl items-center text-xs text-slate-400"><span>#1 Rank Alpha Aspirant</span> <span>🪙 5,400 bP</span></div>
+        <!-- HEADER ROW -->
+        <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
+            <button onclick="window.history.back()" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+            <h1 class="font-black text-lg tracking-wide text-slate-900 dark:text-white mx-auto"><i class="fa-solid fa-trophy text-amber-500 mr-2"></i>Tier Leaderboard</h1>
+            <div class="w-8"></div>
+        </header>
+
+        <!-- MAIN CONTAINER -->
+        <div class="w-full px-4 py-4 max-w-xl mx-auto space-y-4 flex-1">
+            
+            <!-- MODULE CATEGORY STRAP (Quiz / Mock / Challenge) -->
+            <div class="bg-slate-200 dark:bg-slate-900 p-1.5 rounded-2xl flex items-center gap-1 border border-slate-300 dark:border-slate-800">
+                <button id="tabCatQuiz" onclick="window.switchRankCategory('quiz')" class="flex-1 py-2 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition"><i class="fa-solid fa-vial-circle-check mr-1"></i> Quiz</button>
+                <button id="tabCatMock" onclick="window.switchRankCategory('mock')" class="flex-1 py-2 rounded-xl text-xs font-black text-slate-400 hover:text-white transition"><i class="fa-solid fa-stopwatch-20 mr-1"></i> Mock</button>
+                <button id="tabCatChallenge" onclick="window.switchRankCategory('challenge')" class="flex-1 py-2 rounded-xl text-xs font-black text-slate-400 hover:text-white transition"><i class="fa-solid fa-fire mr-1"></i> Challenge</button>
+            </div>
+
+            <!-- TIER HORIZONTAL SCROLLER -->
+            <div class="space-y-1.5">
+                <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 block px-1">Select Tier Division</span>
+                <div id="tierSelectorNode" class="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none"></div>
+            </div>
+
+            <!-- ACTIVE TIER TITLE BADGE -->
+            <div id="currentTierHeaderTitle" class="bg-slate-900/80 border border-slate-800 p-3 rounded-2xl flex items-center justify-between font-black text-xs text-white shadow-inner">
+                <!-- Loaded dynamically -->
+            </div>
+
+            <!-- LINEAR ORDERED LEADERBOARD LIST -->
+            <div id="linearLeaderboardNode" class="space-y-2.5"></div>
         </div>
+
+        <!-- UNIVERSAL STUDENT BOTTOM NAVIGATION -->
+        <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3 flex justify-around items-center shadow-2xl w-full box-border">
+            <button onclick="window.location.href='index.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
+            <button onclick="window.location.href='student-ncert.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
+            <button onclick="window.location.href='student-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
+            <button onclick="window.location.href='student-leaderboard.html'" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-trophy text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Rank</span></button>
+            <button onclick="window.location.href='student-profile.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-user text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Profile</span></button>
+        </nav>
     </div>
 </body>
-</html>
-
+                                                                                                                       </html>
+                
