@@ -31,6 +31,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
+        let activeCategory = localStorage.getItem('mneet_challenge_category') || 'daily'; // 'daily' or 'weekly'
         let activeChallengeId = localStorage.getItem('mneet_challenge_id') || "";
         let activeChallengeName = localStorage.getItem('mneet_challenge_name') || "";
         
@@ -45,13 +46,6 @@
             const screens = ['view-challenge-list', 'view-challenge-builder'];
             screens.forEach(s => document.getElementById(s).classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
-
-            const bottomNav = document.getElementById('challengeBottomNav');
-            if(viewId === 'view-challenge-builder') {
-                bottomNav.style.display = 'none';
-            } else {
-                bottomNav.style.display = 'flex';
-            }
 
             if (updateHash) {
                 const hashMap = {
@@ -70,7 +64,7 @@
                 window.listenRealtimeChallengeQuestions();
             } else {
                 window.navigateToChallengeView('view-challenge-list', false);
-                window.loadChallengesData();
+                window.switchChallengeCategory(activeCategory);
             }
         };
 
@@ -85,6 +79,24 @@
             }
         };
 
+        // Category Switcher (Daily / Weekly)
+        window.switchChallengeCategory = function(cat) {
+            activeCategory = cat;
+            localStorage.setItem('mneet_challenge_category', cat);
+            
+            const btnDaily = document.getElementById('tabBtnDaily');
+            const btnWeekly = document.getElementById('tabBtnWeekly');
+
+            if(cat === 'daily') {
+                btnDaily.className = "flex-1 py-2.5 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition";
+                btnWeekly.className = "flex-1 py-2.5 rounded-xl text-xs font-black text-slate-400 hover:text-white transition";
+            } else {
+                btnWeekly.className = "flex-1 py-2.5 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition";
+                btnDaily.className = "flex-1 py-2.5 rounded-xl text-xs font-black text-slate-400 hover:text-white transition";
+            }
+            window.loadChallengesData();
+        };
+
         // CRUD Matrix for Challenge Names
         window.createChallengeTitle = async function() {
             const input = document.getElementById('challengeNameInput');
@@ -92,6 +104,7 @@
             if(!name) return;
             await addDoc(collection(db, "challenges"), {
                 name,
+                category: activeCategory,
                 createdAt: Date.now(),
                 hidden: false
             });
@@ -104,25 +117,34 @@
             challengesUnsubscribe = onSnapshot(query(collection(db, "challenges"), orderBy("createdAt", "desc")), (snapshot) => {
                 const container = document.getElementById('challengeCardsNode');
                 container.innerHTML = "";
+                let count = 0;
+
                 snapshot.forEach(docSnap => {
                     const c = docSnap.data();
                     const id = docSnap.id;
-                    container.innerHTML += `
-                        <div class="bg-white dark:bg-slate-900 border ${c.hidden ? 'opacity-40 border-slate-300 dark:border-slate-800' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
-                            <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.openChallengeQuestionStudio('${id}', '${c.name.replace(/'/g, "\\'")}')">
-                                <i class="fa-solid fa-trophy text-amber-500 text-lg"></i>
-                                <div class="flex flex-col">
-                                    <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white ${c.hidden ? 'line-through' : ''}">${c.name}</span>
-                                    <span class="text-[10px] text-slate-400 font-bold">Tap to add or manage questions</span>
+                    if(c.category === activeCategory) {
+                        count++;
+                        container.innerHTML += `
+                            <div class="bg-white dark:bg-slate-900 border ${c.hidden ? 'opacity-40 border-slate-300 dark:border-slate-800' : 'border-slate-200 dark:border-slate-800'} rounded-2xl p-4 flex justify-between items-center shadow-sm">
+                                <div class="flex items-center space-x-3 cursor-pointer flex-1" onclick="window.openChallengeQuestionStudio('${id}', '${c.name.replace(/'/g, "\\'")}')">
+                                    <i class="fa-solid fa-trophy text-amber-500 text-lg"></i>
+                                    <div class="flex flex-col">
+                                        <span class="font-black text-xs md:text-sm text-slate-900 dark:text-white ${c.hidden ? 'line-through' : ''}">${c.name}</span>
+                                        <span class="text-[10px] text-slate-400 font-bold uppercase">${c.category} Challenge • Tap to manage</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-1.5">
+                                    <button onclick="window.toggleHideChallenge('${id}', ${c.hidden})" class="bg-amber-50 dark:bg-amber-950/40 text-amber-500 p-2 rounded-xl text-xs"><i class="fa-solid ${c.hidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>
+                                    <button onclick="window.deleteChallengeDoc('${id}')" class="bg-rose-50 dark:bg-rose-950/40 text-rose-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
                                 </div>
                             </div>
-                            <div class="flex items-center space-x-1.5">
-                                <button onclick="window.toggleHideChallenge('${id}', ${c.hidden})" class="bg-amber-50 dark:bg-amber-950/40 text-amber-500 p-2 rounded-xl text-xs"><i class="fa-solid ${c.hidden ? 'fa-eye' : 'fa-eye-slash'}"></i></button>
-                                <button onclick="window.deleteChallengeDoc('${id}')" class="bg-rose-50 dark:bg-rose-950/40 text-rose-500 p-2 rounded-xl text-xs"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                        </div>
-                    `;
+                        `;
+                    }
                 });
+
+                if(count === 0) {
+                    container.innerHTML = `<div class="text-center py-10 text-slate-400 font-bold text-xs">No ${activeCategory} challenges created yet.</div>`;
+                }
             });
         };
 
@@ -179,17 +201,17 @@
             try {
                 if(editingChallengeQuestionId) {
                     await updateDoc(doc(db, `${questionPath}/${editingChallengeQuestionId}`), payload);
-                    alert("✏️ Challenge Question Updated Successfully!");
+                    alert("✏️ Question Updated Successfully!");
                 } else {
                     payload.hidden = false;
                     payload.createdAt = Date.now();
                     await addDoc(collection(db, questionPath), payload);
-                    alert("🚀 Challenge Question Successfully Deployed!");
+                    alert("🚀 Question Successfully Deployed!");
                     currentChallengeActiveIndex = loadedChallengeQuestionsList.length;
                 }
                 window.resetChallengeQuestionForm();
             } catch (err) {
-                console.error("Error: ", err);
+                console.error("Error saving question: ", err);
                 alert("Error saving question: " + err.message);
             }
         };
@@ -369,9 +391,15 @@
                 <button onclick="window.triggerAdminLogout()" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-right-from-bracket text-lg"></i></button>
             </header>
 
-            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-4 flex-1">
+            <div class="w-full px-4 py-4 max-w-xl mx-auto space-y-4 flex-1">
+                <!-- TOP DAILY / WEEKLY TOGGLE BUTTONS -->
+                <div class="bg-slate-200 dark:bg-slate-900 p-1.5 rounded-2xl flex items-center gap-1 border border-slate-300 dark:border-slate-800">
+                    <button id="tabBtnDaily" onclick="window.switchChallengeCategory('daily')" class="flex-1 py-2.5 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition"><i class="fa-solid fa-calendar-day mr-1"></i> Daily Challenge</button>
+                    <button id="tabBtnWeekly" onclick="window.switchChallengeCategory('weekly')" class="flex-1 py-2.5 rounded-xl text-xs font-black text-slate-400 hover:text-white transition"><i class="fa-solid fa-calendar-week mr-1"></i> Weekly Challenge</button>
+                </div>
+
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl flex items-center gap-2 shadow-sm">
-                    <input type="text" id="challengeNameInput" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-black text-slate-800 dark:text-white focus:outline-none" placeholder="Create Challenge Title (e.g. Daily Biology Sprint)...">
+                    <input type="text" id="challengeNameInput" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs font-black text-slate-800 dark:text-white focus:outline-none" placeholder="Create Challenge Title...">
                     <button onclick="window.createChallengeTitle()" class="bg-rose-500 text-white font-black text-xs px-5 py-2.5 rounded-xl whitespace-nowrap active:scale-95 transition">Create</button>
                 </div>
                 <div id="challengeCardsNode" class="space-y-3"></div>
@@ -439,16 +467,7 @@
                 <div id="challengeQuickGridNode" class="grid grid-cols-6 gap-2 max-h-64 overflow-y-auto p-1"></div>
             </div>
         </div>
-
-        <!-- UNIVERSAL BOTTOM NAVIGATION STRAP -->
-        <nav id="challengeBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3.5 flex justify-around items-center shadow-2xl w-full box-border">
-            <button onclick="window.location.href='admin-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
-            <button onclick="window.location.href='admin-ncert.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
-            <button onclick="window.location.href='admin-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
-            <button onclick="window.location.href='admin-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Mock</span></button>
-            <button onclick="window.navigateToChallengeView('view-challenge-list')" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-trophy text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Challenge</span></button>
-        </nav>
     </div>
 </body>
-                    </html>
-                            
+    </html>
+                
