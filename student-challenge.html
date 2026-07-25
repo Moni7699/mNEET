@@ -1,17 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mNEET Student - Challenge Arena</title>
-    <!-- Tailwind CSS Engine -->
+    <title>mNEET - Challenge Arena</title>
+    <!-- Tailwind CSS with Dark support -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Pro Icons -->
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, addDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
@@ -25,181 +29,525 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        let selectedChallengeId = "";
-        let selectedTaskId = "";
-        let taskStreamUnsubscribe = null;
-        let studentCurrentBpCoins = 120; // Mock profile coins tracking
+        let activeTab = 'daily'; // 'daily' or 'weekly'
+        let currentUserId = null;
+        let currentUserName = "Aspirant";
+        let loadedChallenges = [];
+        let activeChallengeDoc = null;
+        let challengeQuestions = [];
 
-        // Dynamic State Screen Router Engine
-        window.navigateToStudentChallengeView = function(viewId) {
-            const screens = ['student-challenge-dashboard', 'student-challenge-tasks', 'student-challenge-canvas'];
-            screens.forEach(s => document.getElementById(s).classList.add('hidden'));
-            document.getElementById(viewId).classList.remove('hidden');
-        };
+        // Engine State
+        let currentQuestionIndex = 0;
+        let activeSubjectFilter = 'all'; // 'all', 'physics', 'chemistry', 'botany', 'zoology'
+        let quizOverallSeconds = 0;
+        let quizOverallInterval = null;
+        let questionTimerInterval = null;
+        
+        // Tracking Stores
+        let questionTimeRemainingMap = {}; // qIndex -> seconds left
+        let studentAnswersMap = {}; // qIndex -> { selectedOpt, isCorrect, submitted }
+        let attemptCount = parseInt(localStorage.getItem('mneet_challenge_attempt_count') || '1');
+        let initialQuestionDuration = Math.max(30, 70 - (attemptCount * 10)); // 1st=60s, 2nd=50s, 3rd=40s, 4th+=30s
 
-        // LEVEL 1: RENDER REALTIME LIVE CHALLENGES
-        window.initStudentChallengeHub = function() {
-            onSnapshot(query(collection(db, "challenges"), orderBy("createdAt", "desc")), (snapshot) => {
-                const container = document.getElementById('studentChallengesContainer');
-                if(!container) return; container.innerHTML = "";
-                snapshot.forEach(docSnap => {
-                    const c = docSnap.data();
-                    if(c.hidden) return; // Strict dashboard mapping bypass
-                    const id = docSnap.id;
+        // System AI Challengers (Cold Start Fallback)
+        const AI_BOTS = [
+            { name: "Aarav Sharma (AI Ranker)", scoreFactor: 0.88, timeSec: 180 },
+            { name: "Ananya Roy (NEET Prep)", scoreFactor: 0.75, timeSec: 210 },
+            { name: "Rohan Verma (Top 1% AI)", scoreFactor: 0.95, timeSec: 150 }
+        ];
 
-                    const subjectBadges = c.subjects.map(s => `<span class="bg-rose-500/10 text-rose-600 font-extrabold text-[9px] px-2 py-0.5 rounded-md border border-rose-500/20">${s}</span>`).join(' ');
-
-                    container.innerHTML += `
-                        <div onclick="window.enterStudentChallenge('${id}', '${c.name.replace(/'/g, "\\'")}')" class="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm active:scale-[0.99] transition cursor-pointer hover:border-rose-400">
-                            <div class="flex justify-between items-start">
-                                <div class="flex items-center space-x-2.5">
-                                    <div class="w-9 h-9 bg-rose-500 rounded-xl flex items-center justify-center text-white font-black"><i class="fa-solid fa-fire text-base"></i></div>
-                                    <div class="flex flex-col">
-                                        <span class="font-black text-slate-800 text-xs md:text-sm">${c.name}</span>
-                                        <span class="text-[10px] text-slate-400 font-bold">Window Limit: ${c.dailyLimit} Attempts</span>
-                                    </div>
-                                </div>
-                                <span class="text-[9px] text-amber-600 bg-amber-50 border border-amber-200 font-black px-2 py-0.5 rounded-lg uppercase">Active</span>
-                            </div>
-                            <p class="text-[11px] font-medium text-slate-500 bg-slate-50 border border-dashed rounded-xl p-2.5 leading-relaxed">🎯 <strong>Syllabus Focus:</strong> ${c.syllabus}</p>
-                            <div class="flex justify-between items-center pt-1 border-t border-slate-100">
-                                <div class="flex space-x-1">${subjectBadges}</div>
-                                <span class="text-[10px] font-black font-mono text-slate-400"><i class="fa-solid fa-clock mr-1"></i>${c.duration} Mins</span>
-                            </div>
-                        </div>
-                    `;
-                });
-            });
-        };
-
-        window.enterStudentChallenge = function(id, name) {
-            selectedChallengeId = id;
-            document.getElementById('challengeTasksHeaderTitle').innerText = name;
-            window.navigateToStudentChallengeView('student-challenge-tasks');
-            window.loadStudentChallengeTasks();
-        };
-
-        window.addEventListener('DOMContentLoaded', () => window.initStudentChallengeHub());
-                // LEVEL 2: LOAD REALTIME CHALLENGE MILESTONE TASKS
-        window.loadStudentChallengeTasks = function() {
-            if(taskStreamUnsubscribe) taskStreamUnsubscribe();
-            taskStreamUnsubscribe = onSnapshot(query(collection(db, `challenges/${selectedChallengeId}/tasks`), orderBy("createdAt", "asc")), (snapshot) => {
-                const container = document.getElementById('studentTasksContainer');
-                container.innerHTML = "";
-                snapshot.forEach(docSnap => {
-                    const t = docSnap.data(); const id = docSnap.id;
-                    container.innerHTML += `
-                        <div onclick="window.launchChallengeBattleCanvas('${id}', '${t.name.replace(/'/g, "\\'")}')" class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm active:scale-[0.99] transition cursor-pointer hover:border-purple-400">
-                            <span class="font-black text-slate-800 text-xs md:text-sm"><i class="fa-solid fa-shield-halved text-amber-500 mr-2"></i>${t.name}</span>
-                            <div class="flex items-center space-x-2">
-                                <span class="text-[9px] font-black text-slate-400 font-mono">0/45 Done</span>
-                                <i class="fa-solid fa-circle-play text-rose-500 text-base"></i>
-                            </div>
-                        </div>
-                    `;
-                });
-            });
-        };
-
-        // LEVEL 3: IMMERSIVE CHALLENGE EXAM BATTLE CANVAS WITH RIGHT(+4) / WRONG(-2)
-        window.launchChallengeBattleCanvas = function(id, name) {
-            selectedTaskId = id;
-            window.navigateToStudentChallengeView('student-challenge-canvas');
-            document.getElementById('canvasChallengeTitle').innerText = name;
-            document.getElementById('hudCoinsTracker').innerText = studentCurrentBpCoins;
-        };
-
-        window.evaluateChallengeAnswer = function(status) {
-            const resultBox = document.getElementById('battleSolutionBox');
-            if(status === 'right') {
-                studentCurrentBpCoins += 4;
-                alert("🎉 Right Answer Matrix Checked! You Earned +4 BP Coins!");
-            } else {
-                studentCurrentBpCoins -= 2;
-                alert("🚨 Wrong Answer Triggered! Deducted -2 BP Coins from Profile!");
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUserId = user.uid;
+                currentUserName = user.displayName || user.email.split('@')[0] || "Aspirant";
             }
-            document.getElementById('hudCoinsTracker').innerText = studentCurrentBpCoins;
-            resultBox.classList.remove('hidden');
+            window.switchChallengeTab(activeTab);
+        });
+
+        window.switchChallengeTab = function(tab) {
+            activeTab = tab;
+            const btnDaily = document.getElementById('tabBtnDaily');
+            const btnWeekly = document.getElementById('tabBtnWeekly');
+
+            if(tab === 'daily') {
+                btnDaily.className = "flex-1 py-2.5 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition";
+                btnWeekly.className = "flex-1 py-2.5 rounded-xl text-xs font-black text-slate-400 hover:text-white transition";
+            } else {
+                btnWeekly.className = "flex-1 py-2.5 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition";
+                btnDaily.className = "flex-1 py-2.5 rounded-xl text-xs font-black text-slate-400 hover:text-white transition";
+            }
+            window.listenRealtimeChallenges();
         };
 
-        window.completeChallengeBattle = function() {
-            alert("🔥 Challenge Milestone Uploaded! Current Balance: " + studentCurrentBpCoins + " BP Coins.");
-            document.getElementById('battleSolutionBox').classList.add('hidden');
-            window.navigateToStudentChallengeView('student-challenge-tasks');
+        window.listenRealtimeChallenges = function() {
+            onSnapshot(query(collection(db, "challenges"), orderBy("createdAt", "desc")), (snapshot) => {
+                loadedChallenges = [];
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if(!data.hidden && (data.category || 'daily') === activeTab) {
+                        loadedChallenges.push({ id: docSnap.id, ...data });
+                    }
+                });
+                window.renderChallengeCardsNode();
+            });
+        };
+
+        window.renderChallengeCardsNode = function() {
+            const container = document.getElementById('challengeCardsNode');
+            container.innerHTML = "";
+
+            if(loadedChallenges.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-16 text-slate-400 font-bold text-xs space-y-2">
+                        <i class="fa-solid fa-trophy-slash text-3xl block text-slate-600"></i>
+                        <p>No active ${activeTab} challenges available right now.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            loadedChallenges.forEach(c => {
+                container.innerHTML += `
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase px-2.5 py-1 rounded-full"><i class="fa-solid fa-bolt mr-1"></i> Live Challenge</span>
+                            <span class="text-[10px] font-bold text-slate-400"><i class="fa-solid fa-clock mr-1"></i> 24h Expiry</span>
+                        </div>
+                        <div>
+                            <h3 class="font-black text-sm text-slate-900 dark:text-white">${c.name}</h3>
+                            <p class="text-[11px] text-slate-400 font-semibold mt-0.5">Test your concepts with instant AI matchmaking competition.</p>
+                        </div>
+                        <button onclick="window.enterChallengeArena('${c.id}', '${c.name.replace(/'/g, "\\'")}')" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black text-xs py-3 rounded-2xl shadow active:scale-95 transition flex items-center justify-center space-x-2">
+                            <span>Enter Challenge Arena</span>
+                            <i class="fa-solid fa-arrow-right text-xs"></i>
+                        </button>
+                    </div>
+                `;
+            });
+        };
+                // Examination Arena Engine
+        window.enterChallengeArena = function(id, name) {
+            activeChallengeDoc = { id, name };
+            document.getElementById('arenaChallengeTitle').innerText = name;
+
+            // Fetch questions for this challenge
+            onSnapshot(collection(db, `challenges/${id}/questions`), (snapshot) => {
+                challengeQuestions = [];
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if(!data.hidden) {
+                        challengeQuestions.push({ id: docSnap.id, ...data });
+                    }
+                });
+
+                if(challengeQuestions.length === 0) {
+                    alert("This challenge has no questions deployed yet!");
+                    return;
+                }
+
+                window.initChallengeSessionState();
+            });
+        };
+
+        window.initChallengeSessionState = function() {
+            currentQuestionIndex = 0;
+            quizOverallSeconds = 0;
+            studentAnswersMap = {};
+            questionTimeRemainingMap = {};
+
+            // Initialize question timers
+            challengeQuestions.forEach((_, idx) => {
+                questionTimeRemainingMap[idx] = initialQuestionDuration;
+            });
+
+            document.getElementById('view-challenge-list').classList.add('hidden');
+            document.getElementById('view-challenge-arena').classList.remove('hidden');
+
+            // Start Overall Stopwatch
+            if(quizOverallInterval) clearInterval(quizOverallInterval);
+            quizOverallInterval = setInterval(() => {
+                quizOverallSeconds++;
+                const m = String(Math.floor(quizOverallSeconds / 60)).padStart(2, '0');
+                const s = String(quizOverallSeconds % 60).padStart(2, '0');
+                document.getElementById('overallStopwatchText').innerText = `${m}:${s}`;
+            }, 1000);
+
+            window.renderSubjectFilterTabs();
+            window.renderQuickJumpGrid();
+            window.loadQuestionCard(0);
+        };
+
+        window.renderSubjectFilterTabs = function() {
+            const subjects = ['all', 'physics', 'chemistry', 'botany', 'zoology'];
+            const container = document.getElementById('subjectFilterTabsNode');
+            container.innerHTML = "";
+
+            subjects.forEach(sub => {
+                const isActive = sub === activeSubjectFilter;
+                container.innerHTML += `
+                    <button onclick="window.setSubjectFilter('${sub}')" class="px-3 py-1 rounded-xl text-[10px] font-black uppercase transition whitespace-nowrap ${isActive ? 'bg-rose-500 text-white shadow' : 'bg-slate-800 text-slate-400 hover:text-white'}">
+                        ${sub}
+                    </button>
+                `;
+            });
+        };
+
+        window.setSubjectFilter = function(sub) {
+            activeSubjectFilter = sub;
+            window.renderSubjectFilterTabs();
+            window.renderQuickJumpGrid();
+        };
+
+        window.renderQuickJumpGrid = function() {
+            const container = document.getElementById('quickJumpGridNode');
+            container.innerHTML = "";
+
+            challengeQuestions.forEach((q, idx) => {
+                const sub = (q.subject || 'all').toLowerCase();
+                if(activeSubjectFilter !== 'all' && sub !== activeSubjectFilter) return;
+
+                const ansState = studentAnswersMap[idx];
+                let btnStyle = "bg-slate-800 text-slate-300 border-slate-700";
+
+                if(ansState && ansState.submitted) {
+                    btnStyle = ansState.isCorrect ? "bg-emerald-500 text-white border-emerald-500" : "bg-rose-500 text-white border-rose-500";
+                } else if(idx === currentQuestionIndex) {
+                    btnStyle = "bg-amber-500 text-slate-950 border-amber-500 font-black shadow-lg scale-105";
+                }
+
+                container.innerHTML += `
+                    <button onclick="window.loadQuestionCard(${idx})" class="w-8 h-8 rounded-xl font-black text-xs border flex items-center justify-center transition ${btnStyle}">
+                        ${idx + 1}
+                    </button>
+                `;
+            });
+        };
+
+        window.loadQuestionCard = function(idx) {
+            if(idx < 0 || idx >= challengeQuestions.length) return;
+
+            currentQuestionIndex = idx;
+            window.renderQuickJumpGrid();
+            window.startQuestionTimer(idx);
+
+            const q = challengeQuestions[idx];
+            const ansState = studentAnswersMap[idx] || {};
+
+            const container = document.getElementById('singleQuestionCanvasNode');
+            container.innerHTML = `
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-xl text-slate-100">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <span class="text-[10px] font-black uppercase text-amber-500 tracking-wider"><i class="fa-solid fa-layer-group mr-1"></i> Question ${idx + 1} of ${challengeQuestions.length}</span>
+                        <div id="qCountdownBadge" class="bg-slate-800 border border-slate-700 text-amber-400 font-black text-xs px-2.5 py-1 rounded-xl flex items-center space-x-1">
+                            <i class="fa-solid fa-hourglass-half text-[10px]"></i>
+                            <span id="qCountdownSecText">${questionTimeRemainingMap[idx]}s</span>
+                        </div>
+                    </div>
+
+                    <div class="text-xs md:text-sm font-bold leading-relaxed whitespace-pre-wrap break-words">
+                        ${q.qText}
+                    </div>
+
+                    ${q.imgData ? `<img src="${q.imgData}" class="w-full max-h-48 object-contain rounded-xl border border-slate-800 bg-slate-950">` : ''}
+
+                    <!-- Options Matrix -->
+                    <div class="space-y-2 text-xs font-bold">
+                        ${['A', 'B', 'C', 'D'].map(optKey => {
+                            const optVal = q[`opt${optKey}`];
+                            if(!optVal) return '';
+
+                            let optStyle = "bg-slate-800/80 border-slate-700 text-slate-200 hover:bg-slate-800";
+                            
+                            if(ansState.submitted) {
+                                if(optKey === q.correctOpt) {
+                                    optStyle = "bg-emerald-500/20 border-emerald-500 text-emerald-400 font-black"; // Correct Option Solid Highlight
+                                } else if(ansState.selectedOpt === optKey && !ansState.isCorrect) {
+                                    optStyle = "bg-rose-500/20 border-rose-500 text-rose-400 font-black"; // Wrong Selected Highlight
+                                }
+                            } else if(ansState.selectedOpt === optKey) {
+                                optStyle = "bg-rose-500/30 border-rose-500 text-white font-black";
+                            }
+
+                            return `
+                                <button onclick="window.selectOptionChoice('${optKey}')" ${ansState.submitted ? 'disabled' : ''} class="w-full text-left p-3 rounded-2xl border ${optStyle} transition flex items-center justify-between">
+                                    <span><b class="mr-2">${optKey}.</b> ${optVal}</span>
+                                    ${ansState.submitted && optKey === q.correctOpt ? '<i class="fa-solid fa-circle-check text-emerald-500"></i>' : ''}
+                                    ${ansState.submitted && ansState.selectedOpt === optKey && !ansState.isCorrect ? '<i class="fa-solid fa-circle-xmark text-rose-500"></i>' : ''}
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <!-- Instant NCERT Solution Breakdown -->
+                    ${ansState.submitted ? `
+                        <div class="bg-slate-950 border border-slate-800 p-3.5 rounded-2xl space-y-1 mt-2">
+                            <span class="text-[9px] font-black uppercase text-amber-500 block"><i class="fa-solid fa-lightbulb mr-1"></i> Solution Breakdown:</span>
+                            <p class="text-xs text-slate-300 font-medium leading-relaxed whitespace-pre-wrap">${q.solutionText || 'No specific breakdown provided for this question.'}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        };
+
+        window.startQuestionTimer = function(idx) {
+            if(questionTimerInterval) clearInterval(questionTimerInterval);
+
+            // If already submitted or time expired, keep badge static
+            if(studentAnswersMap[idx] && studentAnswersMap[idx].submitted) {
+                document.getElementById('qCountdownSecText').innerText = "Done";
+                return;
+            }
+
+            questionTimerInterval = setInterval(() => {
+                if(questionTimeRemainingMap[idx] > 0) {
+                    questionTimeRemainingMap[idx]--;
+                    const el = document.getElementById('qCountdownSecText');
+                    if(el) el.innerText = `${questionTimeRemainingMap[idx]}s`;
+                } else {
+                    clearInterval(questionTimerInterval);
+                    // Lock question on timeout
+                    if(!studentAnswersMap[idx]) {
+                        studentAnswersMap[idx] = { selectedOpt: null, isCorrect: false, submitted: true, expired: true };
+                    } else {
+                        studentAnswersMap[idx].submitted = true;
+                    }
+                    window.loadQuestionCard(idx);
+                }
+            }, 1000);
+        };
+
+        window.selectOptionChoice = function(optKey) {
+            if(studentAnswersMap[currentQuestionIndex] && studentAnswersMap[currentQuestionIndex].submitted) return;
+            studentAnswersMap[currentQuestionIndex] = { selectedOpt: optKey, submitted: false };
+            window.loadQuestionCard(currentQuestionIndex);
+        };
+
+        window.submitCurrentQuestionAnswer = function() {
+            const ans = studentAnswersMap[currentQuestionIndex];
+            if(!ans || !ans.selectedOpt) {
+                return alert("Please select an option first!");
+            }
+            if(ans.submitted) return;
+
+            const q = challengeQuestions[currentQuestionIndex];
+            const isCorrect = ans.selectedOpt === q.correctOpt;
+
+            studentAnswersMap[currentQuestionIndex] = {
+                selectedOpt: ans.selectedOpt,
+                isCorrect,
+                submitted: true
+            };
+
+            window.loadQuestionCard(currentQuestionIndex);
+        };
+                // Complete Quiz Submission & Analytics Engine
+        window.finishFullChallengeTest = function() {
+            if(confirm("Are you sure you want to finish and submit your challenge test?")) {
+                if(quizOverallInterval) clearInterval(quizOverallInterval);
+                if(questionTimerInterval) clearInterval(questionTimerInterval);
+
+                // Increment Attempt Counter for progressive timer reduction next time
+                localStorage.setItem('mneet_challenge_attempt_count', String(attemptCount + 1));
+
+                window.calculateAndDisplayResultScreen();
+            }
+        };
+
+        window.calculateAndDisplayResultScreen = function() {
+            const totalQ = challengeQuestions.length;
+            let correctCount = 0;
+            let wrongCount = 0;
+            let skippedCount = 0;
+
+            challengeQuestions.forEach((q, idx) => {
+                const ans = studentAnswersMap[idx];
+                if(ans && ans.submitted && !ans.expired) {
+                    if(ans.isCorrect) correctCount++;
+                    else wrongCount++;
+                } else {
+                    skippedCount++;
+                }
+            });
+
+            // Point Formula: +4 BP Coins for Correct, -2 BP Coins for Wrong
+            const earnedBPCoins = (correctCount * 4) - (wrongCount * 2);
+            const rawScore = Math.max(0, earnedBPCoins);
+            const totalPossibleScore = totalQ * 4;
+            const scorePct = Math.round((rawScore / totalPossibleScore) * 100);
+            const accuracyPct = Math.round((correctCount / Math.max(1, (correctCount + wrongCount))) * 100);
+
+            // Push Result to Firebase
+            addDoc(collection(db, "rank_challenge_results"), {
+                studentUid: currentUserId || 'guest',
+                studentName: currentUserName,
+                score: rawScore,
+                totalQuestions: totalQ,
+                correct: correctCount,
+                wrong: wrongCount,
+                skipped: skippedCount,
+                timeTaken: Math.ceil(quizOverallSeconds / 60),
+                createdAt: Date.now(),
+                hidden: false
+            }).catch(e => console.error("Error saving score: ", e));
+
+            document.getElementById('view-challenge-arena').classList.add('hidden');
+            document.getElementById('view-challenge-result').classList.remove('hidden');
+
+            // Render Result Metrics
+            const container = document.getElementById('resultDashboardCanvasNode');
+            container.innerHTML = `
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6 text-slate-100 max-w-xl mx-auto">
+                    
+                    <!-- BP Coins Header -->
+                    <div class="bg-gradient-to-r from-amber-500/20 to-rose-500/20 border border-amber-500/30 p-4 rounded-2xl flex justify-between items-center">
+                        <div>
+                            <span class="text-[10px] font-black uppercase text-amber-400 block tracking-wider">Earned BP Coins</span>
+                            <span class="text-2xl font-black text-white">${earnedBPCoins > 0 ? '+' : ''}${earnedBPCoins} BP</span>
+                        </div>
+                        <i class="fa-solid fa-coins text-amber-400 text-3xl"></i>
+                    </div>
+
+                    <!-- Total Percentage Bar -->
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between text-xs font-black">
+                            <span>Total Test Percentage</span>
+                            <span class="text-emerald-400">${scorePct}%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
+                            <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: ${scorePct}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Core Metrics Grid -->
+                    <div class="grid grid-cols-2 gap-3 text-xs font-bold">
+                        <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                            <span class="text-[9px] text-emerald-400 uppercase font-black block">Correct (+4)</span>
+                            <span class="text-base font-black text-slate-100">${correctCount}/${totalQ}</span>
+                            <span class="text-[9px] text-slate-400 block mt-0.5">${Math.round((correctCount/totalQ)*100)}% of Total</span>
+                        </div>
+                        <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                            <span class="text-[9px] text-rose-400 uppercase font-black block">Incorrect (-2)</span>
+                            <span class="text-base font-black text-slate-100">${wrongCount}/${totalQ}</span>
+                            <span class="text-[9px] text-slate-400 block mt-0.5">${Math.round((wrongCount/totalQ)*100)}% of Total</span>
+                        </div>
+                        <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                            <span class="text-[9px] text-slate-400 uppercase font-black block">Skipped</span>
+                            <span class="text-base font-black text-slate-100">${skippedCount}/${totalQ}</span>
+                            <span class="text-[9px] text-slate-400 block mt-0.5">${Math.round((skippedCount/totalQ)*100)}% of Total</span>
+                        </div>
+                        <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                            <span class="text-[9px] text-amber-400 uppercase font-black block">Accuracy</span>
+                            <span class="text-base font-black text-slate-100">${accuracyPct}%</span>
+                            <span class="text-[9px] text-slate-400 block mt-0.5">Precision Ratio</span>
+                        </div>
+                    </div>
+
+                    <!-- AI Opponent Matchmaking Comparison Matrix -->
+                    <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block"><i class="fa-solid fa-users-viewfinder text-rose-500 mr-1"></i> Challenge Opponents Leaderboard</span>
+                        <div class="space-y-2 text-xs font-bold">
+                            <!-- User's Score -->
+                            <div class="flex justify-between items-center p-2 rounded-xl bg-rose-500/10 border border-rose-500/30">
+                                <span class="text-white font-black"><i class="fa-solid fa-user text-rose-500 mr-1"></i> ${currentUserName} (You)</span>
+                                <span class="text-rose-400 font-black">${rawScore} pts (${Math.floor(quizOverallSeconds/60)}m)</span>
+                            </div>
+                            <!-- AI Bots -->
+                            ${AI_BOTS.map(bot => {
+                                const botScore = Math.round(totalPossibleScore * bot.scoreFactor);
+                                return `
+                                    <div class="flex justify-between items-center p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300">
+                                        <span><i class="fa-solid fa-robot text-slate-500 mr-1"></i> ${bot.name}</span>
+                                        <span class="text-slate-400">${botScore} pts (${Math.floor(bot.timeSec/60)}m)</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex space-x-2 pt-2">
+                        <button onclick="window.location.reload()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-black py-3 rounded-2xl text-xs shadow transition">Reattempt Challenge</button>
+                        <button onclick="window.location.href='student-leaderboard.html'" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-black py-3 rounded-2xl text-xs shadow transition">View Global Tier Rank</button>
+                    </div>
+                </div>
+            `;
         };
     </script>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen font-sans select-none antialiased">
-    <div id="studentChallengePortal" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+<body class="bg-slate-950 text-slate-100 min-h-screen transition-colors duration-300 pb-20">
+    <div id="challengePortalApp" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
         
-        <!-- SCREEN 1: CHALLENGE DASHBOARD HUB -->
-        <div id="student-challenge-dashboard" class="w-full flex-1 flex flex-col">
-            <!-- Distraction Free Dynamic Notification Strap Header -->
-            <div class="bg-gradient-to-r from-amber-500 to-rose-500 text-white font-black text-[10px] py-1.5 px-4 text-center tracking-widest uppercase flex justify-center items-center space-x-1.5 shadow-inner">
-                <i class="fa-solid fa-bullhorn animate-bounce"></i> 
-                <span>Admin Alert: New 7-Day Organic Chemistry Challenge Strike is Live! Attempt Now.</span>
+        <!-- SCREEN 1: CHALLENGE LIST VIEW -->
+        <div id="view-challenge-list" class="w-full flex-1 flex flex-col">
+            <header class="bg-slate-900 border-b border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
+                <button onclick="window.history.back()" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+                <h1 class="font-black text-lg tracking-wide text-white mx-auto"><i class="fa-solid fa-fire text-amber-500 mr-2"></i>Challenge Arena</h1>
+                <div class="w-8"></div>
+            </header>
+
+            <div class="w-full px-4 py-4 max-w-xl mx-auto space-y-4 flex-1">
+                <!-- DAILY / WEEKLY TOGGLE -->
+                <div class="bg-slate-900 p-1.5 rounded-2xl flex items-center gap-1 border border-slate-800">
+                    <button id="tabBtnDaily" onclick="window.switchChallengeTab('daily')" class="flex-1 py-2.5 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition"><i class="fa-solid fa-calendar-day mr-1"></i> Daily Challenge</button>
+                    <button id="tabBtnWeekly" onclick="window.switchChallengeTab('weekly')" class="flex-1 py-2.5 rounded-xl text-xs font-black text-slate-400 hover:text-white transition"><i class="fa-solid fa-calendar-week mr-1"></i> Weekly Challenge</button>
+                </div>
+
+                <div id="challengeCardsNode" class="space-y-3"></div>
             </div>
-            
-            <header class="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full shadow-sm">
-                <button onclick="window.location.href='student-dashboard.html'" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg text-slate-600"></i></button>
-                <h2 class="font-black text-sm md:text-base text-slate-800">Challenges Hub</h2>
-                <div class="w-8"></div>
-            </header>
-            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-4 shadow-none" id="studentChallengesContainer"></div>
         </div>
 
-        <!-- SCREEN 2: MILESTONES / DAILY TASKS LIST -->
-        <div id="student-challenge-tasks" class="w-full flex-1 flex flex-col hidden">
-            <header class="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full shadow-sm">
-                <button onclick="window.navigateToStudentChallengeView('student-challenge-dashboard')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg text-slate-600"></i></button>
-                <h2 id="challengeTasksHeaderTitle" class="font-black text-sm text-slate-800 mx-auto truncate max-w-[180px]">Daily Tasks</h2>
-                <div class="w-8"></div>
-            </header>
-            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-3" id="studentTasksContainer"></div>
-        </div>
+        <!-- SCREEN 2: EXAMINATION ARENA VIEW -->
+        <div id="view-challenge-arena" class="fixed inset-0 bg-slate-950 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
+            <!-- TOP CONTROL ROW -->
+            <header class="bg-slate-900 px-4 py-3 flex justify-between items-center border-b border-slate-800 w-full flex-shrink-0">
+                <div class="flex items-center space-x-2">
+                    <button onclick="window.finishFullChallengeTest()" class="bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-black">Submit Test</button>
+                    <span id="arenaChallengeTitle" class="text-xs font-black uppercase text-slate-400 truncate max-w-[120px]">Challenge</span>
+                </div>
 
-        <!-- SCREEN 3: NO BARS IMMERSIVE CHALLENGE BATTLE CANVAS -->
-        <div id="student-challenge-canvas" class="fixed inset-0 bg-slate-900 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
-            <!-- Live Gamified Dashboard HUD Tracking Strap -->
-            <header class="bg-slate-950 text-white px-4 py-3 flex justify-between items-center border-b border-slate-800 w-full h-12 flex-shrink-0">
-                <button onclick="window.navigateToStudentChallengeView('student-challenge-tasks')" class="text-slate-400 font-bold text-xs"><i class="fa-solid fa-chevron-left"></i> Quit</button>
-                <h2 id="canvasChallengeTitle" class="text-[10px] font-black uppercase tracking-wider text-slate-500 truncate max-w-[140px]">Battle Arena</h2>
-                <div class="flex items-center space-x-1.5 bg-amber-500/10 border border-amber-500/30 rounded-full px-2.5 py-0.5">
-                    <i class="fa-solid fa-coins text-amber-400 text-[10px]"></i>
-                    <span id="hudCoinsTracker" class="font-mono text-xs font-black text-amber-400">0</span>
+                <!-- OVERALL STOPWATCH -->
+                <div class="bg-slate-800 border border-slate-700 text-emerald-400 font-black text-xs px-3 py-1.5 rounded-xl flex items-center space-x-1.5">
+                    <i class="fa-solid fa-stopwatch text-xs"></i>
+                    <span id="overallStopwatchText">00:00</span>
                 </div>
             </header>
 
-            <!-- Adaptive Canvas Container Frame Core -->
-            <div class="flex-1 w-full bg-slate-800 p-4 overflow-y-auto box-border flex flex-col items-center">
-                <div class="bg-white border border-slate-200 w-full max-w-xl rounded-3xl p-6 space-y-5 shadow-2xl text-xs font-bold text-slate-700">
-                    <div class="flex justify-between items-center border-b pb-2">
-                        <span class="text-rose-500 font-black uppercase tracking-widest text-[9px]"><i class="fa-solid fa-circle-nodes mr-1"></i> Live Challenge Evaluation</span>
-                        <span class="text-[9px] text-slate-400 font-bold bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-md">Strict Matrix: +4 / -2 Coins</span>
-                    </div>
+            <div class="flex-1 w-full p-4 overflow-y-auto box-border space-y-4 max-w-xl mx-auto">
+                <!-- SUBJECT FILTER TABS -->
+                <div id="subjectFilterTabsNode" class="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none"></div>
 
-                    <!-- Evaluation Content Nodes Flow -->
-                    <p class="text-slate-900 text-sm font-black leading-relaxed">Calculate the absolute work done during an isothermal expansion phase of an ideal gas cluster system?</p>
-                    
-                    <div class="space-y-2.5 pt-1">
-                        <!-- Simulated Options with triggers -->
-                        <div onclick="window.evaluateChallengeAnswer('right')" class="flex items-center space-x-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:border-rose-400 transition"><span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-black">A</span> <span class="text-slate-800 font-bold">W = nRT ln(V2/V1)</span></div>
-                        <div onclick="window.evaluateChallengeAnswer('wrong')" class="flex items-center space-x-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:border-rose-400 transition"><span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-black">B</span> <span class="text-slate-800 font-bold">W = Zero internal parameters</span></div>
-                    </div>
+                <!-- QUICK JUMP SHORTCUT GRID -->
+                <div id="quickJumpGridNode" class="grid grid-cols-8 gap-1.5 max-h-24 overflow-y-auto p-1 bg-slate-900 border border-slate-800 rounded-2xl"></div>
 
-                    <!-- Review & Finalize actions -->
-                    <div class="pt-3 border-t">
-                        <button onclick="window.completeChallengeBattle()" class="w-full bg-slate-900 hover:bg-slate-950 text-white py-3 rounded-xl font-black shadow transition text-center uppercase tracking-wider">Save & Proceed Next</button>
-                    </div>
-
-                    <div id="battleSolutionBox" class="hidden p-4 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl leading-relaxed font-medium">
-                        📌 <strong>Explanation Matrix:</strong> Thermodynamic processes locking constant heat vectors evaluate total metrics via volume proportional log algorithms.
-                    </div>
+                <!-- ACTION BAR: PREVIOUS / SUBMIT ANSWER / NEXT -->
+                <div class="flex justify-between items-center gap-2">
+                    <button onclick="window.loadQuestionCard(currentQuestionIndex - 1)" class="flex-1 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-black text-slate-300 active:scale-95 transition"><i class="fa-solid fa-arrow-left mr-1"></i> Prev</button>
+                    <button onclick="window.submitCurrentQuestionAnswer()" class="flex-1 py-2.5 bg-emerald-500 text-slate-950 rounded-xl text-xs font-black shadow active:scale-95 transition"><i class="fa-solid fa-check mr-1"></i> Submit Answer</button>
+                    <button onclick="window.loadQuestionCard(currentQuestionIndex + 1)" class="flex-1 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-black text-slate-300 active:scale-95 transition">Next <i class="fa-solid fa-arrow-right ml-1"></i></button>
                 </div>
+
+                <!-- SINGLE QUESTION CANVAS -->
+                <div id="singleQuestionCanvasNode"></div>
             </div>
         </div>
+
+        <!-- SCREEN 3: RESULT ANALYTICS DASHBOARD -->
+        <div id="view-challenge-result" class="fixed inset-0 bg-slate-950 z-50 hidden flex flex-col w-screen h-screen overflow-y-auto p-4">
+            <div id="resultDashboardCanvasNode" class="my-auto"></div>
+        </div>
+
+        <!-- UNIVERSAL BOTTOM NAVIGATION -->
+        <nav class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 px-2 py-3 flex justify-around items-center shadow-2xl w-full box-border">
+            <button onclick="window.location.href='index.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
+            <button onclick="window.location.href='student-ncert.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
+            <button onclick="window.location.href='student-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
+            <button onclick="window.location.href='student-challenge.html'" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-fire text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Challenge</span></button>
+            <button onclick="window.location.href='student-leaderboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-trophy text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Rank</span></button>
+        </nav>
     </div>
 </body>
 </html>
-    
+                
