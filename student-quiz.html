@@ -3,13 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mNEET Student - Test Center</title>
+    <title>mNEET - Student Quiz Engine</title>
+    <!-- Tailwind CSS with Dark Mode Support -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
@@ -23,166 +29,650 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        let selectedSubjectId = "";
-        let selectedChapterId = "";
-        let selectedTopicId = "";
-        let subStreamUnsubscribe = null;
+        // Core State
+        let currentUserId = null;
+        let currentUserName = "Aspirant";
+        
+        let allQuizzes = [];
+        let filteredChapters = [];
+        let filteredTopics = [];
+        
+        let selectedSubject = 'physics';
+        let selectedChapter = 'all';
+        let selectedTopic = 'all';
 
-        window.navigateToStudentTestView = function(viewId) {
-            const screens = ['student-view-test-subjects', 'student-view-test-chapters', 'student-view-test-topics', 'student-test-exam-canvas'];
-            screens.forEach(s => document.getElementById(s).classList.add('hidden'));
-            document.getElementById(viewId).classList.remove('hidden');
+        let activeQuizDoc = null;
+        let quizQuestions = [];
+        let currentQuestionIndex = 0;
+        let quizMode = 'practice'; // 'practice' or 'exam'
 
-            const bottomNav = document.getElementById('studentTestBottomNav');
-            if(viewId === 'student-test-exam-canvas') {
-                bottomNav.style.display = 'none';
+        // Timers & Tracking
+        let quizOverallSeconds = 0;
+        let quizOverallInterval = null;
+        let questionTimerInterval = null;
+        let questionTimeRemainingMap = {};
+        let studentAnswersMap = {}; // { opt, isCorrect, submitted, expired }
+
+        // Theme Engine Sync with student-dashboard.html
+        window.syncAppTheme = function() {
+            const savedTheme = localStorage.getItem('mneet_theme') || localStorage.getItem('theme') || 'dark';
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
             } else {
-                bottomNav.style.display = 'flex';
+                document.documentElement.classList.remove('dark');
             }
         };
 
-        window.initStudentTestSubjects = function() {
-            onSnapshot(query(collection(db, "quiz_subjects"), orderBy("createdAt", "asc")), (snapshot) => {
-                const container = document.getElementById('studentTestSubContainer');
-                if(!container) return; container.innerHTML = "";
+        onAuthStateChanged(auth, (user) => {
+            window.syncAppTheme();
+            if (user) {
+                currentUserId = user.uid;
+                currentUserName = user.displayName || user.email.split('@')[0] || "Aspirant";
+            }
+            window.listenRealtimeQuizzes();
+        });
+
+        // 1. Fetch Admin Quizzes from Firestore
+        window.listenRealtimeQuizzes = function() {
+            onSnapshot(query(collection(db, "quizzes"), orderBy("createdAt", "desc")), (snapshot) => {
+                allQuizzes = [];
                 snapshot.forEach(docSnap => {
-                    const s = docSnap.data(); if(s.hidden) return; 
-                    const id = docSnap.id;
-                    container.innerHTML += `
-                        <div onclick="window.enterStudentTestSubject('${id}', '${s.name.replace(/'/g, "\\'")}')" class="bg-white border border-slate-200 rounded-2xl p-5 flex items-center space-x-4 shadow-sm active:scale-[0.99] transition cursor-pointer hover:border-rose-400">
-                            <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500"><i class="fa-solid fa-folder-open text-lg"></i></div>
-                            <span class="font-black text-slate-800 text-sm md:text-base">${s.name}</span>
-                        </div>
-                    `;
+                    const data = docSnap.data();
+                    if(!data.hidden) {
+                        allQuizzes.push({ id: docSnap.id, ...data });
+                    }
                 });
+                window.renderSubjectCards();
+                window.updateCascadingFilters();
             });
         };
 
-        window.enterStudentTestSubject = function(id, name) {
-            selectedSubjectId = id;
-            document.getElementById('studentTestChapterHeaderTitle').innerText = name;
-            window.navigateToStudentTestView('student-view-test-chapters');
-            window.loadStudentTestChapters();
-        };
+        window.renderSubjectCards = function() {
+            const subjects = [
+                { id: 'physics', name: 'Physics', icon: 'fa-atom', color: 'from-blue-500 to-indigo-600' },
+                { id: 'chemistry', name: 'Chemistry', icon: 'fa-flask-vial', color: 'from-emerald-500 to-teal-600' },
+                { id: 'botany', name: 'Botany', icon: 'fa-seedling', color: 'from-green-500 to-emerald-600' },
+                { id: 'zoology', name: 'Zoology', icon: 'fa-dna', color: 'from-rose-500 to-pink-600' }
+            ];
 
-        window.addEventListener('DOMContentLoaded', () => window.initStudentTestSubjects());
-                window.loadStudentTestChapters = function() {
-            if(subStreamUnsubscribe) subStreamUnsubscribe();
-            subStreamUnsubscribe = onSnapshot(query(collection(db, `quiz_subjects/${selectedSubjectId}/chapters`), orderBy("createdAt", "asc")), (snapshot) => {
-                const container = document.getElementById('studentTestChapContainer');
-                container.innerHTML = "";
-                snapshot.forEach(docSnap => {
-                    const c = docSnap.data(); if(c.hidden) return;
-                    const id = docSnap.id;
-                    container.innerHTML += `
-                        <div onclick="window.enterStudentTestChapter('${id}', '${c.name.replace(/'/g, "\\'")}')" class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm active:scale-[0.99] transition cursor-pointer hover:border-purple-400">
-                            <span class="font-black text-slate-800 text-xs md:text-sm">${c.name}</span>
-                            <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
+            const container = document.getElementById('subjectCardsNode');
+            if(!container) return;
+            container.innerHTML = "";
+
+            subjects.forEach(sub => {
+                const isActive = selectedSubject === sub.id;
+                container.innerHTML += `
+                    <button onclick="window.selectSubjectChoice('${sub.id}')" class="p-3.5 rounded-2xl border text-left transition flex items-center space-x-3 ${isActive ? 'bg-gradient-to-r ' + sub.color + ' text-white border-transparent shadow-lg scale-[1.02]' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-400'}">
+                        <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-lg font-black">
+                            <i class="fa-solid ${sub.icon}"></i>
                         </div>
-                    `;
-                });
+                        <div>
+                            <h4 class="font-black text-xs uppercase tracking-wider">${sub.name}</h4>
+                            <span class="text-[10px] opacity-80 font-bold">${allQuizzes.filter(q => (q.subject || '').toLowerCase() === sub.id).length} Quizzes</span>
+                        </div>
+                    </button>
+                `;
             });
         };
 
-        window.enterStudentTestChapter = function(id, name) {
-            selectedChapterId = id;
-            document.getElementById('studentTestTopicHeaderTitle').innerText = name;
-            window.navigateToStudentTestView('student-view-test-topics');
-            window.loadStudentTestTopics();
+        window.selectSubjectChoice = function(subId) {
+            selectedSubject = subId;
+            selectedChapter = 'all';
+            selectedTopic = 'all';
+            window.renderSubjectCards();
+            window.updateCascadingFilters();
         };
 
-        window.loadStudentTestTopics = function() {
-            onSnapshot(query(collection(db, `quiz_subjects/${selectedSubjectId}/chapters/${selectedChapterId}/topics`), orderBy("createdAt", "asc")), (snapshot) => {
-                const container = document.getElementById('studentTestTopicContainer');
-                container.innerHTML = "";
-                snapshot.forEach(docSnap => {
-                    const t = docSnap.data(); if(t.hidden) return;
-                    const id = docSnap.id;
-                    container.innerHTML += `
-                        <div onclick="window.startStudentTopicExam('${id}', '${t.name.replace(/'/g, "\\'")}')" class="bg-white border border-slate-200 rounded-2xl p-4 flex justify-between items-center shadow-sm active:scale-[0.99] cursor-pointer hover:border-emerald-400">
-                            <span class="font-black text-xs md:text-sm text-slate-800"><i class="fa-solid fa-tags text-purple-500 mr-2"></i>${t.name}</span>
-                            <i class="fa-solid fa-angle-right text-slate-400"></i>
+        window.updateCascadingFilters = function() {
+            // Filter Chapters based on Subject
+            const subjectQuizzes = allQuizzes.filter(q => (q.subject || '').toLowerCase() === selectedSubject);
+            filteredChapters = [...new Set(subjectQuizzes.map(q => q.chapter).filter(Boolean))];
+
+            const chapterSelect = document.getElementById('filterChapterSelect');
+            chapterSelect.innerHTML = `<option value="all">All Chapters (${filteredChapters.length})</option>`;
+            filteredChapters.forEach(ch => {
+                chapterSelect.innerHTML += `<option value="${ch}" ${selectedChapter === ch ? 'selected' : ''}>${ch}</option>`;
+            });
+
+            // Filter Topics based on Subject & Chapter
+            let chapterQuizzes = subjectQuizzes;
+            if(selectedChapter !== 'all') {
+                chapterQuizzes = subjectQuizzes.filter(q => q.chapter === selectedChapter);
+            }
+            filteredTopics = [...new Set(chapterQuizzes.map(q => q.topic).filter(Boolean))];
+
+            const topicSelect = document.getElementById('filterTopicSelect');
+            topicSelect.innerHTML = `<option value="all">All Topics (${filteredTopics.length})</option>`;
+            filteredTopics.forEach(top => {
+                topicSelect.innerHTML += `<option value="${top}" ${selectedTopic === top ? 'selected' : ''}>${top}</option>`;
+            });
+
+            window.renderQuizListCards();
+        };
+
+        window.onChapterFilterChange = function(val) {
+            selectedChapter = val;
+            selectedTopic = 'all';
+            window.updateCascadingFilters();
+        };
+
+        window.onTopicFilterChange = function(val) {
+            selectedTopic = val;
+            window.renderQuizListCards();
+        };
+
+        window.renderQuizListCards = function() {
+            const container = document.getElementById('quizCardsListNode');
+            container.innerHTML = "";
+
+            let displayQuizzes = allQuizzes.filter(q => (q.subject || '').toLowerCase() === selectedSubject);
+
+            if(selectedChapter !== 'all') {
+                displayQuizzes = displayQuizzes.filter(q => q.chapter === selectedChapter);
+            }
+            if(selectedTopic !== 'all') {
+                displayQuizzes = displayQuizzes.filter(q => q.topic === selectedTopic);
+            }
+
+            if(displayQuizzes.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-16 text-slate-400 font-bold text-xs space-y-2 col-span-full">
+                        <i class="fa-solid fa-vial-circle-check text-4xl block text-slate-600 mb-2"></i>
+                        <p>No active quizzes published by Admin for this topic yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            displayQuizzes.forEach(q => {
+                const isExamMode = (q.mode || 'practice') === 'exam';
+                container.innerHTML += `
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3 flex flex-col justify-between">
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[9px] font-black uppercase px-2.5 py-1 rounded-full ${isExamMode ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}">
+                                    <i class="fa-solid ${isExamMode ? 'fa-pen-clip' : 'fa-graduation-cap'} mr-1"></i> ${isExamMode ? 'Exam Mode' : 'Practice Mode'}
+                                </span>
+                                <span class="text-[10px] font-bold text-slate-400"><i class="fa-solid fa-clock mr-1"></i> ${q.timeLimit || 15} mins</span>
+                            </div>
+                            <h3 class="font-black text-sm text-slate-900 dark:text-white leading-snug">${q.title || q.chapter || 'NEET Quiz'}</h3>
+                            <p class="text-[11px] text-slate-400 font-semibold line-clamp-1"><i class="fa-solid fa-layer-group text-amber-500 mr-1"></i> ${q.topic || q.chapter || 'General Concepts'}</p>
                         </div>
-                    `;
+
+                        <button onclick="window.enterQuizArenaSession('${q.id}')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs py-3 rounded-2xl shadow active:scale-95 transition flex items-center justify-center space-x-2">
+                            <span>Start Quiz Now</span>
+                            <i class="fa-solid fa-arrow-right text-xs"></i>
+                        </button>
+                    </div>
+                `;
+            });
+        };
+                // 2. Quiz Arena Engine (Execution Room)
+        window.enterQuizArenaSession = function(quizId) {
+            const foundQuiz = allQuizzes.find(q => q.id === quizId);
+            if(!foundQuiz) return alert("Quiz data not found!");
+
+            activeQuizDoc = foundQuiz;
+            quizMode = foundQuiz.mode || 'practice';
+
+            // Fetch Sub-collection Questions deployed by Admin
+            onSnapshot(collection(db, `quizzes/${quizId}/questions`), (snapshot) => {
+                quizQuestions = [];
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if(!data.hidden) {
+                        quizQuestions.push({ id: docSnap.id, ...data });
+                    }
                 });
+
+                if(quizQuestions.length === 0) {
+                    alert("This quiz has no questions uploaded by Admin yet!");
+                    return;
+                }
+
+                window.startQuizSessionEngine();
             });
         };
 
-        window.startStudentTopicExam = function(id, name) {
-            selectedTopicId = id;
-            window.navigateToStudentTestView('student-test-exam-canvas');
-            document.getElementById('topicExamCanvasTitle').innerText = name;
+        window.startQuizSessionEngine = function() {
+            currentQuestionIndex = 0;
+            quizOverallSeconds = 0;
+            studentAnswersMap = {};
+            questionTimeRemainingMap = {};
+
+            const defaultPerQTimer = activeQuizDoc.perQuestionTimer ? parseInt(activeQuizDoc.perQuestionTimer) : 60;
+            quizQuestions.forEach((q, idx) => {
+                questionTimeRemainingMap[idx] = q.timer ? parseInt(q.timer) : defaultPerQTimer;
+            });
+
+            // UI Screen Switching & Hiding Bottom Nav
+            document.getElementById('view-quiz-list').classList.add('hidden');
+            document.getElementById('universalBottomNav').classList.add('hidden'); // Hide Bottom Nav in Arena
+            document.getElementById('view-quiz-arena').classList.remove('hidden');
+
+            if(quizOverallInterval) clearInterval(quizOverallInterval);
+            quizOverallInterval = setInterval(() => {
+                quizOverallSeconds++;
+                const m = String(Math.floor(quizOverallSeconds / 60)).padStart(2, '0');
+                const s = String(quizOverallSeconds % 60).padStart(2, '0');
+                document.getElementById('overallQuizStopwatchText').innerText = `${m}:${s}`;
+            }, 1000);
+
+            window.renderQuizQuickJumpGrid();
+            window.loadQuizQuestionCard(0);
+        };
+
+        window.renderQuizQuickJumpGrid = function() {
+            const container = document.getElementById('quizQuickJumpGridNode');
+            if(!container) return;
+            container.innerHTML = "";
+
+            quizQuestions.forEach((q, idx) => {
+                const ansState = studentAnswersMap[idx];
+                let btnStyle = "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700";
+
+                if(ansState && ansState.submitted) {
+                    if(quizMode === 'practice') {
+                        btnStyle = ansState.isCorrect ? "bg-emerald-500 text-white border-emerald-500" : "bg-rose-500 text-white border-rose-500";
+                    } else {
+                        btnStyle = "bg-amber-500 text-slate-950 border-amber-500 font-black"; // Locked in Exam Mode
+                    }
+                } else if(idx === currentQuestionIndex) {
+                    btnStyle = "bg-emerald-500 text-slate-950 border-emerald-500 font-black shadow-lg scale-105";
+                }
+
+                container.innerHTML += `
+                    <button onclick="window.loadQuizQuestionCard(${idx})" class="w-8 h-8 rounded-xl font-black text-xs border flex items-center justify-center transition ${btnStyle}">
+                        ${idx + 1}
+                    </button>
+                `;
+            });
+        };
+
+        window.loadQuizQuestionCard = function(idx) {
+            if(idx < 0 || idx >= quizQuestions.length) return;
+
+            currentQuestionIndex = idx;
+            window.renderQuizQuickJumpGrid();
+            window.startPerQuestionTimer(idx);
+
+            const q = quizQuestions[idx];
+            const ansState = studentAnswersMap[idx] || {};
+
+            const container = document.getElementById('singleQuizQuestionCanvasNode');
+            container.innerHTML = `
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm text-slate-900 dark:text-slate-100">
+                    <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+                        <span class="text-[10px] font-black uppercase text-emerald-500 tracking-wider">
+                            <i class="fa-solid fa-layer-group mr-1"></i> Question ${idx + 1} of ${quizQuestions.length}
+                        </span>
+                        <div id="qQuizCountdownBadge" class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-emerald-500 font-black text-xs px-2.5 py-1 rounded-xl flex items-center space-x-1">
+                            <i class="fa-solid fa-hourglass-half text-[10px]"></i>
+                            <span id="qQuizCountdownSecText">${questionTimeRemainingMap[idx]}s</span>
+                        </div>
+                    </div>
+
+                    <div class="text-xs md:text-sm font-bold leading-relaxed whitespace-pre-wrap break-words">
+                        ${q.qText || q.questionText || ''}
+                    </div>
+
+                    ${(q.imgData || q.imageUrl) ? `<img src="${q.imgData || q.imageUrl}" class="w-full max-h-48 object-contain rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">` : ''}
+
+                    <!-- Options Matrix -->
+                    <div class="space-y-2 text-xs font-bold">
+                        ${['A', 'B', 'C', 'D'].map(optKey => {
+                            const optVal = q[`opt${optKey}`] || q[`option${optKey}`];
+                            if(!optVal) return '';
+
+                            const correctOptKey = q.correctOpt || q.correctOption;
+                            let optStyle = "bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800";
+                            
+                            if(ansState.submitted) {
+                                if(quizMode === 'practice') {
+                                    if(optKey === correctOptKey) {
+                                        optStyle = "bg-emerald-500/20 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-black";
+                                    } else if(ansState.selectedOpt === optKey && !ansState.isCorrect) {
+                                        optStyle = "bg-rose-500/20 border-rose-500 text-rose-600 dark:text-rose-400 font-black";
+                                    }
+                                } else {
+                                    // Exam Mode Selection Highlight
+                                    if(ansState.selectedOpt === optKey) {
+                                        optStyle = "bg-amber-500/20 border-amber-500 text-amber-500 font-black";
+                                    }
+                                }
+                            } else if(ansState.selectedOpt === optKey) {
+                                optStyle = "bg-emerald-500/30 border-emerald-500 text-emerald-600 dark:text-white font-black";
+                            }
+
+                            return `
+                                <button onclick="window.selectQuizOptionChoice('${optKey}')" ${ansState.submitted ? 'disabled' : ''} class="w-full text-left p-3 rounded-2xl border ${optStyle} transition flex items-center justify-between">
+                                    <span><b class="mr-2">${optKey}.</b> ${optVal}</span>
+                                    ${ansState.submitted && quizMode === 'practice' && optKey === correctOptKey ? '<i class="fa-solid fa-circle-check text-emerald-500"></i>' : ''}
+                                    ${ansState.submitted && quizMode === 'practice' && ansState.selectedOpt === optKey && !ansState.isCorrect ? '<i class="fa-solid fa-circle-xmark text-rose-500"></i>' : ''}
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <!-- Instant Solution Breakdown (Practice Mode Only) -->
+                    ${ansState.submitted && quizMode === 'practice' ? `
+                        <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl space-y-1 mt-2">
+                            <span class="text-[9px] font-black uppercase text-emerald-500 block"><i class="fa-solid fa-lightbulb mr-1"></i> NCERT Solution Breakdown:</span>
+                            <p class="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed whitespace-pre-wrap">${q.solutionText || q.explanation || 'No detailed solution provided.'}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        };
+
+        window.startPerQuestionTimer = function(idx) {
+            if(questionTimerInterval) clearInterval(questionTimerInterval);
+
+            if(studentAnswersMap[idx] && studentAnswersMap[idx].submitted) {
+                document.getElementById('qQuizCountdownSecText').innerText = "Locked";
+                return;
+            }
+
+            questionTimerInterval = setInterval(() => {
+                if(questionTimeRemainingMap[idx] > 0) {
+                    questionTimeRemainingMap[idx]--;
+                    const el = document.getElementById('qQuizCountdownSecText');
+                    if(el) el.innerText = `${questionTimeRemainingMap[idx]}s`;
+                } else {
+                    clearInterval(questionTimerInterval);
+                    if(!studentAnswersMap[idx]) {
+                        studentAnswersMap[idx] = { selectedOpt: null, isCorrect: false, submitted: true, expired: true };
+                    } else {
+                        studentAnswersMap[idx].submitted = true;
+                    }
+                    window.loadQuizQuestionCard(idx);
+                }
+            }, 1000);
+        };
+
+        window.selectQuizOptionChoice = function(optKey) {
+            if(studentAnswersMap[currentQuestionIndex] && studentAnswersMap[currentQuestionIndex].submitted) return;
+            studentAnswersMap[currentQuestionIndex] = { selectedOpt: optKey, submitted: false };
+            window.loadQuizQuestionCard(currentQuestionIndex);
+        };
+
+        window.submitCurrentQuizQuestionAnswer = function() {
+            const ans = studentAnswersMap[currentQuestionIndex];
+            if(!ans || !ans.selectedOpt) {
+                return alert("Please select an option first!");
+            }
+            if(ans.submitted) return;
+
+            const q = quizQuestions[currentQuestionIndex];
+            const correctOptKey = q.correctOpt || q.correctOption;
+            const isCorrect = ans.selectedOpt === correctOptKey;
+
+            studentAnswersMap[currentQuestionIndex] = {
+                selectedOpt: ans.selectedOpt,
+                isCorrect,
+                submitted: true
+            };
+
+            window.loadQuizQuestionCard(currentQuestionIndex);
+        };
+                // 3. Final Quiz Submission & Analytics Engine
+        window.finishFullQuizTest = function() {
+            if(confirm("Are you sure you want to finish and submit your quiz?")) {
+                if(quizOverallInterval) clearInterval(quizOverallInterval);
+                if(questionTimerInterval) clearInterval(questionTimerInterval);
+
+                window.calculateAndDisplayQuizResultScreen();
+            }
+        };
+
+        window.calculateAndDisplayQuizResultScreen = function() {
+            const totalQ = quizQuestions.length;
+            let correctCount = 0;
+            let wrongCount = 0;
+            let skippedCount = 0;
+
+            quizQuestions.forEach((q, idx) => {
+                const ans = studentAnswersMap[idx];
+                if(ans && ans.submitted && !ans.expired && ans.selectedOpt) {
+                    const correctOptKey = q.correctOpt || q.correctOption;
+                    if(ans.selectedOpt === correctOptKey) correctCount++;
+                    else wrongCount++;
+                } else {
+                    skippedCount++;
+                }
+            });
+
+            // Rules: Correct = +4, Wrong = -1
+            const earnedBPCoins = (correctCount * 4) - (wrongCount * 1);
+            const rawScore = Math.max(0, earnedBPCoins);
+            const totalPossibleScore = totalQ * 4;
+            const scorePct = Math.round((rawScore / totalPossibleScore) * 100);
+            const accuracyPct = Math.round((correctCount / Math.max(1, (correctCount + wrongCount))) * 100);
+
+            // Save Score to Firestore Collection
+            addDoc(collection(db, "rank_quiz_results"), {
+                studentUid: currentUserId || 'guest',
+                studentName: currentUserName,
+                quizId: activeQuizDoc ? activeQuizDoc.id : 'unknown',
+                quizTitle: activeQuizDoc ? (activeQuizDoc.title || activeQuizDoc.chapter) : 'Quiz',
+                score: rawScore,
+                totalQuestions: totalQ,
+                correct: correctCount,
+                wrong: wrongCount,
+                skipped: skippedCount,
+                timeTakenSec: quizOverallSeconds,
+                createdAt: Date.now(),
+                hidden: false
+            }).catch(e => console.error("Error saving score: ", e));
+
+            document.getElementById('view-quiz-arena').classList.add('hidden');
+            document.getElementById('view-quiz-result').classList.remove('hidden');
+
+            const container = document.getElementById('quizResultDashboardCanvasNode');
+            container.innerHTML = `
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6 text-slate-900 dark:text-slate-100 max-w-xl mx-auto my-auto">
+                    
+                    <!-- BP Coins Header (+4 / -1 Rule) -->
+                    <div class="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 p-4 rounded-2xl flex justify-between items-center">
+                        <div>
+                            <span class="text-[10px] font-black uppercase text-emerald-500 block tracking-wider">Earned BP Coins (+4 / -1)</span>
+                            <span class="text-2xl font-black text-slate-900 dark:text-white">${earnedBPCoins > 0 ? '+' : ''}${earnedBPCoins} BP</span>
+                        </div>
+                        <i class="fa-solid fa-coins text-emerald-400 text-3xl"></i>
+                    </div>
+
+                    <!-- Score Percentage Bar -->
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between text-xs font-black">
+                            <span>Quiz Score Percentage</span>
+                            <span class="text-emerald-500">${scorePct}%</span>
+                        </div>
+                        <div class="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
+                            <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: ${scorePct}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Core Metrics Grid -->
+                    <div class="grid grid-cols-2 gap-3 text-xs font-bold">
+                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                            <span class="text-[9px] text-emerald-500 uppercase font-black block">Correct (+4)</span>
+                            <span class="text-base font-black text-slate-900 dark:text-slate-100">${correctCount}/${totalQ}</span>
+                            <span class="text-[9px] text-slate-400 block mt-0.5">${Math.round((correctCount/totalQ)*100)}% of Total</span>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                            <span class="text-[9px] text-rose-500 uppercase font-black block">Incorrect (-1)</span>
+                            <span class="text-base font-black text-slate-900 dark:text-slate-100">${wrongCount}/${totalQ}</span>
+                            <span class="text-[9px] text-slate-400 block mt-0.5">${Math.round((wrongCount/totalQ)*100)}% of Total</span>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                            <span class="text-[9px] text-slate-400 uppercase font-black block">Skipped</span>
+                            <span class="text-base font-black text-slate-900 dark:text-slate-100">${skippedCount}/${totalQ}</span>
+                            <span class="text-[9px] text-slate-400 block mt-0.5">${Math.round((skippedCount/totalQ)*100)}% of Total</span>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                            <span class="text-[9px] text-amber-500 uppercase font-black block">Accuracy</span>
+                            <span class="text-base font-black text-slate-900 dark:text-slate-100">${accuracyPct}%</span>
+                            <span class="text-[9px] text-slate-400 block mt-0.5">Precision Ratio</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex space-x-2 pt-2">
+                        <button onclick="window.openQuizSolutionModal('all')" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-3 rounded-2xl text-xs shadow transition"><i class="fa-solid fa-eye mr-1"></i> View Solutions</button>
+                        <button onclick="window.location.reload()" class="flex-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-black py-3 rounded-2xl text-xs shadow transition">Back to Dashboard</button>
+                    </div>
+                </div>
+            `;
+        };
+
+        // Interactive View Solution Filter Modal (Green, Red, Black Dots)
+        window.openQuizSolutionModal = function(filterType) {
+            const modal = document.getElementById('quizSolutionModalOverlay');
+            const container = document.getElementById('quizSolutionQuestionListNode');
+            modal.classList.remove('hidden');
+
+            let html = "";
+            quizQuestions.forEach((q, idx) => {
+                const ans = studentAnswersMap[idx];
+                const correctOptKey = q.correctOpt || q.correctOption;
+                
+                let isCorrect = ans && ans.submitted && ans.selectedOpt === correctOptKey;
+                let isIncorrect = ans && ans.submitted && ans.selectedOpt && ans.selectedOpt !== correctOptKey;
+                let isSkipped = !ans || !ans.submitted || !ans.selectedOpt;
+
+                if(filterType === 'correct' && !isCorrect) return;
+                if(filterType === 'incorrect' && !isIncorrect) return;
+                if(filterType === 'skipped' && !isSkipped) return;
+
+                let dotColor = "bg-slate-400";
+                if(isCorrect) dotColor = "bg-emerald-500";
+                if(isIncorrect) dotColor = "bg-rose-500";
+
+                html += `
+                    <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full ${dotColor} inline-block"></span>
+                            <span class="font-black text-slate-900 dark:text-white">Q${idx+1}: ${q.qText || q.questionText || ''}</span>
+                        </div>
+                        <p class="text-slate-500 text-[11px]"><b>Your Ans:</b> ${ans && ans.selectedOpt ? ans.selectedOpt : 'Skipped'} | <b>Correct Ans:</b> ${correctOptKey}</p>
+                        <div class="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-300">
+                            <b>NCERT Solution:</b> ${q.solutionText || q.explanation || 'N/A'}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html || '<p class="text-center text-slate-400 text-xs py-10">No questions found for this filter.</p>';
+        };
+
+        window.closeQuizSolutionModal = function() {
+            document.getElementById('quizSolutionModalOverlay').classList.add('hidden');
         };
     </script>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen font-sans select-none antialiased">
-    <div id="studentTestAppPortal" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-300 pb-20">
+    <div id="quizPortalApp" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
         
-        <!-- SCREEN 1: SUBJECTS -->
-        <div id="student-view-test-subjects" class="w-full flex-1 flex flex-col">
-            <header class="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full shadow-sm">
-                <button onclick="window.location.href='student-dashboard.html'" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg text-slate-600"></i></button>
-                <h2 class="font-black text-sm text-slate-800">Test Hub</h2>
+        <!-- SCREEN 1: QUIZ SELECTOR DASHBOARD -->
+        <div id="view-quiz-list" class="w-full flex-1 flex flex-col">
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
+                <button onclick="window.history.back()" class="text-slate-400 p-2 hover:text-emerald-500"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+                <h1 class="font-black text-lg tracking-wide text-slate-900 dark:text-white mx-auto"><i class="fa-solid fa-vial-circle-check text-emerald-500 mr-2"></i>Practice Quizzes</h1>
                 <div class="w-8"></div>
             </header>
-            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-3" id="studentTestSubContainer"></div>
+
+            <div class="w-full px-4 py-4 max-w-xl mx-auto space-y-4 flex-1">
+                <!-- 1. Subject Grid Selector -->
+                <div id="subjectCardsNode" class="grid grid-cols-2 gap-2.5"></div>
+
+                <!-- 2. Cascading Chapter & Topic Filters -->
+                <div class="grid grid-cols-2 gap-2 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <div>
+                        <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Select Chapter</label>
+                        <select id="filterChapterSelect" onchange="window.onChapterFilterChange(this.value)" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none">
+                            <option value="all">All Chapters</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Select Topic</label>
+                        <select id="filterTopicSelect" onchange="window.onTopicFilterChange(this.value)" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none">
+                            <option value="all">All Topics</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 3. Quiz Cards Node -->
+                <div id="quizCardsListNode" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
         </div>
 
-        <!-- SCREEN 2: CHAPTERS -->
-        <div id="student-view-test-chapters" class="w-full flex-1 flex flex-col hidden">
-            <header class="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full shadow-sm">
-                <button onclick="window.navigateToStudentTestView('student-view-test-subjects')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg text-slate-600"></i></button>
-                <h2 id="studentTestChapterHeaderTitle" class="font-black text-sm text-slate-800 mx-auto truncate max-w-[180px]">Chapters</h2>
-                <div class="w-8"></div>
-            </header>
-            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-3" id="studentTestChapContainer"></div>
-        </div>
+        <!-- SCREEN 2: QUIZ EXAMINATION ARENA VIEW (No Bottom Nav) -->
+        <div id="view-quiz-arena" class="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
+            <!-- TOP NAVIGATION ROW -->
+            <header class="bg-white dark:bg-slate-900 px-4 py-3 flex justify-between items-center border-b border-slate-200 dark:border-slate-800 w-full flex-shrink-0">
+                <div class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-emerald-500 font-black text-xs px-3 py-1.5 rounded-xl flex items-center space-x-1.5">
+                    <i class="fa-solid fa-stopwatch text-xs"></i>
+                    <span id="overallQuizStopwatchText">00:00</span>
+                </div>
 
-        <!-- SCREEN 3: TOPICS -->
-        <div id="student-view-test-topics" class="w-full flex-1 flex flex-col hidden">
-            <header class="bg-white border-b border-slate-200 px-4 py-4 sticky top-0 z-40 flex items-center justify-between w-full shadow-sm">
-                <button onclick="window.navigateToStudentTestView('student-view-test-chapters')" class="text-slate-400 p-2"><i class="fa-solid fa-chevron-left text-lg text-slate-600"></i></button>
-                <h2 id="studentTestTopicHeaderTitle" class="font-black text-sm text-slate-800 mx-auto truncate max-w-[180px]">Topics</h2>
-                <div class="w-8"></div>
+                <button onclick="window.finishFullQuizTest()" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-3 py-1.5 rounded-xl text-xs font-black shadow">Submit Quiz</button>
             </header>
-            <div class="w-full px-4 py-6 max-w-xl mx-auto space-y-3" id="studentTestTopicContainer"></div>
-        </div>
 
-        <!-- SCREEN 4: EXAM CANVAS -->
-        <div id="student-test-exam-canvas" class="fixed inset-0 bg-slate-900 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
-            <header class="bg-slate-950 text-white px-4 py-3 flex justify-between items-center border-b border-slate-800 w-full h-12 flex-shrink-0">
-                <button onclick="window.navigateToStudentTestView('student-view-test-topics')" class="text-slate-400 font-bold text-xs"><i class="fa-solid fa-chevron-left"></i> Back</button>
-                <h2 id="topicExamCanvasTitle" class="text-xs font-black uppercase tracking-wider text-slate-400 truncate max-w-[180px]">Evaluation Canvas</h2>
-                <div class="w-8"></div>
-            </header>
-            <div class="flex-1 w-full bg-slate-800 p-4 overflow-y-auto box-border flex flex-col items-center">
-                <div class="bg-white border border-slate-200 w-full max-w-xl rounded-3xl p-6 space-y-5 shadow-2xl text-xs font-bold text-slate-700">
-                    <p class="text-slate-900 text-sm font-black leading-relaxed">Which specific enzyme matrix triggers the primary transcription phase during cellular synthesis mechanics?</p>
-                    <div class="space-y-2.5 pt-1">
-                        <label class="flex items-center space-x-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:border-rose-400 transition"><input type="radio" name="tMcq" class="accent-rose-500"> <span class="text-slate-800 font-bold">A) RNA Polymerase Complex</span></label>
-                        <label class="flex items-center space-x-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:border-rose-400 transition"><input type="radio" name="tMcq" class="accent-rose-500"> <span class="text-slate-800 font-bold">B) DNA Ligase Matrix Binder</span></label>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 pt-3 border-t">
-                        <button onclick="document.getElementById('tSol').classList.toggle('hidden')" class="bg-slate-100 text-slate-700 py-3 rounded-xl font-black text-center transition">View Solution</button>
-                        <button onclick="alert('Submission captured!'); window.navigateToStudentTestView('student-view-test-topics');" class="bg-rose-500 text-white py-3 rounded-xl font-black text-center shadow">Submit Answer</button>
-                    </div>
-                    <div id="tSol" class="hidden p-4 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl font-medium mt-2">
-                        📌 <strong>Explanation:</strong> Cellular transcription processes absolutely depend on active RNA Polymerase holoenzymes.
-                    </div>
+            <div class="flex-1 w-full p-4 overflow-y-auto box-border space-y-4 max-w-xl mx-auto pb-24">
+                <!-- QUICK JUMP SHORTCUT GRID -->
+                <div id="quizQuickJumpGridNode" class="grid grid-cols-8 gap-1.5 max-h-24 overflow-y-auto p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl"></div>
+
+                <!-- SINGLE QUESTION CANVAS -->
+                <div id="singleQuizQuestionCanvasNode"></div>
+            </div>
+
+            <!-- BOTTOM ACTION BAR -->
+            <div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-3 z-50">
+                <div class="flex justify-between items-center gap-2 max-w-xl mx-auto">
+                    <button onclick="window.loadQuizQuestionCard(currentQuestionIndex - 1)" class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300 active:scale-95 transition"><i class="fa-solid fa-arrow-left mr-1"></i> Prev</button>
+                    <button onclick="window.submitCurrentQuizQuestionAnswer()" class="flex-1 py-3 bg-emerald-500 text-slate-950 rounded-xl text-xs font-black shadow active:scale-95 transition"><i class="fa-solid fa-check mr-1"></i> Submit Answer</button>
+                    <button onclick="window.loadQuizQuestionCard(currentQuestionIndex + 1)" class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300 active:scale-95 transition">Next <i class="fa-solid fa-arrow-right ml-1"></i></button>
                 </div>
             </div>
         </div>
 
-        <!-- BOTTOM NAV STRAP PERFECTLY SYNCED -->
-        <nav id="studentTestBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 px-2 py-3.5 flex justify-around items-center shadow-2xl w-full box-border">
-            <button onclick="window.location.href='student-dashboard.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-house-user text-base"></i><span class="text-[9px] font-black">Home</span></button>
-            <button onclick="window.location.href='student-ncert.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] font-black">Study</span></button>
-            <button onclick="window.navigateToStudentTestView('student-view-test-subjects')" class="text-rose-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] font-black">Test</span></button>
-            <button onclick="window.location.href='student-mocktest.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-stopwatch-20 text-base"></i><span class="text-[9px] font-black">Mock</span></button>
-            <button onclick="window.location.href='student-profile.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-user-gear text-base"></i><span class="text-[9px] font-black">Students</span></button>
+        <!-- SCREEN 3: RESULT ANALYTICS DASHBOARD (No Bottom Nav) -->
+        <div id="view-quiz-result" class="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-50 hidden flex flex-col w-screen h-screen overflow-y-auto p-4">
+            <div id="quizResultDashboardCanvasNode" class="my-auto"></div>
+        </div>
+
+        <!-- VIEW SOLUTION MODAL OVERLAY (Green, Red, Black Filter Dots) -->
+        <div id="quizSolutionModalOverlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex flex-col p-4 overflow-hidden">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl max-w-xl w-full mx-auto flex flex-col h-full space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
+                    <h3 class="font-black text-sm text-slate-900 dark:text-white">Quiz Solutions Breakdown</h3>
+                    <button onclick="window.closeQuizSolutionModal()" class="text-slate-400 hover:text-rose-500"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                
+                <!-- Filter Dots Row -->
+                <div class="flex space-x-2 text-xs font-black">
+                    <button onclick="window.openQuizSolutionModal('all')" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">All</button>
+                    <button onclick="window.openQuizSolutionModal('correct')" class="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>Correct</span></button>
+                    <button onclick="window.openQuizSolutionModal('incorrect')" class="px-3 py-1.5 rounded-xl bg-rose-500/10 text-rose-500 flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span><span>Incorrect</span></button>
+                    <button onclick="window.openQuizSolutionModal('skipped')" class="px-3 py-1.5 rounded-xl bg-slate-500/10 text-slate-400 flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-slate-400"></span><span>Skipped</span></button>
+                </div>
+
+                <div id="quizSolutionQuestionListNode" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+            </div>
+        </div>
+
+        <!-- UNIVERSAL BOTTOM NAVIGATION (Only visible on Screen 1) -->
+        <nav id="universalBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3 flex justify-around items-center shadow-2xl w-full box-border">
+            <button onclick="window.location.href='index.html'" class="text-slate-400 hover:text-emerald-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
+            <button onclick="window.location.href='student-ncert.html'" class="text-slate-400 hover:text-emerald-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
+            <button onclick="window.location.href='student-quiz.html'" class="text-emerald-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
+            <button onclick="window.location.href='student-challenge.html'" class="text-slate-400 hover:text-emerald-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-fire text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Challenge</span></button>
+            <button onclick="window.location.href='student-leaderboard.html'" class="text-slate-400 hover:text-emerald-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-trophy text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Rank</span></button>
         </nav>
     </div>
 </body>
 </html>
-                
+    
