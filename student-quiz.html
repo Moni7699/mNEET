@@ -14,7 +14,7 @@
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, addDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -31,33 +31,30 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // Core State
+        // Core App State
         let currentUserId = null;
         let currentUserName = "Aspirant";
         
         let allQuizzes = [];
-        let filteredChapters = [];
-        let filteredTopics = [];
-        
-        let selectedSubject = 'physics';
-        let selectedChapter = 'all';
-        let selectedTopic = 'all';
+        let selectedSubject = null;
+        let selectedChapter = null;
+        let selectedTopic = null;
 
         let activeQuizDoc = null;
         let quizQuestions = [];
         let currentQuestionIndex = 0;
-        let quizMode = 'practice'; // 'practice' or 'exam'
+        let quizMode = 'practice';
 
-        // Timers & Tracking
+        // Timers & Answers
         let quizOverallSeconds = 0;
         let quizOverallInterval = null;
         let questionTimerInterval = null;
         let questionTimeRemainingMap = {};
-        let studentAnswersMap = {}; // { opt, isCorrect, submitted, expired }
+        let studentAnswersMap = {};
 
-        // Theme Engine Sync with student-dashboard.html
+        // Theme Sync from Dashboard Sidebar Switch Only
         window.syncAppTheme = function() {
-            const savedTheme = localStorage.getItem('mneet_theme') || localStorage.getItem('theme') || 'dark';
+            const savedTheme = localStorage.getItem('mneet_theme') || 'dark';
             if (savedTheme === 'dark') {
                 document.documentElement.classList.add('dark');
             } else {
@@ -74,7 +71,7 @@
             window.listenRealtimeQuizzes();
         });
 
-        // 1. Fetch Admin Quizzes from Firestore
+        // 1. Fetch Quizzes created by Admin from Firebase
         window.listenRealtimeQuizzes = function() {
             onSnapshot(query(collection(db, "quizzes"), orderBy("createdAt", "desc")), (snapshot) => {
                 allQuizzes = [];
@@ -84,153 +81,182 @@
                         allQuizzes.push({ id: docSnap.id, ...data });
                     }
                 });
-                window.renderSubjectCards();
-                window.updateCascadingFilters();
+                window.showSubjectStep();
             });
         };
 
-        window.renderSubjectCards = function() {
-            const subjects = [
-                { id: 'physics', name: 'Physics', icon: 'fa-atom', color: 'from-blue-500 to-indigo-600' },
-                { id: 'chemistry', name: 'Chemistry', icon: 'fa-flask-vial', color: 'from-emerald-500 to-teal-600' },
-                { id: 'botany', name: 'Botany', icon: 'fa-seedling', color: 'from-green-500 to-emerald-600' },
-                { id: 'zoology', name: 'Zoology', icon: 'fa-dna', color: 'from-rose-500 to-pink-600' }
-            ];
+        function hideAllViews() {
+            document.getElementById('step-subject').classList.add('hidden');
+            document.getElementById('step-chapter').classList.add('hidden');
+            document.getElementById('step-topic').classList.add('hidden');
+            document.getElementById('step-quiz-list').classList.add('hidden');
+            document.getElementById('view-quiz-arena').classList.add('hidden');
+            document.getElementById('view-quiz-result').classList.add('hidden');
+        }
 
-            const container = document.getElementById('subjectCardsNode');
-            if(!container) return;
+        // STEP 1: DYNAMIC SUBJECTS FROM ADMIN DATA
+        window.showSubjectStep = function() {
+            hideAllViews();
+            selectedSubject = null;
+            selectedChapter = null;
+            selectedTopic = null;
+
+            // Extract Unique Subjects created in Admin
+            const dynamicSubjects = [...new Set(allQuizzes.map(q => q.subject).filter(Boolean))];
+
+            const container = document.getElementById('subjectCardsContainer');
             container.innerHTML = "";
 
-            subjects.forEach(sub => {
-                const isActive = selectedSubject === sub.id;
-                container.innerHTML += `
-                    <button onclick="window.selectSubjectChoice('${sub.id}')" class="p-3.5 rounded-2xl border text-left transition flex items-center space-x-3 ${isActive ? 'bg-gradient-to-r ' + sub.color + ' text-white border-transparent shadow-lg scale-[1.02]' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-400'}">
-                        <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-lg font-black">
-                            <i class="fa-solid ${sub.icon}"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-black text-xs uppercase tracking-wider">${sub.name}</h4>
-                            <span class="text-[10px] opacity-80 font-bold">${allQuizzes.filter(q => (q.subject || '').toLowerCase() === sub.id).length} Quizzes</span>
-                        </div>
-                    </button>
-                `;
-            });
-        };
-
-        window.selectSubjectChoice = function(subId) {
-            selectedSubject = subId;
-            selectedChapter = 'all';
-            selectedTopic = 'all';
-            window.renderSubjectCards();
-            window.updateCascadingFilters();
-        };
-
-        window.updateCascadingFilters = function() {
-            // Filter Chapters based on Subject
-            const subjectQuizzes = allQuizzes.filter(q => (q.subject || '').toLowerCase() === selectedSubject);
-            filteredChapters = [...new Set(subjectQuizzes.map(q => q.chapter).filter(Boolean))];
-
-            const chapterSelect = document.getElementById('filterChapterSelect');
-            chapterSelect.innerHTML = `<option value="all">All Chapters (${filteredChapters.length})</option>`;
-            filteredChapters.forEach(ch => {
-                chapterSelect.innerHTML += `<option value="${ch}" ${selectedChapter === ch ? 'selected' : ''}>${ch}</option>`;
-            });
-
-            // Filter Topics based on Subject & Chapter
-            let chapterQuizzes = subjectQuizzes;
-            if(selectedChapter !== 'all') {
-                chapterQuizzes = subjectQuizzes.filter(q => q.chapter === selectedChapter);
-            }
-            filteredTopics = [...new Set(chapterQuizzes.map(q => q.topic).filter(Boolean))];
-
-            const topicSelect = document.getElementById('filterTopicSelect');
-            topicSelect.innerHTML = `<option value="all">All Topics (${filteredTopics.length})</option>`;
-            filteredTopics.forEach(top => {
-                topicSelect.innerHTML += `<option value="${top}" ${selectedTopic === top ? 'selected' : ''}>${top}</option>`;
-            });
-
-            window.renderQuizListCards();
-        };
-
-        window.onChapterFilterChange = function(val) {
-            selectedChapter = val;
-            selectedTopic = 'all';
-            window.updateCascadingFilters();
-        };
-
-        window.onTopicFilterChange = function(val) {
-            selectedTopic = val;
-            window.renderQuizListCards();
-        };
-
-        window.renderQuizListCards = function() {
-            const container = document.getElementById('quizCardsListNode');
-            container.innerHTML = "";
-
-            let displayQuizzes = allQuizzes.filter(q => (q.subject || '').toLowerCase() === selectedSubject);
-
-            if(selectedChapter !== 'all') {
-                displayQuizzes = displayQuizzes.filter(q => q.chapter === selectedChapter);
-            }
-            if(selectedTopic !== 'all') {
-                displayQuizzes = displayQuizzes.filter(q => q.topic === selectedTopic);
-            }
-
-            if(displayQuizzes.length === 0) {
+            if(dynamicSubjects.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-16 text-slate-400 font-bold text-xs space-y-2 col-span-full">
-                        <i class="fa-solid fa-vial-circle-check text-4xl block text-slate-600 mb-2"></i>
-                        <p>No active quizzes published by Admin for this topic yet.</p>
+                    <div class="text-center py-16 text-slate-400 font-bold text-xs space-y-2">
+                        <i class="fa-solid fa-folder-open text-4xl block text-slate-600 mb-2"></i>
+                        <p>No subjects or quizzes published by Admin yet.</p>
                     </div>
                 `;
-                return;
+            } else {
+                dynamicSubjects.forEach(sub => {
+                    const count = allQuizzes.filter(q => q.subject === sub).length;
+                    container.innerHTML += `
+                        <div onclick="window.selectSubject('${sub.replace(/'/g, "\\'")}')" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm hover:border-emerald-500 transition cursor-pointer flex items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xl font-black">
+                                    <i class="fa-solid fa-book-bookmark"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-black text-sm text-slate-900 dark:text-white uppercase tracking-wider">${sub}</h3>
+                                    <p class="text-xs text-slate-400 font-semibold">${count} Quizzes Created</p>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-slate-400"></i>
+                        </div>
+                    `;
+                });
             }
 
-            displayQuizzes.forEach(q => {
-                const isExamMode = (q.mode || 'practice') === 'exam';
-                container.innerHTML += `
-                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3 flex flex-col justify-between">
-                        <div class="space-y-2">
+            document.getElementById('step-subject').classList.remove('hidden');
+        };
+
+        // STEP 2: DYNAMIC CHAPTERS FROM ADMIN DATA
+        window.selectSubject = function(subName) {
+            selectedSubject = subName;
+            hideAllViews();
+
+            const subjectQuizzes = allQuizzes.filter(q => q.subject === selectedSubject);
+            const chapters = [...new Set(subjectQuizzes.map(q => q.chapter).filter(Boolean))];
+
+            document.getElementById('chapterSubjectTitle').innerText = selectedSubject.toUpperCase();
+            const container = document.getElementById('chapterCardsContainer');
+            container.innerHTML = "";
+
+            if(chapters.length === 0) {
+                container.innerHTML = `<p class="text-center text-slate-400 font-bold text-xs py-10">No chapters found for this subject.</p>`;
+            } else {
+                chapters.forEach(ch => {
+                    const chCount = subjectQuizzes.filter(q => q.chapter === ch).length;
+                    container.innerHTML += `
+                        <div onclick="window.selectChapter('${ch.replace(/'/g, "\\'")}')" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm hover:border-emerald-500 transition cursor-pointer flex justify-between items-center">
+                            <div>
+                                <h4 class="font-black text-xs text-slate-900 dark:text-white">${ch}</h4>
+                                <span class="text-[10px] text-slate-400 font-bold">${chCount} Topics / Quizzes</span>
+                            </div>
+                            <i class="fa-solid fa-folder-open text-emerald-500"></i>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('step-chapter').classList.remove('hidden');
+        };
+                // STEP 3: DYNAMIC TOPICS FROM ADMIN DATA
+        window.selectChapter = function(chName) {
+            selectedChapter = chName;
+            hideAllViews();
+
+            const chapterQuizzes = allQuizzes.filter(q => q.subject === selectedSubject && q.chapter === selectedChapter);
+            const topics = [...new Set(chapterQuizzes.map(q => q.topic).filter(Boolean))];
+
+            document.getElementById('topicChapterTitle').innerText = selectedChapter;
+            const container = document.getElementById('topicCardsContainer');
+            container.innerHTML = "";
+
+            if(topics.length === 0) {
+                container.innerHTML = `<p class="text-center text-slate-400 font-bold text-xs py-10">No topics found for this chapter.</p>`;
+            } else {
+                topics.forEach(top => {
+                    const topCount = chapterQuizzes.filter(q => q.topic === top).length;
+                    container.innerHTML += `
+                        <div onclick="window.selectTopic('${top.replace(/'/g, "\\'")}')" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm hover:border-emerald-500 transition cursor-pointer flex justify-between items-center">
+                            <div>
+                                <h4 class="font-black text-xs text-slate-900 dark:text-white">${top}</h4>
+                                <span class="text-[10px] text-slate-400 font-bold">${topCount} Quizzes</span>
+                            </div>
+                            <i class="fa-solid fa-layer-group text-amber-500"></i>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('step-topic').classList.remove('hidden');
+        };
+
+        // STEP 4: DYNAMIC QUIZZES LIST & START
+        window.selectTopic = function(topName) {
+            selectedTopic = topName;
+            hideAllViews();
+
+            const targetQuizzes = allQuizzes.filter(q => 
+                q.subject === selectedSubject && 
+                q.chapter === selectedChapter && 
+                q.topic === selectedTopic
+            );
+
+            document.getElementById('quizListTopicTitle').innerText = selectedTopic;
+            const container = document.getElementById('quizListCardsContainer');
+            container.innerHTML = "";
+
+            if(targetQuizzes.length === 0) {
+                container.innerHTML = `<p class="text-center text-slate-400 font-bold text-xs py-10">No quizzes active right now.</p>`;
+            } else {
+                targetQuizzes.forEach(q => {
+                    const isExamMode = (q.mode || 'practice') === 'exam';
+                    container.innerHTML += `
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3">
                             <div class="flex justify-between items-center">
                                 <span class="text-[9px] font-black uppercase px-2.5 py-1 rounded-full ${isExamMode ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}">
                                     <i class="fa-solid ${isExamMode ? 'fa-pen-clip' : 'fa-graduation-cap'} mr-1"></i> ${isExamMode ? 'Exam Mode' : 'Practice Mode'}
                                 </span>
                                 <span class="text-[10px] font-bold text-slate-400"><i class="fa-solid fa-clock mr-1"></i> ${q.timeLimit || 15} mins</span>
                             </div>
-                            <h3 class="font-black text-sm text-slate-900 dark:text-white leading-snug">${q.title || q.chapter || 'NEET Quiz'}</h3>
-                            <p class="text-[11px] text-slate-400 font-semibold line-clamp-1"><i class="fa-solid fa-layer-group text-amber-500 mr-1"></i> ${q.topic || q.chapter || 'General Concepts'}</p>
+                            <h3 class="font-black text-sm text-slate-900 dark:text-white">${q.title || q.topic}</h3>
+                            <button onclick="window.enterQuizArenaSession('${q.id}')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs py-3 rounded-2xl shadow active:scale-95 transition flex items-center justify-center space-x-2">
+                                <span>Start Quiz Now</span>
+                                <i class="fa-solid fa-arrow-right text-xs"></i>
+                            </button>
                         </div>
+                    `;
+                });
+            }
 
-                        <button onclick="window.enterQuizArenaSession('${q.id}')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs py-3 rounded-2xl shadow active:scale-95 transition flex items-center justify-center space-x-2">
-                            <span>Start Quiz Now</span>
-                            <i class="fa-solid fa-arrow-right text-xs"></i>
-                        </button>
-                    </div>
-                `;
-            });
+            document.getElementById('step-quiz-list').classList.remove('hidden');
         };
-                // 2. Quiz Arena Engine (Execution Room)
+
+        // START QUIZ SESSION
         window.enterQuizArenaSession = function(quizId) {
             const foundQuiz = allQuizzes.find(q => q.id === quizId);
-            if(!foundQuiz) return alert("Quiz data not found!");
+            if(!foundQuiz) return alert("Quiz missing!");
 
             activeQuizDoc = foundQuiz;
             quizMode = foundQuiz.mode || 'practice';
 
-            // Fetch Sub-collection Questions deployed by Admin
             onSnapshot(collection(db, `quizzes/${quizId}/questions`), (snapshot) => {
                 quizQuestions = [];
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
-                    if(!data.hidden) {
-                        quizQuestions.push({ id: docSnap.id, ...data });
-                    }
+                    if(!data.hidden) quizQuestions.push({ id: docSnap.id, ...data });
                 });
 
-                if(quizQuestions.length === 0) {
-                    alert("This quiz has no questions uploaded by Admin yet!");
-                    return;
-                }
+                if(quizQuestions.length === 0) return alert("No questions uploaded by Admin yet!");
 
                 window.startQuizSessionEngine();
             });
@@ -242,14 +268,12 @@
             studentAnswersMap = {};
             questionTimeRemainingMap = {};
 
-            const defaultPerQTimer = activeQuizDoc.perQuestionTimer ? parseInt(activeQuizDoc.perQuestionTimer) : 60;
+            const defaultTimer = activeQuizDoc.perQuestionTimer ? parseInt(activeQuizDoc.perQuestionTimer) : 60;
             quizQuestions.forEach((q, idx) => {
-                questionTimeRemainingMap[idx] = q.timer ? parseInt(q.timer) : defaultPerQTimer;
+                questionTimeRemainingMap[idx] = q.timer ? parseInt(q.timer) : defaultTimer;
             });
 
-            // UI Screen Switching & Hiding Bottom Nav
-            document.getElementById('view-quiz-list').classList.add('hidden');
-            document.getElementById('universalBottomNav').classList.add('hidden'); // Hide Bottom Nav in Arena
+            hideAllViews();
             document.getElementById('view-quiz-arena').classList.remove('hidden');
 
             if(quizOverallInterval) clearInterval(quizOverallInterval);
@@ -266,7 +290,6 @@
 
         window.renderQuizQuickJumpGrid = function() {
             const container = document.getElementById('quizQuickJumpGridNode');
-            if(!container) return;
             container.innerHTML = "";
 
             quizQuestions.forEach((q, idx) => {
@@ -274,11 +297,7 @@
                 let btnStyle = "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700";
 
                 if(ansState && ansState.submitted) {
-                    if(quizMode === 'practice') {
-                        btnStyle = ansState.isCorrect ? "bg-emerald-500 text-white border-emerald-500" : "bg-rose-500 text-white border-rose-500";
-                    } else {
-                        btnStyle = "bg-amber-500 text-slate-950 border-amber-500 font-black"; // Locked in Exam Mode
-                    }
+                    btnStyle = quizMode === 'practice' ? (ansState.isCorrect ? "bg-emerald-500 text-white border-emerald-500" : "bg-rose-500 text-white border-rose-500") : "bg-amber-500 text-slate-950 font-black";
                 } else if(idx === currentQuestionIndex) {
                     btnStyle = "bg-emerald-500 text-slate-950 border-emerald-500 font-black shadow-lg scale-105";
                 }
@@ -305,62 +324,46 @@
             container.innerHTML = `
                 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm text-slate-900 dark:text-slate-100">
                     <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
-                        <span class="text-[10px] font-black uppercase text-emerald-500 tracking-wider">
-                            <i class="fa-solid fa-layer-group mr-1"></i> Question ${idx + 1} of ${quizQuestions.length}
-                        </span>
-                        <div id="qQuizCountdownBadge" class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-emerald-500 font-black text-xs px-2.5 py-1 rounded-xl flex items-center space-x-1">
-                            <i class="fa-solid fa-hourglass-half text-[10px]"></i>
+                        <span class="text-[10px] font-black uppercase text-emerald-500 tracking-wider">Question ${idx + 1} of ${quizQuestions.length}</span>
+                        <div class="bg-slate-100 dark:bg-slate-800 text-emerald-500 font-black text-xs px-2.5 py-1 rounded-xl">
                             <span id="qQuizCountdownSecText">${questionTimeRemainingMap[idx]}s</span>
                         </div>
                     </div>
 
-                    <div class="text-xs md:text-sm font-bold leading-relaxed whitespace-pre-wrap break-words">
-                        ${q.qText || q.questionText || ''}
-                    </div>
+                    <div class="text-xs md:text-sm font-bold leading-relaxed whitespace-pre-wrap break-words">${q.qText || q.questionText || ''}</div>
+                    ${(q.imgData || q.imageUrl) ? `<img src="${q.imgData || q.imageUrl}" class="w-full max-h-48 object-contain rounded-xl border border-slate-200 dark:border-slate-800">` : ''}
 
-                    ${(q.imgData || q.imageUrl) ? `<img src="${q.imgData || q.imageUrl}" class="w-full max-h-48 object-contain rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">` : ''}
-
-                    <!-- Options Matrix -->
                     <div class="space-y-2 text-xs font-bold">
                         ${['A', 'B', 'C', 'D'].map(optKey => {
                             const optVal = q[`opt${optKey}`] || q[`option${optKey}`];
                             if(!optVal) return '';
 
                             const correctOptKey = q.correctOpt || q.correctOption;
-                            let optStyle = "bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800";
+                            let optStyle = "bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200";
                             
                             if(ansState.submitted) {
                                 if(quizMode === 'practice') {
-                                    if(optKey === correctOptKey) {
-                                        optStyle = "bg-emerald-500/20 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-black";
-                                    } else if(ansState.selectedOpt === optKey && !ansState.isCorrect) {
-                                        optStyle = "bg-rose-500/20 border-rose-500 text-rose-600 dark:text-rose-400 font-black";
-                                    }
-                                } else {
-                                    // Exam Mode Selection Highlight
-                                    if(ansState.selectedOpt === optKey) {
-                                        optStyle = "bg-amber-500/20 border-amber-500 text-amber-500 font-black";
-                                    }
+                                    if(optKey === correctOptKey) optStyle = "bg-emerald-500/20 border-emerald-500 text-emerald-500 font-black";
+                                    else if(ansState.selectedOpt === optKey && !ansState.isCorrect) optStyle = "bg-rose-500/20 border-rose-500 text-rose-500 font-black";
+                                } else if(ansState.selectedOpt === optKey) {
+                                    optStyle = "bg-amber-500/20 border-amber-500 text-amber-500 font-black";
                                 }
                             } else if(ansState.selectedOpt === optKey) {
-                                optStyle = "bg-emerald-500/30 border-emerald-500 text-emerald-600 dark:text-white font-black";
+                                optStyle = "bg-emerald-500/30 border-emerald-500 text-emerald-500 font-black";
                             }
 
                             return `
-                                <button onclick="window.selectQuizOptionChoice('${optKey}')" ${ansState.submitted ? 'disabled' : ''} class="w-full text-left p-3 rounded-2xl border ${optStyle} transition flex items-center justify-between">
+                                <button onclick="window.selectQuizOptionChoice('${optKey}')" ${ansState.submitted ? 'disabled' : ''} class="w-full text-left p-3 rounded-2xl border ${optStyle} transition flex justify-between">
                                     <span><b class="mr-2">${optKey}.</b> ${optVal}</span>
-                                    ${ansState.submitted && quizMode === 'practice' && optKey === correctOptKey ? '<i class="fa-solid fa-circle-check text-emerald-500"></i>' : ''}
-                                    ${ansState.submitted && quizMode === 'practice' && ansState.selectedOpt === optKey && !ansState.isCorrect ? '<i class="fa-solid fa-circle-xmark text-rose-500"></i>' : ''}
                                 </button>
                             `;
                         }).join('')}
                     </div>
 
-                    <!-- Instant Solution Breakdown (Practice Mode Only) -->
                     ${ansState.submitted && quizMode === 'practice' ? `
-                        <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl space-y-1 mt-2">
-                            <span class="text-[9px] font-black uppercase text-emerald-500 block"><i class="fa-solid fa-lightbulb mr-1"></i> NCERT Solution Breakdown:</span>
-                            <p class="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed whitespace-pre-wrap">${q.solutionText || q.explanation || 'No detailed solution provided.'}</p>
+                        <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl space-y-1 mt-2">
+                            <span class="text-[9px] font-black uppercase text-emerald-500 block">NCERT Solution Breakdown:</span>
+                            <p class="text-xs text-slate-600 dark:text-slate-300">${q.solutionText || q.explanation || 'N/A'}</p>
                         </div>
                     ` : ''}
                 </div>
@@ -369,7 +372,6 @@
 
         window.startPerQuestionTimer = function(idx) {
             if(questionTimerInterval) clearInterval(questionTimerInterval);
-
             if(studentAnswersMap[idx] && studentAnswersMap[idx].submitted) {
                 document.getElementById('qQuizCountdownSecText').innerText = "Locked";
                 return;
@@ -382,11 +384,8 @@
                     if(el) el.innerText = `${questionTimeRemainingMap[idx]}s`;
                 } else {
                     clearInterval(questionTimerInterval);
-                    if(!studentAnswersMap[idx]) {
-                        studentAnswersMap[idx] = { selectedOpt: null, isCorrect: false, submitted: true, expired: true };
-                    } else {
-                        studentAnswersMap[idx].submitted = true;
-                    }
+                    if(!studentAnswersMap[idx]) studentAnswersMap[idx] = { selectedOpt: null, isCorrect: false, submitted: true, expired: true };
+                    else studentAnswersMap[idx].submitted = true;
                     window.loadQuizQuestionCard(idx);
                 }
             }, 1000);
@@ -400,29 +399,19 @@
 
         window.submitCurrentQuizQuestionAnswer = function() {
             const ans = studentAnswersMap[currentQuestionIndex];
-            if(!ans || !ans.selectedOpt) {
-                return alert("Please select an option first!");
-            }
+            if(!ans || !ans.selectedOpt) return alert("Select an option first!");
             if(ans.submitted) return;
 
             const q = quizQuestions[currentQuestionIndex];
             const correctOptKey = q.correctOpt || q.correctOption;
-            const isCorrect = ans.selectedOpt === correctOptKey;
-
-            studentAnswersMap[currentQuestionIndex] = {
-                selectedOpt: ans.selectedOpt,
-                isCorrect,
-                submitted: true
-            };
-
+            studentAnswersMap[currentQuestionIndex] = { selectedOpt: ans.selectedOpt, isCorrect: ans.selectedOpt === correctOptKey, submitted: true };
             window.loadQuizQuestionCard(currentQuestionIndex);
         };
-                // 3. Final Quiz Submission & Analytics Engine
+                // RESULT & SUBMISSION (+4 / -1 BP Coins)
         window.finishFullQuizTest = function() {
-            if(confirm("Are you sure you want to finish and submit your quiz?")) {
+            if(confirm("Submit your quiz now?")) {
                 if(quizOverallInterval) clearInterval(quizOverallInterval);
                 if(questionTimerInterval) clearInterval(questionTimerInterval);
-
                 window.calculateAndDisplayQuizResultScreen();
             }
         };
@@ -439,96 +428,59 @@
                     const correctOptKey = q.correctOpt || q.correctOption;
                     if(ans.selectedOpt === correctOptKey) correctCount++;
                     else wrongCount++;
-                } else {
-                    skippedCount++;
-                }
+                } else skippedCount++;
             });
 
-            // Rules: Correct = +4, Wrong = -1
             const earnedBPCoins = (correctCount * 4) - (wrongCount * 1);
             const rawScore = Math.max(0, earnedBPCoins);
-            const totalPossibleScore = totalQ * 4;
-            const scorePct = Math.round((rawScore / totalPossibleScore) * 100);
-            const accuracyPct = Math.round((correctCount / Math.max(1, (correctCount + wrongCount))) * 100);
 
-            // Save Score to Firestore Collection
             addDoc(collection(db, "rank_quiz_results"), {
                 studentUid: currentUserId || 'guest',
                 studentName: currentUserName,
-                quizId: activeQuizDoc ? activeQuizDoc.id : 'unknown',
-                quizTitle: activeQuizDoc ? (activeQuizDoc.title || activeQuizDoc.chapter) : 'Quiz',
+                quizTitle: activeQuizDoc ? (activeQuizDoc.title || activeQuizDoc.topic) : 'Quiz',
                 score: rawScore,
                 totalQuestions: totalQ,
                 correct: correctCount,
                 wrong: wrongCount,
                 skipped: skippedCount,
-                timeTakenSec: quizOverallSeconds,
-                createdAt: Date.now(),
-                hidden: false
+                createdAt: Date.now()
             }).catch(e => console.error("Error saving score: ", e));
 
-            document.getElementById('view-quiz-arena').classList.add('hidden');
+            hideAllViews();
             document.getElementById('view-quiz-result').classList.remove('hidden');
 
             const container = document.getElementById('quizResultDashboardCanvasNode');
             container.innerHTML = `
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6 text-slate-900 dark:text-slate-100 max-w-xl mx-auto my-auto">
-                    
-                    <!-- BP Coins Header (+4 / -1 Rule) -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6 max-w-xl mx-auto my-auto text-slate-900 dark:text-white">
                     <div class="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 p-4 rounded-2xl flex justify-between items-center">
                         <div>
-                            <span class="text-[10px] font-black uppercase text-emerald-500 block tracking-wider">Earned BP Coins (+4 / -1)</span>
-                            <span class="text-2xl font-black text-slate-900 dark:text-white">${earnedBPCoins > 0 ? '+' : ''}${earnedBPCoins} BP</span>
+                            <span class="text-[10px] font-black uppercase text-emerald-500 block">Earned BP Coins (+4 / -1)</span>
+                            <span class="text-2xl font-black">${earnedBPCoins > 0 ? '+' : ''}${earnedBPCoins} BP</span>
                         </div>
                         <i class="fa-solid fa-coins text-emerald-400 text-3xl"></i>
                     </div>
 
-                    <!-- Score Percentage Bar -->
-                    <div class="space-y-1.5">
-                        <div class="flex justify-between text-xs font-black">
-                            <span>Quiz Score Percentage</span>
-                            <span class="text-emerald-500">${scorePct}%</span>
+                    <div class="grid grid-cols-3 gap-2 text-center text-xs font-bold">
+                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-emerald-500">
+                            <span class="block font-black text-lg">${correctCount}</span> Correct (+4)
                         </div>
-                        <div class="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
-                            <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: ${scorePct}%"></div>
+                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-rose-500">
+                            <span class="block font-black text-lg">${wrongCount}</span> Wrong (-1)
                         </div>
-                    </div>
-
-                    <!-- Core Metrics Grid -->
-                    <div class="grid grid-cols-2 gap-3 text-xs font-bold">
-                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
-                            <span class="text-[9px] text-emerald-500 uppercase font-black block">Correct (+4)</span>
-                            <span class="text-base font-black text-slate-900 dark:text-slate-100">${correctCount}/${totalQ}</span>
-                            <span class="text-[9px] text-slate-400 block mt-0.5">${Math.round((correctCount/totalQ)*100)}% of Total</span>
-                        </div>
-                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
-                            <span class="text-[9px] text-rose-500 uppercase font-black block">Incorrect (-1)</span>
-                            <span class="text-base font-black text-slate-900 dark:text-slate-100">${wrongCount}/${totalQ}</span>
-                            <span class="text-[9px] text-slate-400 block mt-0.5">${Math.round((wrongCount/totalQ)*100)}% of Total</span>
-                        </div>
-                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
-                            <span class="text-[9px] text-slate-400 uppercase font-black block">Skipped</span>
-                            <span class="text-base font-black text-slate-900 dark:text-slate-100">${skippedCount}/${totalQ}</span>
-                            <span class="text-[9px] text-slate-400 block mt-0.5">${Math.round((skippedCount/totalQ)*100)}% of Total</span>
-                        </div>
-                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
-                            <span class="text-[9px] text-amber-500 uppercase font-black block">Accuracy</span>
-                            <span class="text-base font-black text-slate-900 dark:text-slate-100">${accuracyPct}%</span>
-                            <span class="text-[9px] text-slate-400 block mt-0.5">Precision Ratio</span>
+                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-400">
+                            <span class="block font-black text-lg">${skippedCount}</span> Skipped
                         </div>
                     </div>
 
-                    <!-- Action Buttons -->
-                    <div class="flex space-x-2 pt-2">
-                        <button onclick="window.openQuizSolutionModal('all')" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black py-3 rounded-2xl text-xs shadow transition"><i class="fa-solid fa-eye mr-1"></i> View Solutions</button>
-                        <button onclick="window.location.reload()" class="flex-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-black py-3 rounded-2xl text-xs shadow transition">Back to Dashboard</button>
+                    <div class="flex space-x-2">
+                        <button onclick="window.openQuizSolutionModal()" class="flex-1 bg-emerald-500 text-slate-950 font-black py-3 rounded-2xl text-xs shadow">View Solutions</button>
+                        <button onclick="window.location.reload()" class="flex-1 bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-black py-3 rounded-2xl text-xs shadow">Home</button>
                     </div>
                 </div>
             `;
         };
 
-        // Interactive View Solution Filter Modal (Green, Red, Black Dots)
-        window.openQuizSolutionModal = function(filterType) {
+        window.openQuizSolutionModal = function() {
             const modal = document.getElementById('quizSolutionModalOverlay');
             const container = document.getElementById('quizSolutionQuestionListNode');
             modal.classList.remove('hidden');
@@ -537,18 +489,8 @@
             quizQuestions.forEach((q, idx) => {
                 const ans = studentAnswersMap[idx];
                 const correctOptKey = q.correctOpt || q.correctOption;
-                
                 let isCorrect = ans && ans.submitted && ans.selectedOpt === correctOptKey;
-                let isIncorrect = ans && ans.submitted && ans.selectedOpt && ans.selectedOpt !== correctOptKey;
-                let isSkipped = !ans || !ans.submitted || !ans.selectedOpt;
-
-                if(filterType === 'correct' && !isCorrect) return;
-                if(filterType === 'incorrect' && !isIncorrect) return;
-                if(filterType === 'skipped' && !isSkipped) return;
-
-                let dotColor = "bg-slate-400";
-                if(isCorrect) dotColor = "bg-emerald-500";
-                if(isIncorrect) dotColor = "bg-rose-500";
+                let dotColor = isCorrect ? "bg-emerald-500" : (ans && ans.selectedOpt ? "bg-rose-500" : "bg-slate-400");
 
                 html += `
                     <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
@@ -558,13 +500,12 @@
                         </div>
                         <p class="text-slate-500 text-[11px]"><b>Your Ans:</b> ${ans && ans.selectedOpt ? ans.selectedOpt : 'Skipped'} | <b>Correct Ans:</b> ${correctOptKey}</p>
                         <div class="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-300">
-                            <b>NCERT Solution:</b> ${q.solutionText || q.explanation || 'N/A'}
+                            <b>Solution:</b> ${q.solutionText || q.explanation || 'N/A'}
                         </div>
                     </div>
                 `;
             });
-
-            container.innerHTML = html || '<p class="text-center text-slate-400 text-xs py-10">No questions found for this filter.</p>';
+            container.innerHTML = html;
         };
 
         window.closeQuizSolutionModal = function() {
@@ -573,105 +514,88 @@
     </script>
 </head>
 
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-300 pb-20">
-    <div id="quizPortalApp" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-300">
+    <div id="quizPortalApp" class="min-h-screen flex flex-col justify-between">
         
-        <!-- SCREEN 1: QUIZ SELECTOR DASHBOARD -->
-        <div id="view-quiz-list" class="w-full flex-1 flex flex-col">
-            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
+        <!-- STEP 1: SUBJECT SCREEN -->
+        <div id="step-subject" class="w-full flex-1 flex flex-col max-w-xl mx-auto p-4 space-y-4">
+            <header class="flex justify-between items-center py-2">
                 <button onclick="window.history.back()" class="text-slate-400 p-2 hover:text-emerald-500"><i class="fa-solid fa-chevron-left text-lg"></i></button>
-                <h1 class="font-black text-lg tracking-wide text-slate-900 dark:text-white mx-auto"><i class="fa-solid fa-vial-circle-check text-emerald-500 mr-2"></i>Practice Quizzes</h1>
+                <h1 class="font-black text-base text-slate-900 dark:text-white">Select Subject</h1>
                 <div class="w-8"></div>
             </header>
-
-            <div class="w-full px-4 py-4 max-w-xl mx-auto space-y-4 flex-1">
-                <!-- 1. Subject Grid Selector -->
-                <div id="subjectCardsNode" class="grid grid-cols-2 gap-2.5"></div>
-
-                <!-- 2. Cascading Chapter & Topic Filters -->
-                <div class="grid grid-cols-2 gap-2 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                    <div>
-                        <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Select Chapter</label>
-                        <select id="filterChapterSelect" onchange="window.onChapterFilterChange(this.value)" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none">
-                            <option value="all">All Chapters</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-[9px] font-black uppercase text-slate-400 block mb-1">Select Topic</label>
-                        <select id="filterTopicSelect" onchange="window.onTopicFilterChange(this.value)" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none">
-                            <option value="all">All Topics</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- 3. Quiz Cards Node -->
-                <div id="quizCardsListNode" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
-            </div>
+            <div id="subjectCardsContainer" class="space-y-3"></div>
         </div>
 
-        <!-- SCREEN 2: QUIZ EXAMINATION ARENA VIEW (No Bottom Nav) -->
+        <!-- STEP 2: CHAPTER SCREEN -->
+        <div id="step-chapter" class="w-full flex-1 flex flex-col max-w-xl mx-auto p-4 space-y-4 hidden">
+            <header class="flex justify-between items-center py-2">
+                <button onclick="window.showSubjectStep()" class="text-slate-400 p-2 hover:text-emerald-500"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+                <h1 id="chapterSubjectTitle" class="font-black text-base text-slate-900 dark:text-white uppercase">Chapters</h1>
+                <div class="w-8"></div>
+            </header>
+            <div id="chapterCardsContainer" class="space-y-2"></div>
+        </div>
+
+        <!-- STEP 3: TOPIC SCREEN -->
+        <div id="step-topic" class="w-full flex-1 flex flex-col max-w-xl mx-auto p-4 space-y-4 hidden">
+            <header class="flex justify-between items-center py-2">
+                <button onclick="window.selectSubject(selectedSubject)" class="text-slate-400 p-2 hover:text-emerald-500"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+                <h1 id="topicChapterTitle" class="font-black text-base text-slate-900 dark:text-white">Topics</h1>
+                <div class="w-8"></div>
+            </header>
+            <div id="topicCardsContainer" class="space-y-2"></div>
+        </div>
+
+        <!-- STEP 4: QUIZ LIST SCREEN -->
+        <div id="step-quiz-list" class="w-full flex-1 flex flex-col max-w-xl mx-auto p-4 space-y-4 hidden">
+            <header class="flex justify-between items-center py-2">
+                <button onclick="window.selectChapter(selectedChapter)" class="text-slate-400 p-2 hover:text-emerald-500"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+                <h1 id="quizListTopicTitle" class="font-black text-base text-slate-900 dark:text-white">Quizzes</h1>
+                <div class="w-8"></div>
+            </header>
+            <div id="quizListCardsContainer" class="space-y-3"></div>
+        </div>
+
+        <!-- QUIZ ARENA VIEW -->
         <div id="view-quiz-arena" class="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
-            <!-- TOP NAVIGATION ROW -->
-            <header class="bg-white dark:bg-slate-900 px-4 py-3 flex justify-between items-center border-b border-slate-200 dark:border-slate-800 w-full flex-shrink-0">
-                <div class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-emerald-500 font-black text-xs px-3 py-1.5 rounded-xl flex items-center space-x-1.5">
-                    <i class="fa-solid fa-stopwatch text-xs"></i>
+            <header class="bg-white dark:bg-slate-900 px-4 py-3 flex justify-between items-center border-b border-slate-200 dark:border-slate-800">
+                <div class="bg-slate-100 dark:bg-slate-800 text-emerald-500 font-black text-xs px-3 py-1.5 rounded-xl">
                     <span id="overallQuizStopwatchText">00:00</span>
                 </div>
-
-                <button onclick="window.finishFullQuizTest()" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-3 py-1.5 rounded-xl text-xs font-black shadow">Submit Quiz</button>
+                <button onclick="window.finishFullQuizTest()" class="bg-emerald-500 text-slate-950 px-3 py-1.5 rounded-xl text-xs font-black shadow">Submit Quiz</button>
             </header>
 
-            <div class="flex-1 w-full p-4 overflow-y-auto box-border space-y-4 max-w-xl mx-auto pb-24">
-                <!-- QUICK JUMP SHORTCUT GRID -->
-                <div id="quizQuickJumpGridNode" class="grid grid-cols-8 gap-1.5 max-h-24 overflow-y-auto p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl"></div>
-
-                <!-- SINGLE QUESTION CANVAS -->
+            <div class="flex-1 w-full p-4 overflow-y-auto space-y-4 max-w-xl mx-auto pb-24">
+                <div id="quizQuickJumpGridNode" class="grid grid-cols-8 gap-1.5 p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl"></div>
                 <div id="singleQuizQuestionCanvasNode"></div>
             </div>
 
-            <!-- BOTTOM ACTION BAR -->
             <div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-3 z-50">
                 <div class="flex justify-between items-center gap-2 max-w-xl mx-auto">
-                    <button onclick="window.loadQuizQuestionCard(currentQuestionIndex - 1)" class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300 active:scale-95 transition"><i class="fa-solid fa-arrow-left mr-1"></i> Prev</button>
-                    <button onclick="window.submitCurrentQuizQuestionAnswer()" class="flex-1 py-3 bg-emerald-500 text-slate-950 rounded-xl text-xs font-black shadow active:scale-95 transition"><i class="fa-solid fa-check mr-1"></i> Submit Answer</button>
-                    <button onclick="window.loadQuizQuestionCard(currentQuestionIndex + 1)" class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300 active:scale-95 transition">Next <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                    <button onclick="window.loadQuizQuestionCard(currentQuestionIndex - 1)" class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300">Prev</button>
+                    <button onclick="window.submitCurrentQuizQuestionAnswer()" class="flex-1 py-3 bg-emerald-500 text-slate-950 rounded-xl text-xs font-black shadow">Submit Answer</button>
+                    <button onclick="window.loadQuizQuestionCard(currentQuestionIndex + 1)" class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300">Next</button>
                 </div>
             </div>
         </div>
 
-        <!-- SCREEN 3: RESULT ANALYTICS DASHBOARD (No Bottom Nav) -->
+        <!-- RESULT VIEW -->
         <div id="view-quiz-result" class="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-50 hidden flex flex-col w-screen h-screen overflow-y-auto p-4">
             <div id="quizResultDashboardCanvasNode" class="my-auto"></div>
         </div>
 
-        <!-- VIEW SOLUTION MODAL OVERLAY (Green, Red, Black Filter Dots) -->
-        <div id="quizSolutionModalOverlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex flex-col p-4 overflow-hidden">
+        <!-- SOLUTION MODAL OVERLAY -->
+        <div id="quizSolutionModalOverlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex flex-col p-4">
             <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl max-w-xl w-full mx-auto flex flex-col h-full space-y-3">
                 <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
-                    <h3 class="font-black text-sm text-slate-900 dark:text-white">Quiz Solutions Breakdown</h3>
+                    <h3 class="font-black text-sm text-slate-900 dark:text-white">Solutions Breakdown</h3>
                     <button onclick="window.closeQuizSolutionModal()" class="text-slate-400 hover:text-rose-500"><i class="fa-solid fa-xmark text-lg"></i></button>
                 </div>
-                
-                <!-- Filter Dots Row -->
-                <div class="flex space-x-2 text-xs font-black">
-                    <button onclick="window.openQuizSolutionModal('all')" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">All</button>
-                    <button onclick="window.openQuizSolutionModal('correct')" class="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>Correct</span></button>
-                    <button onclick="window.openQuizSolutionModal('incorrect')" class="px-3 py-1.5 rounded-xl bg-rose-500/10 text-rose-500 flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span><span>Incorrect</span></button>
-                    <button onclick="window.openQuizSolutionModal('skipped')" class="px-3 py-1.5 rounded-xl bg-slate-500/10 text-slate-400 flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-slate-400"></span><span>Skipped</span></button>
-                </div>
-
-                <div id="quizSolutionQuestionListNode" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+                <div id="quizSolutionQuestionListNode" class="flex-1 overflow-y-auto space-y-3"></div>
             </div>
         </div>
 
-        <!-- UNIVERSAL BOTTOM NAVIGATION (Only visible on Screen 1) -->
-        <nav id="universalBottomNav" class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3 flex justify-around items-center shadow-2xl w-full box-border">
-            <button onclick="window.location.href='index.html'" class="text-slate-400 hover:text-emerald-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
-            <button onclick="window.location.href='student-ncert.html'" class="text-slate-400 hover:text-emerald-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
-            <button onclick="window.location.href='student-quiz.html'" class="text-emerald-500 font-black text-center flex flex-col items-center space-y-1"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
-            <button onclick="window.location.href='student-challenge.html'" class="text-slate-400 hover:text-emerald-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-fire text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Challenge</span></button>
-            <button onclick="window.location.href='student-leaderboard.html'" class="text-slate-400 hover:text-emerald-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-trophy text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Rank</span></button>
-        </nav>
     </div>
 </body>
 </html>
