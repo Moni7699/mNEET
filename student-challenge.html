@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mNEET - Challenge Arena</title>
+    <title>mNEET - Student Challenge Arena</title>
     <!-- Tailwind CSS with Dark support -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -14,7 +14,7 @@
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy, addDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -31,7 +31,7 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        let activeTab = 'daily'; // 'daily' or 'weekly'
+        let activeTab = 'daily';
         let currentUserId = null;
         let currentUserName = "Aspirant";
         let loadedChallenges = [];
@@ -40,16 +40,16 @@
 
         // Engine State
         let currentQuestionIndex = 0;
-        let activeSubjectFilter = 'all'; // 'all', 'physics', 'chemistry', 'botany', 'zoology'
+        let activeSubjectFilter = 'all'; 
         let quizOverallSeconds = 0;
         let quizOverallInterval = null;
         let questionTimerInterval = null;
         
         // Tracking Stores
-        let questionTimeRemainingMap = {}; // qIndex -> seconds left
-        let studentAnswersMap = {}; // qIndex -> { selectedOpt, isCorrect, submitted }
+        let questionTimeRemainingMap = {}; 
+        let studentAnswersMap = {}; 
         let attemptCount = parseInt(localStorage.getItem('mneet_challenge_attempt_count') || '1');
-        let initialQuestionDuration = Math.max(30, 70 - (attemptCount * 10)); // 1st=60s, 2nd=50s, 3rd=40s, 4th+=30s
+        let initialQuestionDuration = Math.max(30, 70 - (attemptCount * 10)); // 60s, 50s, 40s, 30s
 
         // System AI Challengers (Cold Start Fallback)
         const AI_BOTS = [
@@ -58,15 +58,32 @@
             { name: "Rohan Verma (Top 1% AI)", scoreFactor: 0.95, timeSec: 150 }
         ];
 
+        // Theme Engine Sync with student-dashboard.html
+        window.syncAppTheme = function() {
+            const savedTheme = localStorage.getItem('mneet_theme') || localStorage.getItem('theme') || 'dark';
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        };
+
         onAuthStateChanged(auth, (user) => {
+            window.syncAppTheme();
             if (user) {
                 currentUserId = user.uid;
                 currentUserName = user.displayName || user.email.split('@')[0] || "Aspirant";
             }
             window.switchChallengeTab(activeTab);
-        });
 
-        window.switchChallengeTab = function(tab) {
+            // Check URL Params for direct shared invite links
+            const urlParams = new URLSearchParams(window.location.search);
+            const directChallengeId = urlParams.get('challengeId');
+            if(directChallengeId) {
+                window.enterChallengeArenaFromDirectLink(directChallengeId);
+            }
+        });
+                window.switchChallengeTab = function(tab) {
             activeTab = tab;
             const btnDaily = document.getElementById('tabBtnDaily');
             const btnWeekly = document.getElementById('tabBtnWeekly');
@@ -81,6 +98,7 @@
             window.listenRealtimeChallenges();
         };
 
+        // Listen for Challenges Published by Admin
         window.listenRealtimeChallenges = function() {
             onSnapshot(query(collection(db, "challenges"), orderBy("createdAt", "desc")), (snapshot) => {
                 loadedChallenges = [];
@@ -102,7 +120,7 @@
                 container.innerHTML = `
                     <div class="text-center py-16 text-slate-400 font-bold text-xs space-y-2">
                         <i class="fa-solid fa-trophy-slash text-3xl block text-slate-600"></i>
-                        <p>No active ${activeTab} challenges available right now.</p>
+                        <p>No active ${activeTab} challenges published by Admin right now.</p>
                     </div>
                 `;
                 return;
@@ -117,22 +135,65 @@
                         </div>
                         <div>
                             <h3 class="font-black text-sm text-slate-900 dark:text-white">${c.name}</h3>
-                            <p class="text-[11px] text-slate-400 font-semibold mt-0.5">Test your concepts with instant AI matchmaking competition.</p>
+                            <p class="text-[11px] text-slate-400 font-semibold mt-0.5">${c.description || 'Test your concepts with instant AI matchmaking competition.'}</p>
                         </div>
-                        <button onclick="window.enterChallengeArena('${c.id}', '${c.name.replace(/'/g, "\\'")}')" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-black text-xs py-3 rounded-2xl shadow active:scale-95 transition flex items-center justify-center space-x-2">
-                            <span>Enter Challenge Arena</span>
-                            <i class="fa-solid fa-arrow-right text-xs"></i>
-                        </button>
+                        <div class="flex space-x-2 pt-1">
+                            <button onclick="window.openInviteModal('${c.id}', '${(c.name || '').replace(/'/g, "\\'")}')" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-xs px-3 py-3 rounded-2xl transition">
+                                <i class="fa-solid fa-user-plus mr-1"></i> Invite
+                            </button>
+                            <button onclick="window.enterChallengeArena('${c.id}', '${(c.name || '').replace(/'/g, "\\'")}')" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-black text-xs py-3 rounded-2xl shadow active:scale-95 transition flex items-center justify-center space-x-2">
+                                <span>Enter Challenge Arena</span>
+                                <i class="fa-solid fa-arrow-right text-xs"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
             });
         };
-                // Examination Arena Engine
+
+        window.openInviteModal = function(id, name) {
+            const inviteUrl = `${window.location.origin}/student-challenge.html?challengeId=${id}`;
+            document.getElementById('inviteChallengeName').innerText = name;
+            document.getElementById('inviteLinkInput').value = inviteUrl;
+            document.getElementById('inviteModalOverlay').classList.remove('hidden');
+        };
+
+        window.closeInviteModal = function() {
+            document.getElementById('inviteModalOverlay').classList.add('hidden');
+        };
+
+        window.copyInviteLink = function() {
+            const input = document.getElementById('inviteLinkInput');
+            input.select();
+            document.execCommand('copy');
+            alert('Challenge invite link copied!');
+        };
+
+        window.shareWhatsApp = function() {
+            const url = document.getElementById('inviteLinkInput').value;
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent('Accept my NEET challenge on mNEET: ' + url)}`, '_blank');
+        };
+
+        window.shareTelegram = function() {
+            const url = document.getElementById('inviteLinkInput').value;
+            window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent('Accept my NEET challenge!')}`, '_blank');
+        };
+
+        // Examination Arena Engine (Syncing Admin Data)
+        window.enterChallengeArenaFromDirectLink = async function(id) {
+            try {
+                const docRef = doc(db, "challenges", id);
+                const docSnap = await getDoc(docRef);
+                if(docSnap.exists()) {
+                    window.enterChallengeArena(id, docSnap.data().name || "Challenge");
+                }
+            } catch(e) { console.error("Error direct link: ", e); }
+        };
+
         window.enterChallengeArena = function(id, name) {
             activeChallengeDoc = { id, name };
-            document.getElementById('arenaChallengeTitle').innerText = name;
 
-            // Fetch questions for this challenge
+            // Fetch Questions Created by Admin from Sub-collection
             onSnapshot(collection(db, `challenges/${id}/questions`), (snapshot) => {
                 challengeQuestions = [];
                 snapshot.forEach(docSnap => {
@@ -143,29 +204,27 @@
                 });
 
                 if(challengeQuestions.length === 0) {
-                    alert("This challenge has no questions deployed yet!");
+                    alert("This challenge has no questions deployed by Admin yet!");
                     return;
                 }
 
                 window.initChallengeSessionState();
             });
         };
-
-        window.initChallengeSessionState = function() {
+                window.initChallengeSessionState = function() {
             currentQuestionIndex = 0;
             quizOverallSeconds = 0;
             studentAnswersMap = {};
             questionTimeRemainingMap = {};
 
-            // Initialize question timers
-            challengeQuestions.forEach((_, idx) => {
-                questionTimeRemainingMap[idx] = initialQuestionDuration;
+            // Initialize question timers (Support Admin custom time OR fallback to attempt logic)
+            challengeQuestions.forEach((q, idx) => {
+                questionTimeRemainingMap[idx] = q.timer ? parseInt(q.timer) : initialQuestionDuration;
             });
 
             document.getElementById('view-challenge-list').classList.add('hidden');
             document.getElementById('view-challenge-arena').classList.remove('hidden');
 
-            // Start Overall Stopwatch
             if(quizOverallInterval) clearInterval(quizOverallInterval);
             quizOverallInterval = setInterval(() => {
                 quizOverallSeconds++;
@@ -187,7 +246,7 @@
             subjects.forEach(sub => {
                 const isActive = sub === activeSubjectFilter;
                 container.innerHTML += `
-                    <button onclick="window.setSubjectFilter('${sub}')" class="px-3 py-1 rounded-xl text-[10px] font-black uppercase transition whitespace-nowrap ${isActive ? 'bg-rose-500 text-white shadow' : 'bg-slate-800 text-slate-400 hover:text-white'}">
+                    <button onclick="window.setSubjectFilter('${sub}')" class="px-3 py-1 rounded-xl text-[10px] font-black uppercase transition whitespace-nowrap ${isActive ? 'bg-rose-500 text-white shadow' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-rose-500'}">
                         ${sub}
                     </button>
                 `;
@@ -209,7 +268,7 @@
                 if(activeSubjectFilter !== 'all' && sub !== activeSubjectFilter) return;
 
                 const ansState = studentAnswersMap[idx];
-                let btnStyle = "bg-slate-800 text-slate-300 border-slate-700";
+                let btnStyle = "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700";
 
                 if(ansState && ansState.submitted) {
                     btnStyle = ansState.isCorrect ? "bg-emerald-500 text-white border-emerald-500" : "bg-rose-500 text-white border-rose-500";
@@ -237,43 +296,46 @@
 
             const container = document.getElementById('singleQuestionCanvasNode');
             container.innerHTML = `
-                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 space-y-4 shadow-xl text-slate-100">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                        <span class="text-[10px] font-black uppercase text-amber-500 tracking-wider"><i class="fa-solid fa-layer-group mr-1"></i> Question ${idx + 1} of ${challengeQuestions.length}</span>
-                        <div id="qCountdownBadge" class="bg-slate-800 border border-slate-700 text-amber-400 font-black text-xs px-2.5 py-1 rounded-xl flex items-center space-x-1">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-sm text-slate-900 dark:text-slate-100">
+                    <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
+                        <span class="text-[10px] font-black uppercase text-amber-500 tracking-wider">
+                            <i class="fa-solid fa-layer-group mr-1"></i> Question ${idx + 1} of ${challengeQuestions.length} (${(q.subject || 'General').toUpperCase()})
+                        </span>
+                        <div id="qCountdownBadge" class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-amber-500 font-black text-xs px-2.5 py-1 rounded-xl flex items-center space-x-1">
                             <i class="fa-solid fa-hourglass-half text-[10px]"></i>
                             <span id="qCountdownSecText">${questionTimeRemainingMap[idx]}s</span>
                         </div>
                     </div>
 
                     <div class="text-xs md:text-sm font-bold leading-relaxed whitespace-pre-wrap break-words">
-                        ${q.qText}
+                        ${q.qText || q.questionText || ''}
                     </div>
 
-                    ${q.imgData ? `<img src="${q.imgData}" class="w-full max-h-48 object-contain rounded-xl border border-slate-800 bg-slate-950">` : ''}
+                    ${(q.imgData || q.imageUrl) ? `<img src="${q.imgData || q.imageUrl}" class="w-full max-h-48 object-contain rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">` : ''}
 
                     <!-- Options Matrix -->
                     <div class="space-y-2 text-xs font-bold">
                         ${['A', 'B', 'C', 'D'].map(optKey => {
-                            const optVal = q[`opt${optKey}`];
+                            const optVal = q[`opt${optKey}`] || q[`option${optKey}`];
                             if(!optVal) return '';
 
-                            let optStyle = "bg-slate-800/80 border-slate-700 text-slate-200 hover:bg-slate-800";
+                            const correctOptKey = q.correctOpt || q.correctOption;
+                            let optStyle = "bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800";
                             
                             if(ansState.submitted) {
-                                if(optKey === q.correctOpt) {
-                                    optStyle = "bg-emerald-500/20 border-emerald-500 text-emerald-400 font-black"; // Correct Option Solid Highlight
+                                if(optKey === correctOptKey) {
+                                    optStyle = "bg-emerald-500/20 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-black";
                                 } else if(ansState.selectedOpt === optKey && !ansState.isCorrect) {
-                                    optStyle = "bg-rose-500/20 border-rose-500 text-rose-400 font-black"; // Wrong Selected Highlight
+                                    optStyle = "bg-rose-500/20 border-rose-500 text-rose-600 dark:text-rose-400 font-black";
                                 }
                             } else if(ansState.selectedOpt === optKey) {
-                                optStyle = "bg-rose-500/30 border-rose-500 text-white font-black";
+                                optStyle = "bg-rose-500/30 border-rose-500 text-rose-600 dark:text-white font-black";
                             }
 
                             return `
                                 <button onclick="window.selectOptionChoice('${optKey}')" ${ansState.submitted ? 'disabled' : ''} class="w-full text-left p-3 rounded-2xl border ${optStyle} transition flex items-center justify-between">
                                     <span><b class="mr-2">${optKey}.</b> ${optVal}</span>
-                                    ${ansState.submitted && optKey === q.correctOpt ? '<i class="fa-solid fa-circle-check text-emerald-500"></i>' : ''}
+                                    ${ansState.submitted && optKey === correctOptKey ? '<i class="fa-solid fa-circle-check text-emerald-500"></i>' : ''}
                                     ${ansState.submitted && ansState.selectedOpt === optKey && !ansState.isCorrect ? '<i class="fa-solid fa-circle-xmark text-rose-500"></i>' : ''}
                                 </button>
                             `;
@@ -282,19 +344,17 @@
 
                     <!-- Instant NCERT Solution Breakdown -->
                     ${ansState.submitted ? `
-                        <div class="bg-slate-950 border border-slate-800 p-3.5 rounded-2xl space-y-1 mt-2">
+                        <div class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl space-y-1 mt-2">
                             <span class="text-[9px] font-black uppercase text-amber-500 block"><i class="fa-solid fa-lightbulb mr-1"></i> Solution Breakdown:</span>
-                            <p class="text-xs text-slate-300 font-medium leading-relaxed whitespace-pre-wrap">${q.solutionText || 'No specific breakdown provided for this question.'}</p>
+                            <p class="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed whitespace-pre-wrap">${q.solutionText || q.explanation || 'No specific breakdown provided for this question.'}</p>
                         </div>
                     ` : ''}
                 </div>
             `;
         };
-
-        window.startQuestionTimer = function(idx) {
+                window.startQuestionTimer = function(idx) {
             if(questionTimerInterval) clearInterval(questionTimerInterval);
 
-            // If already submitted or time expired, keep badge static
             if(studentAnswersMap[idx] && studentAnswersMap[idx].submitted) {
                 document.getElementById('qCountdownSecText').innerText = "Done";
                 return;
@@ -307,7 +367,6 @@
                     if(el) el.innerText = `${questionTimeRemainingMap[idx]}s`;
                 } else {
                     clearInterval(questionTimerInterval);
-                    // Lock question on timeout
                     if(!studentAnswersMap[idx]) {
                         studentAnswersMap[idx] = { selectedOpt: null, isCorrect: false, submitted: true, expired: true };
                     } else {
@@ -332,7 +391,8 @@
             if(ans.submitted) return;
 
             const q = challengeQuestions[currentQuestionIndex];
-            const isCorrect = ans.selectedOpt === q.correctOpt;
+            const correctOptKey = q.correctOpt || q.correctOption;
+            const isCorrect = ans.selectedOpt === correctOptKey;
 
             studentAnswersMap[currentQuestionIndex] = {
                 selectedOpt: ans.selectedOpt,
@@ -342,15 +402,14 @@
 
             window.loadQuestionCard(currentQuestionIndex);
         };
-                // Complete Quiz Submission & Analytics Engine
+
+        // Complete Quiz Submission & Analytics Engine
         window.finishFullChallengeTest = function() {
             if(confirm("Are you sure you want to finish and submit your challenge test?")) {
                 if(quizOverallInterval) clearInterval(quizOverallInterval);
                 if(questionTimerInterval) clearInterval(questionTimerInterval);
 
-                // Increment Attempt Counter for progressive timer reduction next time
                 localStorage.setItem('mneet_challenge_attempt_count', String(attemptCount + 1));
-
                 window.calculateAndDisplayResultScreen();
             }
         };
@@ -371,17 +430,17 @@
                 }
             });
 
-            // Point Formula: +4 BP Coins for Correct, -2 BP Coins for Wrong
             const earnedBPCoins = (correctCount * 4) - (wrongCount * 2);
             const rawScore = Math.max(0, earnedBPCoins);
             const totalPossibleScore = totalQ * 4;
             const scorePct = Math.round((rawScore / totalPossibleScore) * 100);
             const accuracyPct = Math.round((correctCount / Math.max(1, (correctCount + wrongCount))) * 100);
 
-            // Push Result to Firebase
+            // Save Result to Firestore
             addDoc(collection(db, "rank_challenge_results"), {
                 studentUid: currentUserId || 'guest',
                 studentName: currentUserName,
+                challengeId: activeChallengeDoc ? activeChallengeDoc.id : 'unknown',
                 score: rawScore,
                 totalQuestions: totalQ,
                 correct: correctCount,
@@ -395,16 +454,15 @@
             document.getElementById('view-challenge-arena').classList.add('hidden');
             document.getElementById('view-challenge-result').classList.remove('hidden');
 
-            // Render Result Metrics
             const container = document.getElementById('resultDashboardCanvasNode');
             container.innerHTML = `
-                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6 text-slate-100 max-w-xl mx-auto">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6 text-slate-900 dark:text-slate-100 max-w-xl mx-auto">
                     
                     <!-- BP Coins Header -->
                     <div class="bg-gradient-to-r from-amber-500/20 to-rose-500/20 border border-amber-500/30 p-4 rounded-2xl flex justify-between items-center">
                         <div>
-                            <span class="text-[10px] font-black uppercase text-amber-400 block tracking-wider">Earned BP Coins</span>
-                            <span class="text-2xl font-black text-white">${earnedBPCoins > 0 ? '+' : ''}${earnedBPCoins} BP</span>
+                            <span class="text-[10px] font-black uppercase text-amber-500 block tracking-wider">Earned BP Coins</span>
+                            <span class="text-2xl font-black text-slate-900 dark:text-white">${earnedBPCoins > 0 ? '+' : ''}${earnedBPCoins} BP</span>
                         </div>
                         <i class="fa-solid fa-coins text-amber-400 text-3xl"></i>
                     </div>
@@ -413,52 +471,50 @@
                     <div class="space-y-1.5">
                         <div class="flex justify-between text-xs font-black">
                             <span>Total Test Percentage</span>
-                            <span class="text-emerald-400">${scorePct}%</span>
+                            <span class="text-emerald-500">${scorePct}%</span>
                         </div>
-                        <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
+                        <div class="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
                             <div class="bg-emerald-500 h-full rounded-full transition-all duration-1000" style="width: ${scorePct}%"></div>
                         </div>
                     </div>
 
                     <!-- Core Metrics Grid -->
                     <div class="grid grid-cols-2 gap-3 text-xs font-bold">
-                        <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                            <span class="text-[9px] text-emerald-400 uppercase font-black block">Correct (+4)</span>
-                            <span class="text-base font-black text-slate-100">${correctCount}/${totalQ}</span>
+                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                            <span class="text-[9px] text-emerald-500 uppercase font-black block">Correct (+4)</span>
+                            <span class="text-base font-black text-slate-900 dark:text-slate-100">${correctCount}/${totalQ}</span>
                             <span class="text-[9px] text-slate-400 block mt-0.5">${Math.round((correctCount/totalQ)*100)}% of Total</span>
                         </div>
-                        <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                            <span class="text-[9px] text-rose-400 uppercase font-black block">Incorrect (-2)</span>
-                            <span class="text-base font-black text-slate-100">${wrongCount}/${totalQ}</span>
+                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                            <span class="text-[9px] text-rose-500 uppercase font-black block">Incorrect (-2)</span>
+                            <span class="text-base font-black text-slate-900 dark:text-slate-100">${wrongCount}/${totalQ}</span>
                             <span class="text-[9px] text-slate-400 block mt-0.5">${Math.round((wrongCount/totalQ)*100)}% of Total</span>
                         </div>
-                        <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
                             <span class="text-[9px] text-slate-400 uppercase font-black block">Skipped</span>
-                            <span class="text-base font-black text-slate-100">${skippedCount}/${totalQ}</span>
+                            <span class="text-base font-black text-slate-900 dark:text-slate-100">${skippedCount}/${totalQ}</span>
                             <span class="text-[9px] text-slate-400 block mt-0.5">${Math.round((skippedCount/totalQ)*100)}% of Total</span>
                         </div>
-                        <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                            <span class="text-[9px] text-amber-400 uppercase font-black block">Accuracy</span>
-                            <span class="text-base font-black text-slate-100">${accuracyPct}%</span>
+                        <div class="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                            <span class="text-[9px] text-amber-500 uppercase font-black block">Accuracy</span>
+                            <span class="text-base font-black text-slate-900 dark:text-slate-100">${accuracyPct}%</span>
                             <span class="text-[9px] text-slate-400 block mt-0.5">Precision Ratio</span>
                         </div>
                     </div>
 
                     <!-- AI Opponent Matchmaking Comparison Matrix -->
-                    <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-3">
-                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block"><i class="fa-solid fa-users-viewfinder text-rose-500 mr-1"></i> Challenge Opponents Leaderboard</span>
+                    <div class="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block"><i class="fa-solid fa-users-viewfinder text-rose-500 mr-1"></i> Opponents Leaderboard</span>
                         <div class="space-y-2 text-xs font-bold">
-                            <!-- User's Score -->
                             <div class="flex justify-between items-center p-2 rounded-xl bg-rose-500/10 border border-rose-500/30">
-                                <span class="text-white font-black"><i class="fa-solid fa-user text-rose-500 mr-1"></i> ${currentUserName} (You)</span>
-                                <span class="text-rose-400 font-black">${rawScore} pts (${Math.floor(quizOverallSeconds/60)}m)</span>
+                                <span class="text-rose-500 font-black"><i class="fa-solid fa-user mr-1"></i> ${currentUserName} (You)</span>
+                                <span class="text-rose-500 font-black">${rawScore} pts (${Math.floor(quizOverallSeconds/60)}m)</span>
                             </div>
-                            <!-- AI Bots -->
                             ${AI_BOTS.map(bot => {
                                 const botScore = Math.round(totalPossibleScore * bot.scoreFactor);
                                 return `
-                                    <div class="flex justify-between items-center p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300">
-                                        <span><i class="fa-solid fa-robot text-slate-500 mr-1"></i> ${bot.name}</span>
+                                    <div class="flex justify-between items-center p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300">
+                                        <span><i class="fa-solid fa-robot text-slate-400 mr-1"></i> ${bot.name}</span>
                                         <span class="text-slate-400">${botScore} pts (${Math.floor(bot.timeSec/60)}m)</span>
                                     </div>
                                 `;
@@ -468,29 +524,71 @@
 
                     <!-- Action Buttons -->
                     <div class="flex space-x-2 pt-2">
-                        <button onclick="window.location.reload()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-black py-3 rounded-2xl text-xs shadow transition">Reattempt Challenge</button>
-                        <button onclick="window.location.href='student-leaderboard.html'" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-black py-3 rounded-2xl text-xs shadow transition">View Global Tier Rank</button>
+                        <button onclick="window.openDetailedSolutionsModal('all')" class="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black py-3 rounded-2xl text-xs shadow transition"><i class="fa-solid fa-eye mr-1"></i> View Solution</button>
+                        <button onclick="window.location.reload()" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-black py-3 rounded-2xl text-xs shadow transition">Reattempt</button>
                     </div>
                 </div>
             `;
         };
+                // Interactive View Solution Filter Modal (Green, Red, Black Dots)
+        window.openDetailedSolutionsModal = function(filterType) {
+            const modal = document.getElementById('solutionModalOverlay');
+            const container = document.getElementById('solutionQuestionListNode');
+            modal.classList.remove('hidden');
+
+            let html = "";
+            challengeQuestions.forEach((q, idx) => {
+                const ans = studentAnswersMap[idx];
+                let isCorrect = ans && ans.submitted && ans.isCorrect;
+                let isIncorrect = ans && ans.submitted && !ans.isCorrect && !ans.expired;
+                let isSkipped = !ans || !ans.submitted || ans.expired;
+
+                if(filterType === 'correct' && !isCorrect) return;
+                if(filterType === 'incorrect' && !isIncorrect) return;
+                if(filterType === 'skipped' && !isSkipped) return;
+
+                let dotColor = "bg-slate-400";
+                if(isCorrect) dotColor = "bg-emerald-500";
+                if(isIncorrect) dotColor = "bg-rose-500";
+
+                const correctOptKey = q.correctOpt || q.correctOption;
+
+                html += `
+                    <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full ${dotColor} inline-block"></span>
+                            <span class="font-black text-slate-900 dark:text-white">Q${idx+1}: ${q.qText || q.questionText || ''}</span>
+                        </div>
+                        <p class="text-slate-500 text-[11px]"><b>Your Ans:</b> ${ans && ans.selectedOpt ? ans.selectedOpt : 'Skipped'} | <b>Correct Ans:</b> ${correctOptKey}</p>
+                        <div class="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-300">
+                            <b>NCERT Solution:</b> ${q.solutionText || q.explanation || 'N/A'}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html || '<p class="text-center text-slate-400 text-xs py-10">No questions found for this filter.</p>';
+        };
+
+        window.closeSolutionModal = function() {
+            document.getElementById('solutionModalOverlay').classList.add('hidden');
+        };
     </script>
 </head>
 
-<body class="bg-slate-950 text-slate-100 min-h-screen transition-colors duration-300 pb-20">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-300 pb-20">
     <div id="challengePortalApp" class="min-h-screen flex flex-col justify-between overflow-x-hidden">
         
         <!-- SCREEN 1: CHALLENGE LIST VIEW -->
         <div id="view-challenge-list" class="w-full flex-1 flex flex-col">
-            <header class="bg-slate-900 border-b border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
+            <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-40 flex justify-between items-center w-full">
                 <button onclick="window.history.back()" class="text-slate-400 p-2 hover:text-rose-500"><i class="fa-solid fa-chevron-left text-lg"></i></button>
-                <h1 class="font-black text-lg tracking-wide text-white mx-auto"><i class="fa-solid fa-fire text-amber-500 mr-2"></i>Challenge Arena</h1>
+                <h1 class="font-black text-lg tracking-wide text-slate-900 dark:text-white mx-auto"><i class="fa-solid fa-fire text-amber-500 mr-2"></i>Challenge Arena</h1>
                 <div class="w-8"></div>
             </header>
 
             <div class="w-full px-4 py-4 max-w-xl mx-auto space-y-4 flex-1">
-                <!-- DAILY / WEEKLY TOGGLE -->
-                <div class="bg-slate-900 p-1.5 rounded-2xl flex items-center gap-1 border border-slate-800">
+                <div class="bg-white dark:bg-slate-900 p-1.5 rounded-2xl flex items-center gap-1 border border-slate-200 dark:border-slate-800">
                     <button id="tabBtnDaily" onclick="window.switchChallengeTab('daily')" class="flex-1 py-2.5 rounded-xl text-xs font-black bg-rose-500 text-white shadow-md transition"><i class="fa-solid fa-calendar-day mr-1"></i> Daily Challenge</button>
                     <button id="tabBtnWeekly" onclick="window.switchChallengeTab('weekly')" class="flex-1 py-2.5 rounded-xl text-xs font-black text-slate-400 hover:text-white transition"><i class="fa-solid fa-calendar-week mr-1"></i> Weekly Challenge</button>
                 </div>
@@ -500,47 +598,84 @@
         </div>
 
         <!-- SCREEN 2: EXAMINATION ARENA VIEW -->
-        <div id="view-challenge-arena" class="fixed inset-0 bg-slate-950 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
-            <!-- TOP CONTROL ROW -->
-            <header class="bg-slate-900 px-4 py-3 flex justify-between items-center border-b border-slate-800 w-full flex-shrink-0">
-                <div class="flex items-center space-x-2">
-                    <button onclick="window.finishFullChallengeTest()" class="bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-black">Submit Test</button>
-                    <span id="arenaChallengeTitle" class="text-xs font-black uppercase text-slate-400 truncate max-w-[120px]">Challenge</span>
-                </div>
-
-                <!-- OVERALL STOPWATCH -->
-                <div class="bg-slate-800 border border-slate-700 text-emerald-400 font-black text-xs px-3 py-1.5 rounded-xl flex items-center space-x-1.5">
+        <div id="view-challenge-arena" class="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-50 hidden flex flex-col w-screen h-screen overflow-hidden">
+            <!-- TOP NAVIGATION ROW -->
+            <header class="bg-white dark:bg-slate-900 px-4 py-3 flex justify-between items-center border-b border-slate-200 dark:border-slate-800 w-full flex-shrink-0">
+                <!-- TOP LEFT: QUIZ TIMER -->
+                <div class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-emerald-500 font-black text-xs px-3 py-1.5 rounded-xl flex items-center space-x-1.5">
                     <i class="fa-solid fa-stopwatch text-xs"></i>
                     <span id="overallStopwatchText">00:00</span>
                 </div>
+
+                <!-- TOP RIGHT: SUBMIT TEST BUTTON -->
+                <button onclick="window.finishFullChallengeTest()" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow">Submit Quiz</button>
             </header>
 
-            <div class="flex-1 w-full p-4 overflow-y-auto box-border space-y-4 max-w-xl mx-auto">
+            <div class="flex-1 w-full p-4 overflow-y-auto box-border space-y-4 max-w-xl mx-auto pb-24">
                 <!-- SUBJECT FILTER TABS -->
                 <div id="subjectFilterTabsNode" class="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none"></div>
 
                 <!-- QUICK JUMP SHORTCUT GRID -->
-                <div id="quickJumpGridNode" class="grid grid-cols-8 gap-1.5 max-h-24 overflow-y-auto p-1 bg-slate-900 border border-slate-800 rounded-2xl"></div>
-
-                <!-- ACTION BAR: PREVIOUS / SUBMIT ANSWER / NEXT -->
-                <div class="flex justify-between items-center gap-2">
-                    <button onclick="window.loadQuestionCard(currentQuestionIndex - 1)" class="flex-1 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-black text-slate-300 active:scale-95 transition"><i class="fa-solid fa-arrow-left mr-1"></i> Prev</button>
-                    <button onclick="window.submitCurrentQuestionAnswer()" class="flex-1 py-2.5 bg-emerald-500 text-slate-950 rounded-xl text-xs font-black shadow active:scale-95 transition"><i class="fa-solid fa-check mr-1"></i> Submit Answer</button>
-                    <button onclick="window.loadQuestionCard(currentQuestionIndex + 1)" class="flex-1 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-black text-slate-300 active:scale-95 transition">Next <i class="fa-solid fa-arrow-right ml-1"></i></button>
-                </div>
+                <div id="quickJumpGridNode" class="grid grid-cols-8 gap-1.5 max-h-24 overflow-y-auto p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl"></div>
 
                 <!-- SINGLE QUESTION CANVAS -->
                 <div id="singleQuestionCanvasNode"></div>
             </div>
+
+            <!-- BOTTOM NAVIGATION BAR (Prev / Submit Answer / Next) -->
+            <div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-3 z-50">
+                <div class="flex justify-between items-center gap-2 max-w-xl mx-auto">
+                    <button onclick="window.loadQuestionCard(currentQuestionIndex - 1)" class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300 active:scale-95 transition"><i class="fa-solid fa-arrow-left mr-1"></i> Prev</button>
+                    <button onclick="window.submitCurrentQuestionAnswer()" class="flex-1 py-3 bg-emerald-500 text-slate-950 rounded-xl text-xs font-black shadow active:scale-95 transition"><i class="fa-solid fa-check mr-1"></i> Submit Answer</button>
+                    <button onclick="window.loadQuestionCard(currentQuestionIndex + 1)" class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-slate-700 dark:text-slate-300 active:scale-95 transition">Next <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                </div>
+            </div>
         </div>
 
         <!-- SCREEN 3: RESULT ANALYTICS DASHBOARD -->
-        <div id="view-challenge-result" class="fixed inset-0 bg-slate-950 z-50 hidden flex flex-col w-screen h-screen overflow-y-auto p-4">
+        <div id="view-challenge-result" class="fixed inset-0 bg-slate-50 dark:bg-slate-950 z-50 hidden flex flex-col w-screen h-screen overflow-y-auto p-4">
             <div id="resultDashboardCanvasNode" class="my-auto"></div>
         </div>
 
+        <!-- FRIEND INVITE MODAL OVERLAY -->
+        <div id="inviteModalOverlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl max-w-sm w-full space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-black text-sm text-slate-900 dark:text-white">Invite Peer Aspirants</h3>
+                    <button onclick="window.closeInviteModal()" class="text-slate-400 hover:text-rose-500"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p class="text-xs text-slate-400 font-bold" id="inviteChallengeName">Challenge</p>
+                <input id="inviteLinkInput" type="text" readonly class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl text-xs font-mono text-slate-600 dark:text-slate-300">
+                <div class="grid grid-cols-3 gap-2 text-xs font-bold">
+                    <button onclick="window.copyInviteLink()" class="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-copy block text-sm mb-1"></i> Copy</button>
+                    <button onclick="window.shareWhatsApp()" class="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl hover:bg-emerald-500/20"><i class="fa-brands fa-whatsapp block text-sm mb-1"></i> WhatsApp</button>
+                    <button onclick="window.shareTelegram()" class="p-2.5 bg-sky-500/10 text-sky-500 rounded-xl hover:bg-sky-500/20"><i class="fa-brands fa-telegram block text-sm mb-1"></i> Telegram</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW SOLUTION MODAL OVERLAY (Green, Red, Black Filter Dots) -->
+        <div id="solutionModalOverlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex flex-col p-4 overflow-hidden">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-3xl max-w-xl w-full mx-auto flex flex-col h-full space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
+                    <h3 class="font-black text-sm text-slate-900 dark:text-white">Detailed Solutions</h3>
+                    <button onclick="window.closeSolutionModal()" class="text-slate-400 hover:text-rose-500"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                
+                <!-- Filter Dots Row -->
+                <div class="flex space-x-2 text-xs font-black">
+                    <button onclick="window.openDetailedSolutionsModal('all')" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">All</button>
+                    <button onclick="window.openDetailedSolutionsModal('correct')" class="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>Correct</span></button>
+                    <button onclick="window.openDetailedSolutionsModal('incorrect')" class="px-3 py-1.5 rounded-xl bg-rose-500/10 text-rose-500 flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span><span>Incorrect</span></button>
+                    <button onclick="window.openDetailedSolutionsModal('skipped')" class="px-3 py-1.5 rounded-xl bg-slate-500/10 text-slate-400 flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-slate-400"></span><span>Skipped</span></button>
+                </div>
+
+                <div id="solutionQuestionListNode" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+            </div>
+        </div>
+
         <!-- UNIVERSAL BOTTOM NAVIGATION -->
-        <nav class="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 px-2 py-3 flex justify-around items-center shadow-2xl w-full box-border">
+        <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-3 flex justify-around items-center shadow-2xl w-full box-border">
             <button onclick="window.location.href='index.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-house-medical text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Home</span></button>
             <button onclick="window.location.href='student-ncert.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-book-open text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Study</span></button>
             <button onclick="window.location.href='student-quiz.html'" class="text-slate-400 hover:text-rose-500 font-bold text-center flex flex-col items-center space-y-1 transition"><i class="fa-solid fa-vial-circle-check text-base"></i><span class="text-[9px] uppercase tracking-widest font-black">Test</span></button>
