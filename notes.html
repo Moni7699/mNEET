@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>mNEET - Notes</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+
+    <style>
+
+        .notes-page {
+            min-height: 100vh;
+            padding-bottom: 30px;
+        }
+
+        .notes-header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+
+            display: flex;
+            align-items: center;
+            gap: 14px;
+
+            padding: 14px 17px;
+
+            background:
+                rgba(4,10,21,0.96);
+
+            backdrop-filter: blur(15px);
+
+            border-bottom:
+                1px solid
+                rgba(255,255,255,0.07);
+        }
+
+        .notes-back {
+            border: none;
+            background: transparent;
+
+            color: white;
+
+            font-size: 25px;
+
+            cursor: pointer;
+        }
+
+        .notes-brand {
+            color: #ffc107;
+
+            font-size: 21px;
+
+            font-weight: 900;
+        }
+
+        .notes-brand span {
+            color: white;
+        }
+
+        .notes-main {
+            width: 100%;
+            max-width: 900px;
+
+            margin: auto;
+
+            padding: 22px 15px;
+        }
+
+        .notes-hero {
+            padding: 23px 20px;
+
+            border-radius: 20px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #10213b,
+                    #07101f
+                );
+
+            border:
+                1px solid
+                rgba(255,193,7,0.16);
+        }
+
+        .notes-small {
+            color: #ffc107;
+
+            font-size: 10px;
+
+            font-weight: 900;
+
+            letter-spacing: 1px;
+        }
+
+        .notes-title {
+            color: white;
+
+            font-size: 24px;
+
+            margin: 7px 0;
+        }
+
+        .notes-description {
+            color: #8d9aae;
+
+            font-size: 13px;
+
+            line-height: 1.6;
+        }
+
+        .pdf-card {
+            margin-top: 18px;
+
+            padding: 18px;
+
+            border-radius: 18px;
+
+            background: #0d192c;
+
+            border:
+                1px solid
+                rgba(255,255,255,0.07);
+        }
+
+        .pdf-icon {
+            font-size: 42px;
+
+            margin-bottom: 10px;
+        }
+
+        .pdf-title {
+            color: white;
+
+            font-size: 17px;
+
+            font-weight: 900;
+
+            margin-bottom: 7px;
+        }
+
+        .pdf-description {
+            color: #8e9bae;
+
+            font-size: 12px;
+
+            line-height: 1.5;
+
+            margin-bottom: 17px;
+        }
+
+        .pdf-button {
+            width: 100%;
+
+            min-height: 47px;
+
+            border: none;
+
+            border-radius: 11px;
+
+            background: #ffc107;
+
+            color: #171717;
+
+            font-weight: 900;
+
+            cursor: pointer;
+        }
+
+        .pdf-empty {
+            padding: 30px 15px;
+
+            text-align: center;
+
+            color: #8997aa;
+        }
+
+        .pdf-error {
+            padding: 25px;
+
+            text-align: center;
+
+            color: #ff7777;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="notes-page">
+
+
+    <header class="notes-header">
+
+        <button
+            class="notes-back"
+            onclick="goBackToTopic()"
+        >
+            ←
+        </button>
+
+        <div class="notes-brand">
+            <span>m</span>NEET
+        </div>
+
+    </header>
+
+
+
+    <main class="notes-main">
+
+
+        <section class="notes-hero">
+
+            <div class="notes-small">
+                NCERT / TOPIC NOTES
+            </div>
+
+            <h1
+                id="topicTitle"
+                class="notes-title"
+            >
+                Loading...
+            </h1>
+
+            <div
+                id="topicDescription"
+                class="notes-description"
+            >
+                Please wait...
+            </div>
+
+        </section>
+
+
+
+        <section id="notesContainer">
+
+            <div class="pdf-empty">
+                Loading notes...
+            </div>
+
+        </section>
+
+
+    </main>
+
+
+</div>
+
+
+<script src="js/firebase.js"></script>
+
+<script src="js/auth.js"></script>
+
+<script src="js/notes.js"></script>
+
+
+</body>
+
+</html>
