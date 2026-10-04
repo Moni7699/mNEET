@@ -17,11 +17,246 @@
         href="css/style.css"
     >
 
-    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+    <style>
 
-    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+        .topic-page {
+            min-height: 100vh;
+            padding-bottom: 30px;
+        }
 
-    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+        .topic-header {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+
+            display: flex;
+            align-items: center;
+            gap: 14px;
+
+            padding: 14px 17px;
+
+            background:
+                rgba(4,10,21,0.96);
+
+            backdrop-filter: blur(15px);
+
+            border-bottom:
+                1px solid
+                rgba(255,255,255,0.07);
+        }
+
+        .topic-back {
+            border: none;
+            background: transparent;
+
+            color: white;
+
+            font-size: 25px;
+
+            cursor: pointer;
+        }
+
+        .brand {
+            color: #ffc107;
+
+            font-size: 21px;
+
+            font-weight: 900;
+        }
+
+        .brand span {
+            color: white;
+        }
+
+        .topic-main {
+            width: 100%;
+            max-width: 900px;
+
+            margin: auto;
+
+            padding: 22px 15px;
+        }
+
+        .topic-hero {
+            padding: 24px 20px;
+
+            border-radius: 20px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #10213b,
+                    #07101f
+                );
+
+            border:
+                1px solid
+                rgba(255,193,7,0.16);
+        }
+
+        .topic-label {
+            color: #ffc107;
+
+            font-size: 10px;
+
+            font-weight: 900;
+
+            letter-spacing: 1px;
+        }
+
+        .topic-title {
+            color: white;
+
+            font-size: 25px;
+
+            margin: 7px 0;
+        }
+
+        .topic-description {
+            color: #8e9bae;
+
+            font-size: 13px;
+
+            line-height: 1.6;
+        }
+
+        .practice-grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, 1fr);
+
+            gap: 14px;
+
+            margin-top: 20px;
+        }
+
+        .practice-card {
+            padding: 20px;
+
+            border-radius: 18px;
+
+            background: #0d192c;
+
+            border:
+                1px solid
+                rgba(255,255,255,0.07);
+
+            transition: 0.2s;
+        }
+
+        .practice-card:hover {
+            transform:
+                translateY(-2px);
+
+            border-color:
+                rgba(255,193,7,0.25);
+        }
+
+        .practice-icon {
+            width: 48px;
+            height: 48px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 13px;
+
+            background:
+                rgba(255,193,7,0.08);
+
+            font-size: 24px;
+
+            margin-bottom: 14px;
+        }
+
+        .practice-title {
+            color: white;
+
+            font-size: 16px;
+
+            font-weight: 900;
+
+            margin-bottom: 6px;
+        }
+
+        .practice-description {
+            color: #8997aa;
+
+            font-size: 12px;
+
+            line-height: 1.5;
+
+            margin-bottom: 16px;
+        }
+
+        .practice-button {
+            width: 100%;
+
+            min-height: 43px;
+
+            border: none;
+
+            border-radius: 10px;
+
+            background: #ffc107;
+
+            color: #171717;
+
+            font-weight: 900;
+
+            cursor: pointer;
+        }
+
+        .practice-button.notes {
+            background: #17263d;
+
+            color: #ffc107;
+
+            border:
+                1px solid
+                rgba(255,193,7,0.20);
+        }
+
+        .quiz-info {
+            margin-top: 18px;
+
+            padding: 17px;
+
+            border-radius: 15px;
+
+            background:
+                rgba(255,193,7,0.05);
+
+            border:
+                1px solid
+                rgba(255,193,7,0.12);
+
+            color: #9ba8ba;
+
+            font-size: 12px;
+
+            line-height: 1.7;
+        }
+
+        .loading {
+            text-align: center;
+
+            color: #8997aa;
+
+            padding: 40px;
+        }
+
+        @media (max-width: 600px) {
+
+            .practice-grid {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+    </style>
 
 </head>
 
@@ -29,337 +264,80 @@
 <body>
 
 
-<div class="student-app">
+<div class="topic-page">
 
 
-    <!-- HEADER -->
-
-    <header class="student-header">
-
-        <div class="header-left">
-
-            <button
-                class="header-back"
-                onclick="goBackToChapter()"
-            >
-                ←
-            </button>
-
-            <div class="brand-logo">
-                <span>m</span>NEET
-            </div>
-
-        </div>
-
+    <header class="topic-header">
 
         <button
-            class="header-logout"
-            onclick="logoutUser()"
+            class="topic-back"
+            onclick="goBack()"
         >
-            Logout
+            ←
         </button>
+
+        <div class="brand">
+            <span>m</span>NEET
+        </div>
 
     </header>
 
 
 
-    <!-- MAIN -->
-
-    <main class="student-main">
+    <main class="topic-main">
 
 
-        <!-- TOPIC HERO -->
+        <section class="topic-hero">
 
-        <section class="student-hero">
-
-            <div>
-
-                <div class="hero-small">
-                    TOPIC PRACTICE
-                </div>
-
-                <h1 id="topicTitle">
-                    Loading Topic...
-                </h1>
-
-                <p id="topicDescription">
-                    Please wait...
-                </p>
-
+            <div class="topic-label">
+                NEET BIOLOGY • TOPIC
             </div>
 
+            <h1
+                id="topicTitle"
+                class="topic-title"
+            >
+                Loading...
+            </h1>
 
-            <div class="hero-icon">
-                🧠
+            <div
+                id="topicDescription"
+                class="topic-description"
+            >
+                Please wait...
             </div>
 
         </section>
 
 
 
-        <!-- QUIZ + NOTES -->
+        <section
+            id="practiceGrid"
+            class="practice-grid"
+        >
 
-        <div class="section-heading">
+            <div class="loading">
+                Loading topic...
+            </div>
 
-            <h2>
-                Study & Practice
-            </h2>
+        </section>
+
+
+
+        <div class="quiz-info">
+
+            💡 <strong>mNEET Practice Tip:</strong>
+
+            First read the topic notes carefully,
+            then attempt the quiz.
+
+            After submitting each answer,
+            review the solution and NCERT reference.
 
         </div>
-
-
-        <section class="quick-grid">
-
-
-            <!-- QUIZ -->
-
-            <button
-                class="quick-card"
-                onclick="openTopicQuiz()"
-            >
-
-                <span class="quick-icon">
-                    📝
-                </span>
-
-                <span class="quick-title">
-                    Practice Quiz
-                </span>
-
-                <span class="quick-text">
-                    Test your NEET preparation
-                </span>
-
-            </button>
-
-
-
-            <!-- NOTES -->
-
-            <button
-                class="quick-card"
-                onclick="openTopicNotes()"
-            >
-
-                <span class="quick-icon">
-                    📄
-                </span>
-
-                <span class="quick-title">
-                    Topic Notes
-                </span>
-
-                <span class="quick-text">
-                    Read your study material
-                </span>
-
-            </button>
-
-
-        </section>
-
-
-
-        <!-- PROGRESS -->
-
-        <section class="progress-card">
-
-            <div class="progress-top">
-
-                <div>
-
-                    <div class="card-label">
-                        Topic Progress
-                    </div>
-
-                    <div
-                        id="topicProgressPercent"
-                        class="progress-percent"
-                    >
-                        0%
-                    </div>
-
-                </div>
-
-
-                <div class="progress-circle">
-
-                    <span
-                        id="topicProgressCircle"
-                    >
-                        0%
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <div class="progress-bar">
-
-                <div
-                    id="topicProgressBar"
-                    class="progress-fill"
-                    style="width:0%;"
-                ></div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- INFORMATION -->
-
-        <div class="section-heading">
-
-            <h2>
-                Topic Information
-            </h2>
-
-        </div>
-
-
-        <section class="stats-grid">
-
-
-            <div class="stat-card">
-
-                <div class="stat-icon">
-                    📝
-                </div>
-
-                <div>
-
-                    <div class="stat-label">
-                        Quiz
-                    </div>
-
-                    <div class="stat-value">
-                        Ready
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <div class="stat-card">
-
-                <div class="stat-icon">
-                    📄
-                </div>
-
-                <div>
-
-                    <div class="stat-label">
-                        Notes
-                    </div>
-
-                    <div class="stat-value">
-                        PDF
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <div class="stat-card">
-
-                <div class="stat-icon">
-                    🎯
-                </div>
-
-                <div>
-
-                    <div class="stat-label">
-                        Attempts
-                    </div>
-
-                    <div
-                        id="attemptCount"
-                        class="stat-value"
-                    >
-                        0
-                    </div>
-
-                </div>
-
-            </div>
-
-
-        </section>
 
 
     </main>
-
-
-
-    <!-- BOTTOM NAV -->
-
-    <nav class="bottom-nav">
-
-
-        <button
-            class="bottom-item"
-            onclick="goBackToStudent()"
-        >
-
-            <span>🏠</span>
-
-            <small>
-                Home
-            </small>
-
-        </button>
-
-
-        <button
-            class="bottom-item active"
-            onclick="openTopicQuiz()"
-        >
-
-            <span>📝</span>
-
-            <small>
-                Quiz
-            </small>
-
-        </button>
-
-
-        <button
-            class="bottom-item"
-            onclick="openTopicNotes()"
-        >
-
-            <span>📄</span>
-
-            <small>
-                Notes
-            </small>
-
-        </button>
-
-
-        <button
-            class="bottom-item"
-            onclick="goBackToChapter()"
-        >
-
-            <span>📚</span>
-
-            <small>
-                Topics
-            </small>
-
-        </button>
-
-
-    </nav>
 
 
 </div>
