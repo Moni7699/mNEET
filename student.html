@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>mNEET - Student Dashboard</title>
+
+
+    <!-- ============================= -->
+    <!-- CSS -->
+    <!-- ============================= -->
+
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+
+
+    <!-- ============================= -->
+    <!-- Firebase SDK -->
+    <!-- ============================= -->
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-database-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-storage-compat.js"></script>
+
+</head>
+
+
+<body>
+
+
+<!-- ==========================================
+     APP
+     ========================================== -->
+
+<div class="student-app">
+
+
+    <!-- ======================================
+         TOP HEADER
+         ====================================== -->
+
+    <header class="student-header">
+
+        <div class="header-left">
+
+            <div class="brand-logo">
+
+                <span>m</span>NEET
+
+            </div>
+
+            <div
+                id="welcomeText"
+                class="welcome-text"
+            >
+
+                Welcome
+
+            </div>
+
+        </div>
+
+
+        <button
+            class="header-logout"
+            onclick="logoutUser()"
+        >
+
+            Logout
+
+        </button>
+
+    </header>
+
+
+
+    <!-- ======================================
+         MAIN CONTENT
+         ====================================== -->
+
+    <main class="student-main">
+
+
+        <!-- ==================================
+             HERO
+             ================================== -->
+
+        <section class="student-hero">
+
+            <div>
+
+                <div class="hero-small">
+                    NEET BIOLOGY
+                </div>
+
+                <h1>
+                    Your Preparation
+                    Starts Here
+                </h1>
+
+                <p>
+                    Learn smarter. Practice better.
+                    Improve every day.
+                </p>
+
+            </div>
+
+
+            <div class="hero-icon">
+                🎓
+            </div>
+
+        </section>
+
+
+
+        <!-- ==================================
+             OVERALL PROGRESS
+             ================================== -->
+
+        <section class="progress-card">
+
+            <div class="progress-top">
+
+                <div>
+
+                    <div class="card-label">
+                        Overall Course Progress
+                    </div>
+
+                    <div
+                        id="progressPercent"
+                        class="progress-percent"
+                    >
+                        0%
+                    </div>
+
+                </div>
+
+
+                <div class="progress-circle">
+
+                    <span
+                        id="progressCircleText"
+                    >
+                        0%
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="progress-bar">
+
+                <div
+                    id="progressBar"
+                    class="progress-fill"
+                    style="width: 0%;"
+                ></div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ==================================
+             LAST ATTEMPT
+             ================================== -->
+
+        <section class="stats-grid">
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    🎯
+                </div>
+
+                <div>
+
+                    <div class="stat-label">
+                        Last Attempt
+                    </div>
+
+                    <div
+                        id="lastScore"
+                        class="stat-value"
+                    >
+                        --
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    📊
+                </div>
+
+                <div>
+
+                    <div class="stat-label">
+                        Accuracy
+                    </div>
+
+                    <div
+                        id="accuracy"
+                        class="stat-value"
+                    >
+                        --
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div class="stat-icon">
+                    🏆
+                </div>
+
+                <div>
+
+                    <div class="stat-label">
+                        Best Score
+                    </div>
+
+                    <div
+                        id="bestScore"
+                        class="stat-value"
+                    >
+                        --
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- ==================================
+             CONTINUE
+             ================================== -->
+
+        <section class="continue-card">
+
+            <div>
+
+                <div class="continue-label">
+                    Continue Learning
+                </div>
+
+                <h2 id="continueTitle">
+                    Start your course
+                </h2>
+
+                <p id="continueText">
+                    Choose a course to begin
+                    your preparation.
+                </p>
+
+            </div>
+
+
+            <button
+                id="continueButton"
+                class="continue-button"
+                onclick="continueLearning()"
+            >
+
+                Continue
+
+            </button>
+
+        </section>
+
+
+
+        <!-- ==================================
+             COURSES
+             ================================== -->
+
+        <div class="section-heading">
+
+            <h2>
+                My Courses
+            </h2>
+
+            <span id="courseCount">
+                0 Courses
+            </span>
+
+        </div>
+
+
+        <section
+            id="courseList"
+            class="course-grid"
+        >
+
+            <div class="course-loading">
+
+                Loading courses...
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ==================================
+             QUICK ACCESS
+             ================================== -->
+
+        <div class="section-heading">
+
+            <h2>
+                Quick Practice
+            </h2>
+
+        </div>
+
+
+        <section class="quick-grid">
+
+
+            <button
+                class="quick-card"
+                onclick="openTopicPractice()"
+            >
+
+                <span class="quick-icon">
+                    📝
+                </span>
+
+                <span class="quick-title">
+                    Topic Wise
+                </span>
+
+                <span class="quick-text">
+                    Practice by topic
+                </span>
+
+            </button>
+
+
+
+            <button
+                class="quick-card"
+                onclick="openChapterPractice()"
+            >
+
+                <span class="quick-icon">
+                    🧠
+                </span>
+
+                <span class="quick-title">
+                    Chapter Wise
+                </span>
+
+                <span class="quick-text">
+                    Type based practice
+                </span>
+
+            </button>
+
+
+
+            <button
+                class="quick-card"
+                onclick="openNCERT()"
+            >
+
+                <span class="quick-icon">
+                    📖
+                </span>
+
+                <span class="quick-title">
+                    NCERT Reading
+                </span>
+
+                <span class="quick-text">
+                    Read chapter PDFs
+                </span>
+
+            </button>
+
+
+
+            <button
+                class="quick-card"
+                onclick="openVideos()"
+            >
+
+                <span class="quick-icon">
+                    ▶️
+                </span>
+
+                <span class="quick-title">
+                    Video Classes
+                </span>
+
+                <span class="quick-text">
+                    Watch lessons
+                </span>
+
+            </button>
+
+
+        </section>
+
+
+    </main>
+
+
+
+    <!-- ======================================
+         BOTTOM NAVIGATION
+         ====================================== -->
+
+    <nav class="bottom-nav">
+
+
+        <button
+            class="bottom-item active"
+            onclick="goHome()"
+        >
+
+            <span>
+                🏠
+            </span>
+
+            <small>
+                Home
+            </small>
+
+        </button>
+
+
+
+        <button
+            class="bottom-item"
+            onclick="openTopicPractice()"
+        >
+
+            <span>
+                📝
+            </span>
+
+            <small>
+                Practice
+            </small>
+
+        </button>
+
+
+
+        <button
+            class="bottom-item"
+            onclick="openNCERT()"
+        >
+
+            <span>
+                📖
+            </span>
+
+            <small>
+                NCERT
+            </small>
+
+        </button>
+
+
+
+        <button
+            class="bottom-item"
+            onclick="openVideos()"
+        >
+
+            <span>
+                ▶️
+            </span>
+
+            <small>
+                Videos
+            </small>
+
+        </button>
+
+
+
+        <button
+            class="bottom-item"
+            onclick="openProfile()"
+        >
+
+            <span>
+                👤
+            </span>
+
+            <small>
+                Profile
+            </small>
+
+        </button>
+
+
+    </nav>
+
+
+</div>
+
+
+
+<!-- ==========================================
+     FIREBASE
+     ========================================== -->
+
+<script src="js/firebase.js"></script>
+
+
+<!-- ==========================================
+     AUTH
+     ========================================== -->
+
+<script src="js/auth.js"></script>
+
+
+<!-- ==========================================
+     STUDENT JS
+     ========================================== -->
+
+<script src="js/student.js"></script>
+
+
+</body>
+
+                        </html>
