@@ -2,13 +2,9 @@
 // mNEET - Topic Page
 // ==========================================
 
-let currentUser = null;
-
-let activeCourseId = null;
-
-let activeChapterId = null;
-
-let activeTopicId = null;
+let courseId = null;
+let chapterId = null;
+let topicId = null;
 
 
 // ==========================================
@@ -31,32 +27,33 @@ document.addEventListener(
                 }
 
 
-                currentUser = user;
-
-
-                activeCourseId =
+                courseId =
                     localStorage.getItem(
                         "activeCourse"
                     );
 
 
-                activeChapterId =
+                chapterId =
                     localStorage.getItem(
                         "activeChapter"
                     );
 
 
-                activeTopicId =
+                topicId =
                     localStorage.getItem(
                         "activeTopic"
                     );
 
 
                 if (
-                    !activeCourseId ||
-                    !activeChapterId ||
-                    !activeTopicId
+                    !courseId ||
+                    !chapterId ||
+                    !topicId
                 ) {
+
+                    alert(
+                        "Topic information is missing."
+                    );
 
                     window.location.href =
                         "student.html";
@@ -81,88 +78,20 @@ document.addEventListener(
 function loadTopic() {
 
     db.collection("courses")
-        .doc(activeCourseId)
+        .doc(courseId)
         .collection("chapters")
-        .doc(activeChapterId)
+        .doc(chapterId)
         .collection("topics")
-        .doc(activeTopicId)
+        .doc(topicId)
         .get()
 
         .then(function (doc) {
 
             if (!doc.exists) {
 
-                alert(
+                showError(
                     "Topic not found."
                 );
-
-                goBackToChapter();
-
-                return;
-            }
-
-
-            const topic =
-                doc.data();
-
-
-            document.getElementById(
-                "topicTitle"
-            ).textContent =
-                topic.name ||
-                topic.title ||
-                "Biology Topic";
-
-
-            document.getElementById(
-                "topicDescription"
-            ).textContent =
-                topic.description ||
-                "Practice this topic for NEET.";
-
-
-            loadProgress();
-
-        })
-
-        .catch(function (error) {
-
-            console.error(
-                "Topic loading error:",
-                error
-            );
-
-        });
-
-}
-
-
-// ==========================================
-// LOAD USER PROGRESS
-// ==========================================
-
-function loadProgress() {
-
-    const progressRef =
-        db.collection("users")
-            .doc(currentUser.uid)
-            .collection("progress")
-            .doc(
-                activeCourseId +
-                "_" +
-                activeChapterId +
-                "_" +
-                activeTopicId
-            );
-
-
-    progressRef.get()
-
-        .then(function (doc) {
-
-            if (!doc.exists) {
-
-                updateProgress(0, 0);
 
                 return;
             }
@@ -172,30 +101,35 @@ function loadProgress() {
                 doc.data();
 
 
-            const percent =
-                Number(
-                    data.percent || 0
-                );
+            document.getElementById(
+                "topicTitle"
+            ).textContent =
+                data.name ||
+                data.title ||
+                "Biology Topic";
 
 
-            const attempts =
-                Number(
-                    data.attempts || 0
-                );
+            document.getElementById(
+                "topicDescription"
+            ).textContent =
+                data.description ||
+                "Practice questions and study notes for this topic.";
 
 
-            updateProgress(
-                percent,
-                attempts
-            );
+            renderPracticeCards();
 
         })
 
         .catch(function (error) {
 
             console.error(
-                "Progress error:",
+                "Topic error:",
                 error
+            );
+
+
+            showError(
+                "Unable to load topic."
             );
 
         });
@@ -204,78 +138,77 @@ function loadProgress() {
 
 
 // ==========================================
-// UPDATE PROGRESS UI
+// PRACTICE CARDS
 // ==========================================
 
-function updateProgress(
-    percent,
-    attempts
-) {
+function renderPracticeCards() {
 
-    percent =
-        Math.max(
-            0,
-            Math.min(
-                100,
-                percent
-            )
-        );
-
-
-    const percentText =
+    const container =
         document.getElementById(
-            "topicProgressPercent"
+            "practiceGrid"
         );
 
 
-    const circle =
-        document.getElementById(
-            "topicProgressCircle"
-        );
+    container.innerHTML = `
+
+        <div class="practice-card">
+
+            <div class="practice-icon">
+                📝
+            </div>
+
+            <div class="practice-title">
+                Practice Quiz
+            </div>
+
+            <div class="practice-description">
+
+                Solve NEET-style questions
+                with timer, answer submission,
+                solutions and scoring.
+
+            </div>
+
+            <button
+                class="practice-button"
+                onclick="openQuiz()"
+            >
+                Start Quiz
+            </button>
+
+        </div>
 
 
-    const bar =
-        document.getElementById(
-            "topicProgressBar"
-        );
 
+        <div class="practice-card">
 
-    const attemptText =
-        document.getElementById(
-            "attemptCount"
-        );
+            <div class="practice-icon">
+                📖
+            </div>
 
+            <div class="practice-title">
+                Topic Notes
+            </div>
 
-    if (percentText) {
+            <div class="practice-description">
 
-        percentText.textContent =
-            percent + "%";
+                Read topic-wise study notes
+                and revise important NCERT
+                concepts before attempting
+                the quiz.
 
-    }
+            </div>
 
+            <button
+                class="practice-button notes"
+                onclick="openNotes()"
+            >
+                Open Notes
+            </button>
 
-    if (circle) {
+        </div>
 
-        circle.textContent =
-            percent + "%";
-
-    }
-
-
-    if (bar) {
-
-        bar.style.width =
-            percent + "%";
-
-    }
-
-
-    if (attemptText) {
-
-        attemptText.textContent =
-            attempts;
-
-    }
+    `;
 
 }
 
@@ -284,23 +217,23 @@ function updateProgress(
 // OPEN QUIZ
 // ==========================================
 
-function openTopicQuiz() {
+function openQuiz() {
 
     localStorage.setItem(
         "quizCourse",
-        activeCourseId
+        courseId
     );
 
 
     localStorage.setItem(
         "quizChapter",
-        activeChapterId
+        chapterId
     );
 
 
     localStorage.setItem(
         "quizTopic",
-        activeTopicId
+        topicId
     );
 
 
@@ -314,23 +247,23 @@ function openTopicQuiz() {
 // OPEN NOTES
 // ==========================================
 
-function openTopicNotes() {
+function openNotes() {
 
     localStorage.setItem(
         "notesCourse",
-        activeCourseId
+        courseId
     );
 
 
     localStorage.setItem(
         "notesChapter",
-        activeChapterId
+        chapterId
     );
 
 
     localStorage.setItem(
         "notesTopic",
-        activeTopicId
+        topicId
     );
 
 
@@ -341,10 +274,10 @@ function openTopicNotes() {
 
 
 // ==========================================
-// BACK TO CHAPTER
+// BACK
 // ==========================================
 
-function goBackToChapter() {
+function goBack() {
 
     window.location.href =
         "chapter.html";
@@ -353,12 +286,61 @@ function goBackToChapter() {
 
 
 // ==========================================
-// BACK TO STUDENT
+// ERROR
 // ==========================================
 
-function goBackToStudent() {
+function showError(message) {
 
-    window.location.href =
-        "student.html";
+    const container =
+        document.getElementById(
+            "practiceGrid"
+        );
 
-               }
+
+    container.innerHTML = `
+
+        <div class="loading">
+
+            ${escapeHTML(message)}
+
+        </div>
+
+    `;
+
+}
+
+
+// ==========================================
+// ESCAPE
+// ==========================================
+
+function escapeHTML(value) {
+
+    return String(value)
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
