@@ -1,273 +1,335 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mNEET - Authentication Engine</title>
-    <!-- Tailwind CSS for Responsive UI -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        // Tailwind Config for smooth Light/Dark mode transition
-        tailwind.config = {
-            darkMode: 'class',
-        }
-    </script>
-    <!-- Firebase SDK Modules -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-        // Authentic Firebase Configuration Object
-        const firebaseConfig = {
-            apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
-            authDomain: "mneet-spark.firebaseapp.com",
-            databaseURL: "https://mneet-spark-default-rtdb.firebaseio.com",
-            projectId: "mneet-spark",
-            storageBucket: "mneet-spark.firebasestorage.app",
-            messagingSenderId: "252201633700",
-            appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
-        };
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+    <title>mNEET - NEET Learning Platform</title>
 
-        // DOM elements configuration
-        const authForm = document.getElementById('authForm');
-        const extraFields = document.getElementById('extraFields');
-        const submitBtn = document.getElementById('submitBtn');
-        const toggleLink = document.getElementById('toggleLink');
-        const formTitle = document.getElementById('form-title');
-        const errorMessage = document.getElementById('errorMessage');
-        const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+    <!-- ============================= -->
+    <!-- mNEET CSS -->
+    <!-- ============================= -->
 
-        let isSignUp = false;
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
 
-        // Theme Switcher Logic (Global scope)
-        window.toggleTheme = function() {
-            const htmlTag = document.documentElement;
-            const themeBtn = document.getElementById('themeBtn');
-            if (htmlTag.classList.contains('dark')) {
-                htmlTag.classList.remove('dark');
-                themeBtn.innerText = "🌙 Dark Mode";
-                localStorage.setItem('theme', 'light');
-            } else {
-                htmlTag.classList.add('dark');
-                themeBtn.innerText = "☀️ Light Mode";
-                localStorage.setItem('theme', 'dark');
-            }
-        };
 
-        // Handle Form Presentation Toggle
-        window.toggleMode = function(e) {
-            e.preventDefault();
-            isSignUp = !isSignUp;
-            errorMessage.innerText = "";
-            errorMessage.className = "text-rose-500 text-sm text-center font-medium mb-4 transition-all";
-            
-            if (isSignUp) {
-                extraFields.classList.remove('hidden');
-                forgotPasswordLink.classList.add('hidden');
-                formTitle.innerText = "Join the NEET Arena";
-                submitBtn.innerText = "Create Account";
-                toggleLink.innerHTML = 'Already have an account? <span class="text-sky-500 dark:text-sky-400 font-bold cursor-pointer hover:underline">Log In</span>';
-            } else {
-                extraFields.classList.add('hidden');
-                forgotPasswordLink.classList.remove('hidden');
-                formTitle.innerText = "Crack NEET with Gamified Learning";
-                submitBtn.innerText = "Log In";
-                toggleLink.innerHTML = 'Don\'t have an account? <span class="text-sky-500 dark:text-sky-400 font-bold cursor-pointer hover:underline">Sign Up</span>';
-            }
-        };
+    <!-- ============================= -->
+    <!-- Firebase SDK -->
+    <!-- ============================= -->
 
-        // Forgot Password Logic Trigger
-        window.handleForgotPassword = async function(e) {
-            e.preventDefault();
-            const email = document.getElementById('email').value.trim();
-            errorMessage.innerText = "";
-            
-            if (!email) {
-                errorMessage.className = "text-rose-500 text-sm text-center font-medium mb-4 transition-all";
-                errorMessage.innerText = "Please enter your Email Address first to reset password.";
-                return;
-            }
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
 
-            try {
-                await sendPasswordResetEmail(auth, email);
-                errorMessage.className = "text-emerald-500 text-sm text-center font-medium mb-4 transition-all";
-                errorMessage.innerText = "Password reset link sent to your email!";
-            } catch (error) {
-                errorMessage.className = "text-rose-500 text-sm text-center font-medium mb-4 transition-all";
-                errorMessage.innerText = "Error: Could not find user with this email.";
-            }
-        };
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
 
-        // Master Authentication Engine
-        authForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            errorMessage.innerText = "";
-            errorMessage.className = "text-rose-500 text-sm text-center font-medium mb-4 transition-all";
-            
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            
-            try {
-                if (isSignUp) {
-                    const fullName = document.getElementById('fullName').value.trim();
-                    const phone = document.getElementById('phone').value.trim();
-                    const city = document.getElementById('city').value.trim();
-                    
-                    if (!fullName || !phone || !city) {
-                        errorMessage.innerText = "All fields are mandatory for registration.";
-                        return;
-                    }
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 
-                    // 1. Create User Identity in Auth
-                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                    const user = userCredential.user;
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-database-compat.js"></script>
 
-                    // 2. Define Secure Database Mapping (Everyone signs up as student)
-                    await setDoc(doc(db, "users", user.uid), {
-                        uid: user.uid,
-                        name: fullName,
-                        email: email,
-                        phone: phone,
-                        city: city,
-                        role: "student", // Locked to student scope on signup
-                        bpCoins: 100,
-                        createdAt: new Date().toISOString()
-                    });
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-storage-compat.js"></script>
 
-                    alert("Registration Successful!");
-                    window.location.href = "student-dashboard.html";
-
-                } else {
-                    // 1. Execute Sign In Request
-                    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                    const user = userCredential.user;
-
-                    // 2. Retrieve Document Verification Map
-                    const userDoc = await getDoc(doc(db, "users", user.uid));
-                    
-                    if (userDoc.exists()) {
-                        const userData = userDoc.data();
-                        // Smart Role Validation Redirect
-                        if (userData.role === 'admin') {
-                            window.location.href = "admin-dashboard.html";
-                        } else {
-                            window.location.href = "student-dashboard.html";
-                        }
-                    } else {
-                        // Secret Trigger: Fallback verification if admin document hasn't been written in Firestore yet but exists in Auth
-                        errorMessage.innerText = "Account matched. Profile data mapping mismatch.";
-                    }
-                }
-            } catch (error) {
-                console.error("Auth Loop Failure Code:", error.code);
-                if (error.code === 'auth/email-already-in-use') {
-                    errorMessage.innerText = "This email address is already in use.";
-                } else if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-                    errorMessage.innerText = "Invalid credentials. Double check email and password.";
-                } else if (error.code === 'auth/weak-password') {
-                    errorMessage.innerText = "Password must be at least 6 characters long.";
-                } else {
-                    errorMessage.innerText = "Authentication failed. Error profile: " + error.message;
-                }
-            }
-        });
-
-        // Keep system localized theme configuration on reload
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            const htmlTag = document.documentElement;
-            const themeBtn = document.getElementById('themeBtn');
-            if (savedTheme === 'light') {
-                htmlTag.classList.remove('dark');
-                themeBtn.innerText = "🌙 Dark Mode";
-            } else {
-                htmlTag.classList.add('dark');
-                themeBtn.innerText = "☀️ Light Mode";
-            }
-        });
-    </script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 min-h-screen flex flex-col justify-between p-4 transition-colors duration-300">
 
-    <!-- Top Toolbar Action Bar -->
-    <div class="w-full flex justify-end p-2">
-        <button id="themeBtn" onclick="toggleTheme()" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition hover:scale-105 active:scale-95">
-            ☀️ Light Mode
-        </button>
-    </div>
 
-    <!-- Main Dynamic Form Wrapper -->
-    <div class="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl dark:shadow-2xl p-8 mx-auto my-auto transition-colors duration-300">
-        
-        <!-- Branding Identity Map -->
-        <div class="text-center mb-6">
-            <h1 class="text-4xl font-black tracking-wider text-sky-500 dark:text-sky-400 drop-shadow-sm">mNEET</h1>
-            <p id="form-title" class="text-slate-500 dark:text-slate-400 text-sm mt-2 transition-all">Crack NEET with Gamified Learning</p>
+<body>
+
+
+<!-- ===================================== -->
+<!-- MAIN AUTH PAGE -->
+<!-- ===================================== -->
+
+<div class="auth-page">
+
+
+    <!-- ================================= -->
+    <!-- AUTH CARD -->
+    <!-- ================================= -->
+
+    <div class="auth-card">
+
+
+        <!-- ============================== -->
+        <!-- LOGO -->
+        <!-- ============================== -->
+
+        <div class="logo-area">
+
+            <div class="mneet-logo">
+
+                <span class="logo-m">m</span><span class="logo-neet">NEET</span>
+
+            </div>
+
+            <div class="logo-subtitle">
+                NEET Learning Platform
+            </div>
+
         </div>
 
-        <!-- Notification Alerts Engine -->
-        <div id="errorMessage" class="text-rose-500 text-sm text-center font-medium mb-4 min-h-[20px] transition-all"></div>
 
-        <!-- Input Processing Form -->
-        <form id="authForm" class="space-y-4">
-            
-            <!-- Context Group: Signup Exclusive Profile Data -->
-            <div id="extraFields" class="space-y-4 hidden transition-all">
-                <div class="space-y-1">
-                    <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Full Name</label>
-                    <input type="text" id="fullName" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white text-base focus:outline-none focus:border-sky-500 dark:focus:border-sky-400 transition" placeholder="Dr. Rahul Sharma">
-                </div>
-                
-                <div class="space-y-1">
-                    <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Phone Number</label>
-                    <input type="tel" id="phone" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white text-base focus:outline-none focus:border-sky-500 dark:focus:border-sky-400 transition" placeholder="9876543210">
-                </div>
+        <!-- ================================= -->
+        <!-- LOGIN FORM -->
+        <!-- ================================= -->
 
-                <div class="space-y-1">
-                    <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">City Name</label>
-                    <input type="text" id="city" class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white text-base focus:outline-none focus:border-sky-500 dark:focus:border-sky-400 transition" placeholder="Kolkata">
-                </div>
+        <div
+            id="loginBox"
+            class="auth-section"
+        >
+
+            <h1>
+                Welcome Back
+            </h1>
+
+            <p class="auth-description">
+                Login and continue your NEET preparation.
+            </p>
+
+
+            <!-- Email -->
+
+            <div class="input-group">
+
+                <label for="loginEmail">
+                    Email
+                </label>
+
+                <input
+                    type="email"
+                    id="loginEmail"
+                    placeholder="Enter your email"
+                    autocomplete="email"
+                >
+
             </div>
 
-            <!-- Email Address Input Field -->
-            <div class="space-y-1">
-                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Email Address</label>
-                <input type="email" id="email" required class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white text-base focus:outline-none focus:border-sky-500 dark:focus:border-sky-400 transition" placeholder="aspirant@gmail.com">
+
+            <!-- Password -->
+
+            <div class="input-group">
+
+                <label for="loginPassword">
+                    Password
+                </label>
+
+                <input
+                    type="password"
+                    id="loginPassword"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                >
+
             </div>
 
-            <!-- Password Input Field -->
-            <div class="space-y-1">
-                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Password</label>
-                <input type="password" id="password" required class="w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 text-slate-900 dark:text-white text-base focus:outline-none focus:border-sky-500 dark:focus:border-sky-400 transition" placeholder="••••••••">
-            </div>
 
-            <!-- Forgot Password Dynamic Interface -->
-            <div id="forgotPasswordLink" class="text-right">
-                <a href="#" onclick="handleForgotPassword(event)" class="text-xs font-semibold text-sky-500 dark:text-sky-400 hover:underline">Forgot Password?</a>
-            </div>
+            <!-- Login Button -->
 
-            <!-- Submit Processing Trigger -->
-            <button type="submit" id="submitBtn" class="w-full bg-sky-500 hover:bg-sky-600 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 font-bold py-3.5 px-4 rounded-xl shadow-md transition duration-200 transform hover:-translate-y-0.5 active:translate-y-0">
-                Log In
+            <button
+                id="loginButton"
+                class="primary-button"
+                onclick="loginUser()"
+            >
+
+                Login
+
             </button>
-        </form>
 
-        <!-- Dynamic Context Mode Switch Link -->
-        <div class="text-center mt-6 text-sm text-slate-500 dark:text-slate-400" id="toggleLink" onclick="toggleMode(event)">
-            Don't have an account? <span class="text-sky-500 dark:text-sky-400 font-bold cursor-pointer hover:underline">Sign Up</span>
+
+            <!-- Switch Register -->
+
+            <div class="switch-text">
+
+                Don't have an account?
+
+                <button
+                    class="text-button"
+                    onclick="showRegister()"
+                >
+                    Create Account
+                </button>
+
+            </div>
+
         </div>
+
+
+
+        <!-- ================================= -->
+        <!-- REGISTER FORM -->
+        <!-- ================================= -->
+
+        <div
+            id="registerBox"
+            class="auth-section hidden"
+        >
+
+            <h1>
+                Create Account
+            </h1>
+
+            <p class="auth-description">
+                Create your mNEET student account.
+            </p>
+
+
+            <!-- Name -->
+
+            <div class="input-group">
+
+                <label for="registerName">
+                    Full Name
+                </label>
+
+                <input
+                    type="text"
+                    id="registerName"
+                    placeholder="Enter your full name"
+                    autocomplete="name"
+                >
+
+            </div>
+
+
+            <!-- Email -->
+
+            <div class="input-group">
+
+                <label for="registerEmail">
+                    Email
+                </label>
+
+                <input
+                    type="email"
+                    id="registerEmail"
+                    placeholder="Enter your email"
+                    autocomplete="email"
+                >
+
+            </div>
+
+
+            <!-- Password -->
+
+            <div class="input-group">
+
+                <label for="registerPassword">
+                    Password
+                </label>
+
+                <input
+                    type="password"
+                    id="registerPassword"
+                    placeholder="Minimum 6 characters"
+                    autocomplete="new-password"
+                >
+
+            </div>
+
+
+            <!-- Confirm Password -->
+
+            <div class="input-group">
+
+                <label for="registerConfirmPassword">
+                    Confirm Password
+                </label>
+
+                <input
+                    type="password"
+                    id="registerConfirmPassword"
+                    placeholder="Confirm your password"
+                    autocomplete="new-password"
+                >
+
+            </div>
+
+
+            <!-- Register Button -->
+
+            <button
+                id="registerButton"
+                class="primary-button"
+                onclick="registerUser()"
+            >
+
+                Create Account
+
+            </button>
+
+
+            <!-- Switch Login -->
+
+            <div class="switch-text">
+
+                Already have an account?
+
+                <button
+                    class="text-button"
+                    onclick="showLogin()"
+                >
+                    Login
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- ================================= -->
+        <!-- MESSAGE -->
+        <!-- ================================= -->
+
+        <div
+            id="message"
+            class="message"
+        ></div>
+
+
+        <!-- ================================= -->
+        <!-- LOADING -->
+        <!-- ================================= -->
+
+        <div
+            id="authLoading"
+            class="auth-loading hidden"
+        >
+
+            <div class="spinner"></div>
+
+            <span>
+                Please wait...
+            </span>
+
+        </div>
+
+
     </div>
 
-    <!-- Decorative Bottom Spacer Footer -->
-    <div class="text-center text-xs text-slate-400 dark:text-slate-600 p-2">
-        mNEET Security Arena Protected &copy; 2026
-    </div>
+</div>
+
+
+
+<!-- ===================================== -->
+<!-- FIREBASE CONFIG -->
+<!-- ===================================== -->
+
+<script src="js/firebase.js"></script>
+
+
+<!-- ===================================== -->
+<!-- AUTH JAVASCRIPT -->
+<!-- ===================================== -->
+
+<script src="js/auth.js"></script>
+
 
 </body>
+
 </html>
