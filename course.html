@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>mNEET - Course</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-storage-compat.js"></script>
+
+</head>
+
+
+<body>
+
+
+<div class="student-app">
+
+
+    <!-- ================================
+         HEADER
+         ================================= -->
+
+    <header class="student-header">
+
+        <div class="header-left">
+
+            <button
+                class="header-back"
+                onclick="goBackToStudent()"
+            >
+                ←
+            </button>
+
+            <div class="brand-logo">
+                <span>m</span>NEET
+            </div>
+
+        </div>
+
+
+        <button
+            class="header-logout"
+            onclick="logoutUser()"
+        >
+            Logout
+        </button>
+
+    </header>
+
+
+
+    <!-- ================================
+         MAIN
+         ================================= -->
+
+    <main class="student-main">
+
+
+        <!-- ================================
+             COURSE HERO
+             ================================= -->
+
+        <section class="student-hero course-hero">
+
+            <div>
+
+                <div class="hero-small">
+                    NEET BIOLOGY COURSE
+                </div>
+
+                <h1 id="courseTitle">
+                    Loading Course...
+                </h1>
+
+                <p id="courseDescription">
+                    Please wait...
+                </p>
+
+            </div>
+
+
+            <div class="hero-icon">
+                🧬
+            </div>
+
+        </section>
+
+
+
+        <!-- ================================
+             COURSE PROGRESS
+             ================================= -->
+
+        <section class="progress-card">
+
+            <div class="progress-top">
+
+                <div>
+
+                    <div class="card-label">
+                        Course Progress
+                    </div>
+
+                    <div
+                        id="courseProgressPercent"
+                        class="progress-percent"
+                    >
+                        0%
+                    </div>
+
+                </div>
+
+
+                <div class="progress-circle">
+
+                    <span id="courseProgressCircle">
+                        0%
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="progress-bar">
+
+                <div
+                    id="courseProgressBar"
+                    class="progress-fill"
+                    style="width: 0%;"
+                ></div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ================================
+             COURSE SECTIONS
+             ================================= -->
+
+        <div class="section-heading">
+
+            <h2>
+                Course Practice
+            </h2>
+
+        </div>
+
+
+        <section class="quick-grid">
+
+
+            <!-- TOPIC WISE -->
+
+            <button
+                class="quick-card"
+                onclick="openTopicWise()"
+            >
+
+                <span class="quick-icon">
+                    📝
+                </span>
+
+                <span class="quick-title">
+                    Topic Wise Practice
+                </span>
+
+                <span class="quick-text">
+                    Chapter → Topic → Quiz
+                </span>
+
+            </button>
+
+
+
+            <!-- CHAPTER WISE -->
+
+            <button
+                class="quick-card"
+                onclick="openChapterWise()"
+            >
+
+                <span class="quick-icon">
+                    🧠
+                </span>
+
+                <span class="quick-title">
+                    Chapter Wise Practice
+                </span>
+
+                <span class="quick-text">
+                    Assertion, PYQ & more
+                </span>
+
+            </button>
+
+
+
+            <!-- NCERT -->
+
+            <button
+                class="quick-card"
+                onclick="openNCERTBooks()"
+            >
+
+                <span class="quick-icon">
+                    📖
+                </span>
+
+                <span class="quick-title">
+                    NCERT Books
+                </span>
+
+                <span class="quick-text">
+                    Chapter-wise reading
+                </span>
+
+            </button>
+
+
+
+            <!-- VIDEOS -->
+
+            <button
+                class="quick-card"
+                onclick="openCourseVideos()"
+            >
+
+                <span class="quick-icon">
+                    ▶️
+                </span>
+
+                <span class="quick-title">
+                    Video Classes
+                </span>
+
+                <span class="quick-text">
+                    Watch Biology lessons
+                </span>
+
+            </button>
+
+
+        </section>
+
+
+
+        <!-- ================================
+             CHAPTER LIST
+             ================================= -->
+
+        <div class="section-heading">
+
+            <h2>
+                Chapters
+            </h2>
+
+            <span id="chapterCount">
+                0 Chapters
+            </span>
+
+        </div>
+
+
+        <section
+            id="chapterList"
+            class="course-grid"
+        >
+
+            <div class="course-loading">
+
+                Loading chapters...
+
+            </div>
+
+        </section>
+
+
+    </main>
+
+
+
+    <!-- ================================
+         BOTTOM NAV
+         ================================= -->
+
+    <nav class="bottom-nav">
+
+
+        <button
+            class="bottom-item"
+            onclick="goBackToStudent()"
+        >
+
+            <span>🏠</span>
+
+            <small>
+                Home
+            </small>
+
+        </button>
+
+
+        <button
+            class="bottom-item active"
+            onclick="openTopicWise()"
+        >
+
+            <span>📝</span>
+
+            <small>
+                Practice
+            </small>
+
+        </button>
+
+
+        <button
+            class="bottom-item"
+            onclick="openNCERTBooks()"
+        >
+
+            <span>📖</span>
+
+            <small>
+                NCERT
+            </small>
+
+        </button>
+
+
+        <button
+            class="bottom-item"
+            onclick="openCourseVideos()"
+        >
+
+            <span>▶️</span>
+
+            <small>
+                Videos
+            </small>
+
+        </button>
+
+
+    </nav>
+
+
+</div>
+
+
+
+<!-- ================================
+     FIREBASE
+     ================================= -->
+
+<script src="js/firebase.js"></script>
+
+
+<!-- ================================
+     AUTH
+     ================================= -->
+
+<script src="js/auth.js"></script>
+
+
+<!-- ================================
+     COURSE JS
+     ================================= -->
+
+<script src="js/course.js"></script>
+
+
+</body>
+
+</html>
