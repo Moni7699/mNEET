@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>mNEET - Quiz</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+
+    <style>
+
+        .quiz-page {
+            min-height: 100vh;
+            padding-bottom: 30px;
+        }
+
+        .quiz-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 12px;
+
+            padding: 13px 18px;
+
+            background:
+                rgba(4, 10, 21, 0.96);
+
+            backdrop-filter: blur(18px);
+
+            border-bottom:
+                1px solid
+                rgba(255,255,255,0.07);
+        }
+
+        .quiz-back {
+            border: none;
+            background: transparent;
+            color: white;
+            font-size: 25px;
+            cursor: pointer;
+        }
+
+        .quiz-title {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .quiz-title small {
+            display: block;
+            color: #8997ae;
+            font-size: 10px;
+            margin-bottom: 3px;
+        }
+
+        .quiz-title strong {
+            display: block;
+            color: #fff;
+            font-size: 14px;
+
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+
+        .timer-box {
+            min-width: 72px;
+
+            padding: 9px 10px;
+
+            text-align: center;
+
+            border-radius: 10px;
+
+            background:
+                rgba(255,193,7,0.08);
+
+            border:
+                1px solid
+                rgba(255,193,7,0.20);
+
+            color: #ffc107;
+
+            font-weight: 900;
+            font-size: 14px;
+        }
+
+        .quiz-main {
+            width: 100%;
+            max-width: 900px;
+
+            margin: auto;
+
+            padding: 20px 15px 35px;
+        }
+
+        .quiz-progress-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            margin-bottom: 10px;
+
+            color: #8997ae;
+            font-size: 12px;
+        }
+
+        .quiz-progress-row strong {
+            color: #fff;
+        }
+
+        .question-card {
+            overflow: hidden;
+
+            border-radius: 20px;
+
+            background:
+                rgba(14,25,45,0.96);
+
+            border:
+                1px solid
+                rgba(255,255,255,0.07);
+
+            box-shadow:
+                0 18px 45px
+                rgba(0,0,0,0.25);
+        }
+
+        .question-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 17px 18px;
+
+            border-bottom:
+                1px solid
+                rgba(255,255,255,0.06);
+        }
+
+        .question-number {
+            color: #ffc107;
+            font-size: 13px;
+            font-weight: 900;
+        }
+
+        .question-status {
+            color: #7f8da5;
+            font-size: 11px;
+        }
+
+        .question-image-box {
+            width: 100%;
+
+            min-height: 230px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 18px;
+
+            background:
+                #091426;
+        }
+
+        .question-image-box img {
+            display: block;
+
+            max-width: 100%;
+            max-height: 430px;
+
+            object-fit: contain;
+
+            border-radius: 8px;
+        }
+
+        .question-image-placeholder {
+            color: #65748b;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .options {
+            padding: 18px;
+        }
+
+        .option {
+            width: 100%;
+
+            display: flex;
+            align-items: center;
+
+            gap: 12px;
+
+            padding: 14px;
+
+            margin-bottom: 11px;
+
+            border-radius: 13px;
+
+            border:
+                1px solid
+                #263751;
+
+            background:
+                #0a1528;
+
+            color: #dce3ee;
+
+            text-align: left;
+
+            cursor: pointer;
+
+            transition:
+                0.2s;
+        }
+
+        .option:last-child {
+            margin-bottom: 0;
+        }
+
+        .option:hover {
+            border-color:
+                rgba(255,193,7,0.45);
+        }
+
+        .option.selected {
+            border-color: #ffc107;
+
+            background:
+                rgba(255,193,7,0.10);
+
+            color: #fff;
+        }
+
+        .option.correct {
+            border-color: #35c878;
+
+            background:
+                rgba(53,200,120,0.10);
+
+            color: #7ff0af;
+        }
+
+        .option.wrong {
+            border-color: #ff5c5c;
+
+            background:
+                rgba(255,92,92,0.10);
+
+            color: #ff8585;
+        }
+
+        .option-number {
+            width: 31px;
+            height: 31px;
+
+            flex-shrink: 0;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 9px;
+
+            background:
+                #17263d;
+
+            color: #b5c1d1;
+
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .option-text {
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .solution-box {
+            display: none;
+
+            margin: 0 18px 18px;
+
+            padding: 15px;
+
+            border-radius: 13px;
+
+            background:
+                rgba(255,193,7,0.06);
+
+            border:
+                1px solid
+                rgba(255,193,7,0.15);
+        }
+
+        .solution-box.show {
+            display: block;
+        }
+
+        .solution-title {
+            color: #ffc107;
+
+            font-weight: 800;
+
+            font-size: 13px;
+
+            margin-bottom: 7px;
+        }
+
+        .solution-text {
+            color: #aeb9ca;
+
+            font-size: 12px;
+
+            line-height: 1.6;
+        }
+
+        .quiz-actions {
+            display: grid;
+
+            grid-template-columns:
+                1fr 1.3fr 1fr;
+
+            gap: 10px;
+
+            margin-top: 18px;
+        }
+
+        .quiz-action {
+            min-height: 46px;
+
+            border-radius: 11px;
+
+            border:
+                1px solid
+                #293955;
+
+            background:
+                #0b172a;
+
+            color: #dce3ee;
+
+            font-weight: 800;
+
+            cursor: pointer;
+        }
+
+        .quiz-action.submit-answer {
+            border-color:
+                rgba(255,193,7,0.35);
+
+            background:
+                #ffc107;
+
+            color: #171717;
+        }
+
+        .quiz-action.submit-quiz {
+            border-color:
+                rgba(255,92,92,0.30);
+
+            color: #ff8585;
+        }
+
+        .quiz-action:disabled {
+            opacity: 0.45;
+        }
+
+        .quiz-loading {
+            min-height: 300px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            color: #8997ae;
+        }
+
+        .quiz-error {
+            padding: 30px;
+
+            text-align: center;
+
+            color: #ff8585;
+        }
+
+        @media (max-width: 600px) {
+
+            .quiz-header {
+                padding: 11px 12px;
+            }
+
+            .quiz-main {
+                padding:
+                    15px
+                    11px
+                    30px;
+            }
+
+            .question-image-box {
+                min-height: 200px;
+            }
+
+            .quiz-actions {
+                grid-template-columns:
+                    1fr 1fr;
+            }
+
+            .quiz-action.submit-answer {
+                grid-column:
+                    1 / -1;
+
+                order: -1;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="quiz-page">
+
+
+    <!-- HEADER -->
+
+    <header class="quiz-header">
+
+        <button
+            class="quiz-back"
+            onclick="exitQuiz()"
+        >
+            ←
+        </button>
+
+
+        <div class="quiz-title">
+
+            <small>
+                mNEET PRACTICE
+            </small>
+
+            <strong id="quizTitle">
+                Loading Quiz...
+            </strong>
+
+        </div>
+
+
+        <div
+            id="questionTimer"
+            class="timer-box"
+        >
+            60s
+        </div>
+
+    </header>
+
+
+
+    <!-- MAIN -->
+
+    <main class="quiz-main">
+
+
+        <div class="quiz-progress-row">
+
+            <span>
+                Question
+                <strong id="currentQuestion">
+                    1
+                </strong>
+                /
+                <strong id="totalQuestions">
+                    0
+                </strong>
+            </span>
+
+
+            <span>
+                Total:
+                <strong id="totalTimer">
+                    00:00
+                </strong>
+            </span>
+
+        </div>
+
+
+
+        <div
+            id="quizContainer"
+            class="question-card"
+        >
+
+            <div class="quiz-loading">
+
+                Loading questions...
+
+            </div>
+
+        </div>
+
+
+    </main>
+
+
+</div>
+
+
+<script src="js/firebase.js"></script>
+
+<script src="js/auth.js"></script>
+
+<script src="js/quiz.js"></script>
+
+
+</body>
+
+  </html>
