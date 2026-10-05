@@ -1,81 +1,75 @@
 // ==========================================
-// mNEET - Topic Page
+// mNEET - TOPIC PAGE
 // ==========================================
 
-let currentUser = null;
-
-let courseId = null;
-let chapterId = null;
-let topicId = null;
+let courseId = "";
+let chapterId = "";
+let topicId = "";
 
 
 // ==========================================
-// PAGE LOAD
+// PAGE START
 // ==========================================
 
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
+document.addEventListener("DOMContentLoaded", function () {
 
-        auth.onAuthStateChanged(
-            function (user) {
+    console.log("mNEET topic.js loaded");
 
-                if (!user) {
-
-                    window.location.href =
-                        "index.html";
-
-                    return;
-                }
-
-
-                currentUser = user;
-
-
-                /*
-                 * Read the same IDs saved
-                 * by chapter.js.
-                 */
-
-                courseId =
-                    localStorage.getItem(
-                        "activeCourse"
-                    );
-
-
-                chapterId =
-                    localStorage.getItem(
-                        "activeChapter"
-                    );
-
-
-                topicId =
-                    localStorage.getItem(
-                        "activeTopic"
-                    );
-
-
-                if (
-                    !courseId ||
-                    !chapterId ||
-                    !topicId
-                ) {
-
-                    showError(
-                        "Topic information is missing. Please open the topic from the Chapter page."
-                    );
-
-                    return;
-                }
-
-
-                loadTopic();
-
-            }
-        );
-
+    if (typeof firebase === "undefined") {
+        showError("Firebase library load হয়নি.");
+        return;
     }
-);
+
+    if (typeof auth === "undefined") {
+        showError("Firebase Auth পাওয়া যাচ্ছে না.");
+        return;
+    }
+
+    if (typeof db === "undefined") {
+        showError("Firestore database পাওয়া যাচ্ছে না.");
+        return;
+    }
+
+
+    auth.onAuthStateChanged(function (user) {
+
+        if (!user) {
+
+            window.location.href = "index.html";
+            return;
+        }
+
+
+        courseId =
+            localStorage.getItem("activeCourse");
+
+        chapterId =
+            localStorage.getItem("activeChapter");
+
+        topicId =
+            localStorage.getItem("activeTopic");
+
+
+        console.log("Course:", courseId);
+        console.log("Chapter:", chapterId);
+        console.log("Topic:", topicId);
+
+
+        if (!courseId || !chapterId || !topicId) {
+
+            showError(
+                "Topic information missing. Please go back and open the topic again."
+            );
+
+            return;
+        }
+
+
+        loadTopic();
+
+    });
+
+});
 
 
 // ==========================================
@@ -84,173 +78,148 @@ document.addEventListener(
 
 function loadTopic() {
 
+    console.log("Loading Firestore topic...");
+
+
     db.collection("courses")
         .doc(courseId)
+
         .collection("chapters")
         .doc(chapterId)
+
         .collection("topics")
         .doc(topicId)
+
         .get()
 
-        .then(
-            function (doc) {
+        .then(function (doc) {
 
-                if (!doc.exists) {
-
-                    showError(
-                        "Topic not found in Firebase."
-                    );
-
-                    return;
-                }
+            console.log("Firestore response:", doc);
 
 
-                const topic =
-                    doc.data();
-
-
-                document.getElementById(
-                    "topicTitle"
-                ).textContent =
-                    topic.name ||
-                    topic.title ||
-                    "Biology Topic";
-
-
-                document.getElementById(
-                    "topicDescription"
-                ).textContent =
-                    topic.description ||
-                    "Practice questions and study notes for this topic.";
-
-
-                renderPracticeCards();
-
-            }
-        )
-
-        .catch(
-            function (error) {
-
-                console.error(
-                    "Topic loading error:",
-                    error
-                );
-
+            if (!doc.exists) {
 
                 showError(
-                    "Unable to load topic: " +
-                    (
-                        error.message ||
-                        "Unknown Firebase error."
-                    )
+                    "Topic document পাওয়া যায়নি: " + topicId
                 );
 
+                return;
             }
-        );
+
+
+            const data = doc.data();
+
+            console.log("Topic data:", data);
+
+
+            // TITLE
+            const title =
+                data.name ||
+                data.title ||
+                "Biology Topic";
+
+
+            document.getElementById(
+                "topicTitle"
+            ).textContent = title;
+
+
+            // DESCRIPTION
+            document.getElementById(
+                "topicDescription"
+            ).textContent =
+                data.description ||
+                "Practice questions and study notes for this topic.";
+
+
+            // PRACTICE CARDS
+            renderPracticeCards();
+
+
+        })
+
+        .catch(function (error) {
+
+            console.error(
+                "Firestore Topic Error:",
+                error
+            );
+
+
+            showError(
+                "Topic load error: " +
+                error.message
+            );
+
+        });
 
 }
 
 
 // ==========================================
-// RENDER PRACTICE CARDS
+// PRACTICE CARDS
 // ==========================================
 
 function renderPracticeCards() {
 
     const container =
-        document.getElementById(
-            "practiceGrid"
-        );
+        document.getElementById("practiceGrid");
+
+
+    if (!container) {
+        return;
+    }
 
 
     container.innerHTML = `
 
-        <!-- QUIZ -->
-
         <div class="practice-card">
 
-
             <div class="practice-icon">
-
                 📝
-
             </div>
-
 
             <div class="practice-title">
-
                 Practice Quiz
-
             </div>
-
 
             <div class="practice-description">
-
-                Solve NEET-style questions
-                with timer, answer submission,
+                Solve NEET-style questions with
+                timer, answer submission,
                 solutions and scoring.
-
             </div>
-
 
             <button
                 class="practice-button"
-                type="button"
                 onclick="openQuiz()"
             >
-
-                Start Quiz →
-
+                Start Quiz
             </button>
-
 
         </div>
 
 
-
-        <!-- NOTES -->
-
         <div class="practice-card">
 
-
             <div class="practice-icon">
-
                 📖
-
             </div>
-
 
             <div class="practice-title">
-
                 Topic Notes
-
             </div>
-
 
             <div class="practice-description">
-
-                Read topic-wise study notes
-                and revise important NCERT
-                concepts before attempting
-                the quiz.
-
+                Read topic-wise study notes and
+                revise important NCERT concepts.
             </div>
 
-
             <button
-                class="
-                    practice-button
-                    notes
-                "
-                type="button"
+                class="practice-button notes"
                 onclick="openNotes()"
             >
-
-                Open Notes →
-
+                Open Notes
             </button>
-
 
         </div>
 
@@ -265,22 +234,15 @@ function renderPracticeCards() {
 
 function openQuiz() {
 
-    /*
-     * Keep separate quiz keys because
-     * quiz.js may already use these.
-     */
-
     localStorage.setItem(
         "quizCourse",
         courseId
     );
 
-
     localStorage.setItem(
         "quizChapter",
         chapterId
     );
-
 
     localStorage.setItem(
         "quizTopic",
@@ -288,30 +250,7 @@ function openQuiz() {
     );
 
 
-    /*
-     * Also keep the common active IDs.
-     */
-
-    localStorage.setItem(
-        "activeCourse",
-        courseId
-    );
-
-
-    localStorage.setItem(
-        "activeChapter",
-        chapterId
-    );
-
-
-    localStorage.setItem(
-        "activeTopic",
-        topicId
-    );
-
-
-    window.location.href =
-        "quiz.html";
+    window.location.href = "quiz.html";
 
 }
 
@@ -327,12 +266,10 @@ function openNotes() {
         courseId
     );
 
-
     localStorage.setItem(
         "notesChapter",
         chapterId
     );
-
 
     localStorage.setItem(
         "notesTopic",
@@ -340,74 +277,45 @@ function openNotes() {
     );
 
 
-    /*
-     * Keep common active IDs too.
-     */
-
-    localStorage.setItem(
-        "activeCourse",
-        courseId
-    );
-
-
-    localStorage.setItem(
-        "activeChapter",
-        chapterId
-    );
-
-
-    localStorage.setItem(
-        "activeTopic",
-        topicId
-    );
-
-
-    window.location.href =
-        "notes.html";
+    window.location.href = "notes.html";
 
 }
 
 
 // ==========================================
-// BACK TO CHAPTER
+// BACK
 // ==========================================
 
 function goBack() {
 
-    /*
-     * IDs remain saved,
-     * so chapter.js can load
-     * the correct chapter.
-     */
-
-    window.location.href =
-        "chapter.html";
+    window.location.href = "chapter.html";
 
 }
 
 
 // ==========================================
-// ERROR
+// ERROR DISPLAY
 // ==========================================
 
 function showError(message) {
 
-    const title =
-        document.getElementById(
-            "topicTitle"
-        );
+    console.error(message);
 
+
+    const title =
+        document.getElementById("topicTitle");
 
     const description =
-        document.getElementById(
-            "topicDescription"
-        );
+        document.getElementById("topicDescription");
+
+    const grid =
+        document.getElementById("practiceGrid");
 
 
     if (title) {
 
         title.textContent =
-            "Topic Error";
+            "Topic Loading Error";
 
     }
 
@@ -415,51 +323,34 @@ function showError(message) {
     if (description) {
 
         description.textContent =
-            "The topic could not be loaded.";
+            message;
 
     }
 
 
-    const container =
-        document.getElementById(
-            "practiceGrid"
-        );
+    if (grid) {
 
+        grid.innerHTML = `
 
-    if (!container) {
+            <div class="loading">
 
-        return;
+                ⚠️ ${escapeHTML(message)}
 
-    }
+                <br><br>
 
-
-    container.innerHTML = `
-
-        <div class="error-card">
-
-            <div class="icon">
-
-                ⚠️
+                <button
+                    class="practice-button"
+                    onclick="goBack()"
+                    style="max-width:220px;"
+                >
+                    ← Back to Chapters
+                </button>
 
             </div>
 
+        `;
 
-            <h3>
-
-                Unable to open topic
-
-            </h3>
-
-
-            <p>
-
-                ${escapeHTML(message)}
-
-            </p>
-
-        </div>
-
-    `;
+    }
 
 }
 
@@ -472,29 +363,14 @@ function escapeHTML(value) {
 
     return String(value)
 
-        .replace(
-            /&/g,
-            "&amp;"
-        )
+        .replace(/&/g, "&amp;")
 
-        .replace(
-            /</g,
-            "&lt;"
-        )
+        .replace(/</g, "&lt;")
 
-        .replace(
-            />/g,
-            "&gt;"
-        )
+        .replace(/>/g, "&gt;")
 
-        .replace(
-            /"/g,
-            "&quot;"
-        )
+        .replace(/"/g, "&quot;")
 
-        .replace(
-            /'/g,
-            "&#039;"
-        );
+        .replace(/'/g, "&#039;");
 
 }
