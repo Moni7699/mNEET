@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>mNEET - Practice Result</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+
+    <style>
+
+        .result-page {
+            min-height: 100vh;
+            padding-bottom: 40px;
+        }
+
+        .result-header {
+            padding: 18px;
+
+            text-align: center;
+
+            background:
+                rgba(4,10,21,0.96);
+
+            border-bottom:
+                1px solid
+                rgba(255,255,255,0.07);
+        }
+
+        .brand {
+            color: #ffc107;
+
+            font-size: 22px;
+
+            font-weight: 900;
+        }
+
+        .brand span {
+            color: white;
+        }
+
+        .result-main {
+            width: 100%;
+            max-width: 850px;
+
+            margin: auto;
+
+            padding: 22px 15px;
+        }
+
+        .result-hero {
+            padding: 25px 20px;
+
+            text-align: center;
+
+            border-radius: 22px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #10213b,
+                    #07101f
+                );
+
+            border:
+                1px solid
+                rgba(255,193,7,0.16);
+        }
+
+        .result-label {
+            color: #ffc107;
+
+            font-size: 10px;
+
+            font-weight: 900;
+
+            letter-spacing: 1px;
+        }
+
+        .result-title {
+            color: white;
+
+            font-size: 25px;
+
+            margin: 8px 0 5px;
+        }
+
+        .result-subtitle {
+            color: #8997aa;
+
+            font-size: 12px;
+        }
+
+        .score-circle {
+            width: 145px;
+            height: 145px;
+
+            margin: 23px auto 8px;
+
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: center;
+
+            justify-content: center;
+
+            border-radius: 50%;
+
+            background:
+                #0b172a;
+
+            border:
+                5px solid
+                #ffc107;
+
+            box-shadow:
+                0 0 35px
+                rgba(255,193,7,0.12);
+        }
+
+        .score-number {
+            color: #ffc107;
+
+            font-size: 37px;
+
+            font-weight: 900;
+        }
+
+        .score-label {
+            color: #8d9aae;
+
+            font-size: 10px;
+
+            text-transform: uppercase;
+        }
+
+        .stats-grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(4, 1fr);
+
+            gap: 11px;
+
+            margin-top: 18px;
+        }
+
+        .stat-card {
+            padding: 16px 8px;
+
+            text-align: center;
+
+            border-radius: 14px;
+
+            background: #0d192c;
+
+            border:
+                1px solid
+                rgba(255,255,255,0.07);
+        }
+
+        .stat-number {
+            color: white;
+
+            font-size: 21px;
+
+            font-weight: 900;
+
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            color: #8492a7;
+
+            font-size: 10px;
+        }
+
+        .correct {
+            color: #35d27d;
+        }
+
+        .wrong {
+            color: #ff6464;
+        }
+
+        .skipped {
+            color: #ffc107;
+        }
+
+        .accuracy-card {
+            margin-top: 15px;
+
+            padding: 18px;
+
+            border-radius: 15px;
+
+            background: #0d192c;
+
+            border:
+                1px solid
+                rgba(255,255,255,0.07);
+        }
+
+        .accuracy-row {
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            color: #aab5c5;
+
+            font-size: 12px;
+
+            margin-bottom: 10px;
+        }
+
+        .accuracy-row strong {
+            color: white;
+
+            font-size: 14px;
+        }
+
+        .progress {
+            width: 100%;
+
+            height: 8px;
+
+            overflow: hidden;
+
+            border-radius: 20px;
+
+            background: #1a2a43;
+        }
+
+        .progress-fill {
+            height: 100%;
+
+            width: 0%;
+
+            border-radius: 20px;
+
+            background: #ffc107;
+        }
+
+        .info-card {
+            margin-top: 15px;
+
+            padding: 17px;
+
+            border-radius: 15px;
+
+            background: #0d192c;
+
+            color: #9ba7b9;
+
+            font-size: 12px;
+
+            line-height: 1.7;
+        }
+
+        .info-card strong {
+            color: white;
+        }
+
+        .actions {
+            display: grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            gap: 10px;
+
+            margin-top: 18px;
+        }
+
+        .action-btn {
+            min-height: 47px;
+
+            border-radius: 11px;
+
+            border:
+                1px solid
+                #293955;
+
+            background: #0d192c;
+
+            color: #dce3ee;
+
+            font-weight: 800;
+
+            cursor: pointer;
+        }
+
+        .primary {
+            background: #ffc107;
+
+            color: #171717;
+
+            border-color: #ffc107;
+        }
+
+        .error {
+            padding: 40px 20px;
+
+            text-align: center;
+
+            color: #ff8585;
+        }
+
+        @media (max-width: 600px) {
+
+            .stats-grid {
+                grid-template-columns:
+                    repeat(2, 1fr);
+            }
+
+            .actions {
+                grid-template-columns:
+                    1fr;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="result-page">
+
+
+    <header class="result-header">
+
+        <div class="brand">
+            <span>m</span>NEET
+        </div>
+
+    </header>
+
+
+
+    <main class="result-main">
+
+
+        <section
+            id="resultContent"
+            class="result-hero"
+        >
+
+            <div class="result-label">
+                PRACTICE COMPLETE
+            </div>
+
+
+            <h1
+                id="resultTitle"
+                class="result-title"
+            >
+                Your Result
+            </h1>
+
+
+            <div
+                id="resultSubtitle"
+                class="result-subtitle"
+            >
+                Loading result...
+            </div>
+
+
+            <div class="score-circle">
+
+                <div
+                    id="score"
+                    class="score-number"
+                >
+                    0
+                </div>
+
+                <div class="score-label">
+                    Score
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+
+        <section class="stats-grid">
+
+
+            <div class="stat-card">
+
+                <div
+                    id="correct"
+                    class="stat-number correct"
+                >
+                    0
+                </div>
+
+                <div class="stat-label">
+                    Correct
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div
+                    id="incorrect"
+                    class="stat-number wrong"
+                >
+                    0
+                </div>
+
+                <div class="stat-label">
+                    Incorrect
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div
+                    id="skipped"
+                    class="stat-number skipped"
+                >
+                    0
+                </div>
+
+                <div class="stat-label">
+                    Skipped
+                </div>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <div
+                    id="accuracy"
+                    class="stat-number"
+                >
+                    0%
+                </div>
+
+                <div class="stat-label">
+                    Accuracy
+                </div>
+
+            </div>
+
+
+        </section>
+
+
+
+        <section class="accuracy-card">
+
+            <div class="accuracy-row">
+
+                <span>
+                    Accuracy
+                </span>
+
+                <strong id="accuracyText">
+                    0%
+                </strong>
+
+            </div>
+
+
+            <div class="progress">
+
+                <div
+                    id="accuracyFill"
+                    class="progress-fill"
+                ></div>
+
+            </div>
+
+        </section>
+
+
+
+        <section class="info-card">
+
+            <div>
+                <strong>Questions:</strong>
+                <span id="totalQuestions">0</span>
+            </div>
+
+            <div>
+                <strong>Total Time:</strong>
+                <span id="totalTime">00:00</span>
+            </div>
+
+            <div>
+                <strong>Marking:</strong>
+                +4 correct / -1 incorrect
+            </div>
+
+        </section>
+
+
+
+        <section class="actions">
+
+            <button
+                class="action-btn"
+                onclick="backToPractice()"
+            >
+                ← Practice Types
+            </button>
+
+
+            <button
+                class="action-btn primary"
+                onclick="reattempt()"
+            >
+                ↻ Reattempt
+            </button>
+
+
+            <button
+                class="action-btn"
+                onclick="goHome()"
+            >
+                🏠 Dashboard
+            </button>
+
+        </section>
+
+
+    </main>
+
+
+</div>
+
+
+<script src="js/firebase.js"></script>
+
+<script src="js/auth.js"></script>
+
+<script src="js/type-result.js"></script>
+
+
+</body>
+
+  </html>
