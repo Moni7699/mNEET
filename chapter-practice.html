@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>mNEET - Chapter Practice</title>
+
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+
+    <style>
+
+        .practice-page {
+            min-height: 100vh;
+            padding-bottom: 35px;
+        }
+
+        .practice-header {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+
+            display: flex;
+            align-items: center;
+            gap: 14px;
+
+            padding: 14px 17px;
+
+            background:
+                rgba(4,10,21,0.96);
+
+            backdrop-filter: blur(15px);
+
+            border-bottom:
+                1px solid
+                rgba(255,255,255,0.07);
+        }
+
+        .back-btn {
+            border: none;
+            background: transparent;
+
+            color: white;
+
+            font-size: 25px;
+
+            cursor: pointer;
+        }
+
+        .brand {
+            color: #ffc107;
+
+            font-size: 21px;
+
+            font-weight: 900;
+        }
+
+        .brand span {
+            color: white;
+        }
+
+        .practice-main {
+            width: 100%;
+            max-width: 900px;
+
+            margin: auto;
+
+            padding: 22px 15px;
+        }
+
+        .hero {
+            padding: 24px 20px;
+
+            border-radius: 20px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #10213b,
+                    #07101f
+                );
+
+            border:
+                1px solid
+                rgba(255,193,7,0.16);
+        }
+
+        .hero-label {
+            color: #ffc107;
+
+            font-size: 10px;
+
+            font-weight: 900;
+
+            letter-spacing: 1px;
+        }
+
+        .hero-title {
+            color: white;
+
+            font-size: 25px;
+
+            margin: 7px 0;
+        }
+
+        .hero-description {
+            color: #8e9bae;
+
+            font-size: 13px;
+
+            line-height: 1.6;
+        }
+
+        .type-grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, 1fr);
+
+            gap: 14px;
+
+            margin-top: 20px;
+        }
+
+        .type-card {
+            padding: 19px;
+
+            border-radius: 17px;
+
+            background: #0d192c;
+
+            border:
+                1px solid
+                rgba(255,255,255,0.07);
+
+            transition: 0.2s;
+        }
+
+        .type-card:hover {
+            transform:
+                translateY(-2px);
+
+            border-color:
+                rgba(255,193,7,0.25);
+        }
+
+        .type-icon {
+            width: 47px;
+            height: 47px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 13px;
+
+            background:
+                rgba(255,193,7,0.08);
+
+            font-size: 23px;
+
+            margin-bottom: 13px;
+        }
+
+        .type-title {
+            color: white;
+
+            font-size: 15px;
+
+            font-weight: 900;
+
+            margin-bottom: 6px;
+        }
+
+        .type-description {
+            color: #8997aa;
+
+            font-size: 11px;
+
+            line-height: 1.5;
+
+            min-height: 35px;
+
+            margin-bottom: 15px;
+        }
+
+        .type-button {
+            width: 100%;
+
+            min-height: 42px;
+
+            border: none;
+
+            border-radius: 10px;
+
+            background: #ffc107;
+
+            color: #171717;
+
+            font-weight: 900;
+
+            cursor: pointer;
+        }
+
+        .loading {
+            grid-column: 1 / -1;
+
+            padding: 40px;
+
+            text-align: center;
+
+            color: #8997aa;
+        }
+
+        @media (max-width: 600px) {
+
+            .type-grid {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="practice-page">
+
+
+    <header class="practice-header">
+
+        <button
+            class="back-btn"
+            onclick="goBack()"
+        >
+            ←
+        </button>
+
+        <div class="brand">
+            <span>m</span>NEET
+        </div>
+
+    </header>
+
+
+
+    <main class="practice-main">
+
+
+        <section class="hero">
+
+            <div class="hero-label">
+                CHAPTER WISE PRACTICE
+            </div>
+
+            <h1
+                id="chapterTitle"
+                class="hero-title"
+            >
+                Loading...
+            </h1>
+
+            <div class="hero-description">
+
+                Choose a question type and
+                practice specifically for NEET.
+
+            </div>
+
+        </section>
+
+
+
+        <section
+            id="typeGrid"
+            class="type-grid"
+        >
+
+            <div class="loading">
+                Loading practice types...
+            </div>
+
+        </section>
+
+
+    </main>
+
+
+</div>
+
+
+<script src="js/firebase.js"></script>
+
+<script src="js/auth.js"></script>
+
+<script src="js/chapter-practice.js"></script>
+
+
+</body>
+
+</html>
