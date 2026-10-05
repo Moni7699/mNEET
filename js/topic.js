@@ -1,5 +1,6 @@
 // ==========================================
 // mNEET - TOPIC PAGE
+// Firebase Firestore Version
 // ==========================================
 
 let courseId = "";
@@ -13,33 +14,31 @@ let topicId = "";
 
 document.addEventListener("DOMContentLoaded", function () {
 
-    console.log("mNEET topic.js loaded");
-
-    if (typeof firebase === "undefined") {
-        showError("Firebase library load হয়নি.");
-        return;
-    }
-
-    if (typeof auth === "undefined") {
-        showError("Firebase Auth পাওয়া যাচ্ছে না.");
-        return;
-    }
-
-    if (typeof db === "undefined") {
-        showError("Firestore database পাওয়া যাচ্ছে না.");
+    // Firebase ready কিনা check
+    if (
+        typeof firebase === "undefined" ||
+        typeof db === "undefined" ||
+        typeof auth === "undefined"
+    ) {
+        showPageError(
+            "Firebase library load হয়নি।"
+        );
         return;
     }
 
 
+    // User login check
     auth.onAuthStateChanged(function (user) {
 
         if (!user) {
 
             window.location.href = "index.html";
             return;
+
         }
 
 
+        // LocalStorage থেকে ID নেওয়া
         courseId =
             localStorage.getItem("activeCourse");
 
@@ -50,21 +49,22 @@ document.addEventListener("DOMContentLoaded", function () {
             localStorage.getItem("activeTopic");
 
 
-        console.log("Course:", courseId);
-        console.log("Chapter:", chapterId);
-        console.log("Topic:", topicId);
+        // ID missing হলে
+        if (
+            !courseId ||
+            !chapterId ||
+            !topicId
+        ) {
 
-
-        if (!courseId || !chapterId || !topicId) {
-
-            showError(
-                "Topic information missing. Please go back and open the topic again."
+            showPageError(
+                "Topic information পাওয়া যায়নি।"
             );
 
             return;
         }
 
 
+        // Topic load
         loadTopic();
 
     });
@@ -78,80 +78,152 @@ document.addEventListener("DOMContentLoaded", function () {
 
 function loadTopic() {
 
-    console.log("Loading Firestore topic...");
+    setLoading();
 
 
     db.collection("courses")
         .doc(courseId)
-
         .collection("chapters")
         .doc(chapterId)
-
         .collection("topics")
         .doc(topicId)
-
         .get()
 
         .then(function (doc) {
 
-            console.log("Firestore response:", doc);
-
-
             if (!doc.exists) {
 
-                showError(
-                    "Topic document পাওয়া যায়নি: " + topicId
+                showPageError(
+                    "Topic পাওয়া যায়নি।"
                 );
 
                 return;
             }
 
 
-            const data = doc.data();
+            const topic =
+                doc.data();
 
-            console.log("Topic data:", data);
 
-
+            // ==============================
             // TITLE
+            // ==============================
+
             const title =
-                data.name ||
-                data.title ||
+                topic.name ||
+                topic.title ||
                 "Biology Topic";
 
 
-            document.getElementById(
-                "topicTitle"
-            ).textContent = title;
-
-
-            // DESCRIPTION
-            document.getElementById(
-                "topicDescription"
-            ).textContent =
-                data.description ||
+            const description =
+                topic.description ||
                 "Practice questions and study notes for this topic.";
 
 
-            // PRACTICE CARDS
-            renderPracticeCards();
+            const titleElement =
+                document.getElementById("topicTitle");
 
+
+            const descriptionElement =
+                document.getElementById(
+                    "topicDescription"
+                );
+
+
+            if (titleElement) {
+
+                titleElement.textContent =
+                    title;
+
+            }
+
+
+            if (descriptionElement) {
+
+                descriptionElement.textContent =
+                    description;
+
+            }
+
+
+            // ==============================
+            // PRACTICE CARDS
+            // ==============================
+
+            renderPracticeCards();
 
         })
 
         .catch(function (error) {
 
             console.error(
-                "Firestore Topic Error:",
+                "Topic Firestore Error:",
                 error
             );
 
 
-            showError(
-                "Topic load error: " +
-                error.message
+            showPageError(
+                "Topic load করা যায়নি।"
             );
 
         });
+
+}
+
+
+// ==========================================
+// LOADING STATE
+// ==========================================
+
+function setLoading() {
+
+    const title =
+        document.getElementById(
+            "topicTitle"
+        );
+
+
+    const description =
+        document.getElementById(
+            "topicDescription"
+        );
+
+
+    const grid =
+        document.getElementById(
+            "practiceGrid"
+        );
+
+
+    if (title) {
+
+        title.textContent =
+            "Loading...";
+
+    }
+
+
+    if (description) {
+
+        description.textContent =
+            "Please wait...";
+
+    }
+
+
+    if (grid) {
+
+        grid.innerHTML = `
+
+            <div class="loading">
+
+                Loading topic...
+
+            </div>
+
+        `;
+
+    }
 
 }
 
@@ -163,7 +235,9 @@ function loadTopic() {
 function renderPracticeCards() {
 
     const container =
-        document.getElementById("practiceGrid");
+        document.getElementById(
+            "practiceGrid"
+        );
 
 
     if (!container) {
@@ -173,31 +247,46 @@ function renderPracticeCards() {
 
     container.innerHTML = `
 
+        <!-- QUIZ CARD -->
+
         <div class="practice-card">
 
             <div class="practice-icon">
                 📝
             </div>
 
+
             <div class="practice-title">
                 Practice Quiz
             </div>
 
+
             <div class="practice-description">
-                Solve NEET-style questions with
-                timer, answer submission,
-                solutions and scoring.
+
+                Attempt NEET Biology
+                questions from this topic.
+
+                Timer, answer submit,
+                score and solutions
+                will be available.
+
             </div>
+
 
             <button
                 class="practice-button"
                 onclick="openQuiz()"
             >
+
                 Start Quiz
+
             </button>
 
         </div>
 
+
+
+        <!-- NOTES CARD -->
 
         <div class="practice-card">
 
@@ -205,20 +294,28 @@ function renderPracticeCards() {
                 📖
             </div>
 
+
             <div class="practice-title">
                 Topic Notes
             </div>
 
+
             <div class="practice-description">
-                Read topic-wise study notes and
-                revise important NCERT concepts.
+
+                Read the topic notes
+                and revise important
+                NCERT concepts.
+
             </div>
+
 
             <button
                 class="practice-button notes"
                 onclick="openNotes()"
             >
+
                 Open Notes
+
             </button>
 
         </div>
@@ -234,15 +331,31 @@ function renderPracticeCards() {
 
 function openQuiz() {
 
+    if (
+        !courseId ||
+        !chapterId ||
+        !topicId
+    ) {
+
+        alert(
+            "Quiz information পাওয়া যায়নি।"
+        );
+
+        return;
+    }
+
+
     localStorage.setItem(
         "quizCourse",
         courseId
     );
 
+
     localStorage.setItem(
         "quizChapter",
         chapterId
     );
+
 
     localStorage.setItem(
         "quizTopic",
@@ -250,7 +363,9 @@ function openQuiz() {
     );
 
 
-    window.location.href = "quiz.html";
+    // নতুন quiz page
+    window.location.href =
+        "quiz.html";
 
 }
 
@@ -261,15 +376,31 @@ function openQuiz() {
 
 function openNotes() {
 
+    if (
+        !courseId ||
+        !chapterId ||
+        !topicId
+    ) {
+
+        alert(
+            "Notes information পাওয়া যায়নি।"
+        );
+
+        return;
+    }
+
+
     localStorage.setItem(
         "notesCourse",
         courseId
     );
 
+
     localStorage.setItem(
         "notesChapter",
         chapterId
     );
+
 
     localStorage.setItem(
         "notesTopic",
@@ -277,39 +408,46 @@ function openNotes() {
     );
 
 
-    window.location.href = "notes.html";
+    window.location.href =
+        "notes.html";
 
 }
 
 
 // ==========================================
-// BACK
+// BACK TO CHAPTER
 // ==========================================
 
 function goBack() {
 
-    window.location.href = "chapter.html";
+    window.location.href =
+        "chapter.html";
 
 }
 
 
 // ==========================================
-// ERROR DISPLAY
+// ERROR PAGE
 // ==========================================
 
-function showError(message) {
-
-    console.error(message);
-
+function showPageError(message) {
 
     const title =
-        document.getElementById("topicTitle");
+        document.getElementById(
+            "topicTitle"
+        );
+
 
     const description =
-        document.getElementById("topicDescription");
+        document.getElementById(
+            "topicDescription"
+        );
 
-    const grid =
-        document.getElementById("practiceGrid");
+
+    const container =
+        document.getElementById(
+            "practiceGrid"
+        );
 
 
     if (title) {
@@ -328,20 +466,49 @@ function showError(message) {
     }
 
 
-    if (grid) {
+    if (container) {
 
-        grid.innerHTML = `
+        container.innerHTML = `
 
-            <div class="loading">
+            <div
+                class="loading"
+                style="
+                    padding:30px 15px;
+                    text-align:center;
+                "
+            >
 
-                ⚠️ ${escapeHTML(message)}
+                <div
+                    style="
+                        font-size:38px;
+                        margin-bottom:15px;
+                    "
+                >
+                    ⚠️
+                </div>
 
-                <br><br>
+
+                <div
+                    style="
+                        color:#9ba8ba;
+                        margin-bottom:20px;
+                    "
+                >
+                    ${escapeHTML(message)}
+                </div>
+
 
                 <button
-                    class="practice-button"
                     onclick="goBack()"
-                    style="max-width:220px;"
+                    style="
+                        border:none;
+                        background:#ffc107;
+                        color:#111;
+                        padding:13px 24px;
+                        border-radius:10px;
+                        font-weight:900;
+                        cursor:pointer;
+                    "
                 >
                     ← Back to Chapters
                 </button>
