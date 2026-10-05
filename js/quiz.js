@@ -1,417 +1,1043 @@
-// ======================================================
-// mNEET - QUIZ SYSTEM
-// Firestore Structure:
-//
-// courses/{courseId}
-//   /chapters/{chapterId}
-//   /topics/{topicId}
-//   /quiz/{quizId}
-//   /questions/{questionId}
-// ======================================================
+/* =========================================================
+   mNEET QUIZ SYSTEM
+   Firebase Firestore
+   Path:
+   courses/{courseId}/chapters/{chapterId}/topics/{topicId}/quiz
+   quiz/{quizId}/questions/{questionId}
+========================================================= */
 
-
-// ======================================================
-// GLOBAL VARIABLES
-// ======================================================
-
-let currentUser = null;
-
-let courseId = null;
-let chapterId = null;
-let topicId = null;
-let quizId = null;
+let db = null;
 
 let questions = [];
 let currentQuestion = 0;
 
-let selectedOption = null;
+let selectedAnswers = {};
+let submittedAnswers = {};
 
-let answers = {};
+let questionTimeLeft = 60;
+let perQuestionTime = 60;
 
-let questionTimer = 60;
 let totalSeconds = 0;
 
 let questionTimerInterval = null;
 let totalTimerInterval = null;
 
-let answerSubmitted = false;
-
 let quizFinished = false;
 
 
-// ======================================================
-// PAGE LOAD
-// ======================================================
+/* =========================================================
+   FIREBASE CHECK
+========================================================= */
+
+function firebaseReady() {
+
+    if (typeof firebase === "undefined") {
+        return false;
+    }
+
+    if (!firebase.apps || firebase.apps.length === 0) {
+        return false;
+    }
+
+    try {
+        db = firebase.firestore();
+        return true;
+    } catch (error) {
+        console.error("Firestore error:", error);
+        return false;
+    }
+}
+
+
+/* =========================================================
+   LOCAL STORAGE
+========================================================= */
+
+function getStorageValue(keys) {
+
+    for (const key of keys) {
+
+        const value = localStorage.getItem(key);
+
+        if (value !== null && value !== "") {
+            return value;
+        }
+    }
+
+    return null;
+}
+
+
+function getCourseId() {
+
+    return getStorageValue([
+        "activeCourse",
+        "courseId",
+        "selectedCourse"
+    ]);
+}
+
+
+function getChapterId() {
+
+    return getStorageValue([
+        "activeChapter",
+        "chapterId",
+        "selectedChapter"
+    ]);
+}
+
+
+function getTopicId() {
+
+    return getStorageValue([
+        "activeTopic",
+        "topicId",
+        "selectedTopic"
+    ]);
+}
+
+
+function getQuizId() {
+
+    return getStorageValue([
+        "activeQuiz",
+        "quizId",
+        "selectedQuiz"
+    ]) || "quiz-01";
+}
+
+
+/* =========================================================
+   PAGE START
+========================================================= */
 
 document.addEventListener("DOMContentLoaded", function () {
 
-    if (
-        typeof firebase === "undefined" ||
-        typeof auth === "undefined" ||
-        typeof db === "undefined"
-    ) {
+    startQuizPage();
 
-        showQuizError(
-            "Firebase library load হয়নি।"
+});
+
+
+async function startQuizPage() {
+
+    showLoading("Loading questions...");
+
+    if (!firebaseReady()) {
+
+        showError(
+            "Firebase library load হয়নি।<br><br>" +
+            "Please check firebase.js"
+        );
+
+        return;
+    }
+
+    const courseId = getCourseId();
+    const chapterId = getChapterId();
+    const topicId = getTopicId();
+    const quizId = getQuizId();
+
+    console.log("Course:", courseId);
+    console.log("Chapter:", chapterId);
+    console.log("Topic:", topicId);
+    console.log("Quiz:", quizId);
+
+    if (!courseId || !chapterId || !topicId) {
+
+        showError(
+            "Quiz information পাওয়া যায়নি।<br><br>" +
+            "Please go back and open the quiz again."
+        );
+
+        return;
+    }
+
+    try {
+
+        await loadQuiz(
+            courseId,
+            chapterId,
+            topicId,
+            quizId
+        );
+
+    } catch (error) {
+
+        console.error("Quiz loading error:", error);
+
+        showError(
+            "Quiz load করা যায়নি।<br><br>" +
+            error.message
+        );
+    }
+}
+
+
+/* =========================================================
+   LOAD QUIZ
+========================================================= */
+
+async function loadQuiz(
+    courseId,
+    chapterId,
+    topicId,
+    quizId
+) {
+
+    const quizRef = db
+        .collection("courses")
+        .doc(courseId)
+        .collection("chapters")
+        .doc(chapterId)
+        .collection("topics")
+        .doc(topicId)
+        .collection("quiz")
+        .doc(quizId);
+
+    const quizSnap = await quizRef.get();
+
+    if (!quizSnap.exists) {
+
+        throw new Error(
+            "Quiz document পাওয়া যায়নি: " + quizId
+        );
+    }
+
+    const quizData = quizSnap.data();
+
+    console.log("Quiz data:", quizData);
+
+    const title =
+        quizData.title ||
+        "Topic Quiz";
+
+    document.getElementById("quizTitle").textContent =
+        title;
+
+
+    /* -----------------------------------------------------
+       TIMER SETTINGS
+    ----------------------------------------------------- */
+
+    perQuestionTime =
+        Number(quizData.timePerQuestion) || 60;
+
+    questionTimeLeft = perQuestionTime;
+
+
+    /* -----------------------------------------------------
+       QUESTIONS
+    ----------------------------------------------------- */
+
+    const questionSnap = await quizRef
+        .collection("questions")
+        .where("published", "==", true)
+        .get();
+
+
+    questions = [];
+
+    questionSnap.forEach(function (doc) {
+
+        const data = doc.data();
+
+        questions.push({
+            id: doc.id,
+            ...data
+        });
+
+    });
+
+
+    /*
+       যদি published field না থাকার কারণে
+       উপরের query-তে কিছু না আসে,
+       তাহলে সব question load করবে।
+    */
+
+    if (questions.length === 0) {
+
+        const allQuestions =
+            await quizRef
+                .collection("questions")
+                .get();
+
+        allQuestions.forEach(function (doc) {
+
+            const data = doc.data();
+
+            /*
+              published false হলে বাদ
+            */
+
+            if (data.published === false) {
+                return;
+            }
+
+            questions.push({
+                id: doc.id,
+                ...data
+            });
+
+        });
+    }
+
+
+    /* -----------------------------------------------------
+       SORT BY ORDER
+    ----------------------------------------------------- */
+
+    questions.sort(function (a, b) {
+
+        return (
+            Number(a.order || 0) -
+            Number(b.order || 0)
+        );
+
+    });
+
+
+    if (questions.length === 0) {
+
+        showError(
+            "এই quiz-এর মধ্যে কোনো question পাওয়া যায়নি।"
         );
 
         return;
     }
 
 
-    auth.onAuthStateChanged(function (user) {
+    /* -----------------------------------------------------
+       TOTAL TIMER
+    ----------------------------------------------------- */
 
-        if (!user) {
+    totalSeconds =
+        questions.length * perQuestionTime;
 
-            window.location.href = "index.html";
 
-            return;
-        }
+    /*
+       Existing quiz resume data
+    */
 
+    loadSavedProgress();
 
-        currentUser = user;
 
+    updateQuizHeader();
 
-        // ----------------------------------------------
-        // GET SAVED IDs
-        // ----------------------------------------------
+    renderQuestion();
 
-        courseId =
-            localStorage.getItem("quizCourse") ||
-            localStorage.getItem("activeCourse");
-
-
-        chapterId =
-            localStorage.getItem("quizChapter") ||
-            localStorage.getItem("activeChapter");
-
-
-        topicId =
-            localStorage.getItem("quizTopic") ||
-            localStorage.getItem("activeTopic");
-
-
-        // ----------------------------------------------
-        // CHECK IDs
-        // ----------------------------------------------
-
-        if (
-            !courseId ||
-            !chapterId ||
-            !topicId
-        ) {
-
-            showQuizError(
-                "Quiz information পাওয়া যায়নি।"
-            );
-
-            return;
-        }
-
-
-        // ----------------------------------------------
-        // START
-        // ----------------------------------------------
-
-        loadQuiz();
-
-    });
-
-});
-
-
-// ======================================================
-// LOAD QUIZ
-// ======================================================
-
-function loadQuiz() {
-
-    setQuizTitle("Loading Quiz...");
-
-    setLoading();
-
-
-    const topicRef =
-        db.collection("courses")
-            .doc(courseId)
-            .collection("chapters")
-            .doc(chapterId)
-            .collection("topics")
-            .doc(topicId);
-
-
-    // --------------------------------------------------
-    // STEP 1
-    // Find quiz collection
-    // --------------------------------------------------
-
-    topicRef
-        .collection("quiz")
-        .get()
-
-        .then(function (quizSnapshot) {
-
-            if (quizSnapshot.empty) {
-
-                showQuizError(
-                    "এই topic-এর মধ্যে কোনো quiz পাওয়া যায়নি।"
-                );
-
-                return;
-            }
-
-
-            // --------------------------------------------------
-            // Select published quiz
-            // --------------------------------------------------
-
-            let selectedQuizDoc = null;
-
-
-            quizSnapshot.forEach(function (doc) {
-
-                const data = doc.data();
-
-
-                if (
-                    selectedQuizDoc === null &&
-                    data.published !== false
-                ) {
-
-                    selectedQuizDoc = doc;
-
-                }
-
-            });
-
-
-            // If no published quiz exists,
-            // use first quiz document
-
-            if (!selectedQuizDoc) {
-
-                selectedQuizDoc =
-                    quizSnapshot.docs[0];
-
-            }
-
-
-            quizId =
-                selectedQuizDoc.id;
-
-
-            const quizData =
-                selectedQuizDoc.data();
-
-
-            setQuizTitle(
-                quizData.title ||
-                quizData.name ||
-                "Practice Quiz"
-            );
-
-
-            // --------------------------------------------------
-            // STEP 2
-            // Load Questions
-            // --------------------------------------------------
-
-            return selectedQuizDoc.ref
-                .collection("questions")
-                .get();
-
-        })
-
-        .then(function (questionSnapshot) {
-
-            if (!questionSnapshot) {
-
-                return;
-
-            }
-
-
-            if (questionSnapshot.empty) {
-
-                showQuizError(
-                    "এই quiz-এর মধ্যে কোনো question পাওয়া যায়নি।"
-                );
-
-                return;
-
-            }
-
-
-            questions = [];
-
-
-            questionSnapshot.forEach(function (doc) {
-
-                const data =
-                    doc.data();
-
-
-                // Only published questions
-                if (data.published === false) {
-
-                    return;
-
-                }
-
-
-                questions.push({
-
-                    id: doc.id,
-
-                    questionText:
-                        data.questionText ||
-                        data.question ||
-                        "",
-
-                    imageUrl:
-                        data.imageUrl ||
-                        data.questionImageUrl ||
-                        "",
-
-                    option1:
-                        data.option1 ||
-                        "",
-
-                    option2:
-                        data.option2 ||
-                        "",
-
-                    option3:
-                        data.option3 ||
-                        "",
-
-                    option4:
-                        data.option4 ||
-                        "",
-
-                    correctOption:
-                        Number(
-                            data.correctOption
-                        ),
-
-                    solution:
-                        data.solution ||
-                        "",
-
-                    reference:
-                        data.reference ||
-                        data.ncertReference ||
-                        "",
-
-                    order:
-                        Number(
-                            data.order || 999999
-                        )
-
-                });
-
-            });
-
-
-            // --------------------------------------------------
-            // SORT BY ORDER
-            // --------------------------------------------------
-
-            questions.sort(function (a, b) {
-
-                return a.order - b.order;
-
-            });
-
-
-            if (questions.length === 0) {
-
-                showQuizError(
-                    "কোনো published question পাওয়া যায়নি।"
-                );
-
-                return;
-
-            }
-
-
-            // --------------------------------------------------
-            // START QUIZ
-            // --------------------------------------------------
-
-            currentQuestion = 0;
-
-            answers = {};
-
-            quizFinished = false;
-
-
-            startTotalTimer();
-
-
-            renderQuestion();
-
-        })
-
-        .catch(function (error) {
-
-            console.error(
-                "QUIZ FIRESTORE ERROR:",
-                error
-            );
-
-
-            showQuizError(
-                "Quiz load করতে সমস্যা হয়েছে।"
-            );
-
-        });
+    startTimers();
 
 }
 
 
-// ======================================================
-// RENDER QUESTION
-// ======================================================
+/* =========================================================
+   RENDER QUESTION
+========================================================= */
 
 function renderQuestion() {
 
-    if (
-        currentQuestion < 0 ||
-        currentQuestion >= questions.length
-    ) {
-
+    if (!questions.length) {
         return;
+    }
+
+    const q = questions[currentQuestion];
+
+    if (!q) {
+        return;
+    }
+
+
+    const container =
+        document.getElementById("quizContainer");
+
+
+    const optionTexts = [
+
+        q.option1 || "",
+        q.option2 || "",
+        q.option3 || "",
+        q.option4 || ""
+
+    ];
+
+
+    const letters = [
+        "1",
+        "2",
+        "3",
+        "4"
+    ];
+
+
+    let html = "";
+
+
+    html += `
+        <div class="question-card">
+
+            <p class="question-text">
+                ${escapeHTML(
+                    q.questionText ||
+                    "Question text পাওয়া যায়নি."
+                )}
+            </p>
+    `;
+
+
+    /* -----------------------------------------------------
+       QUESTION IMAGE
+    ----------------------------------------------------- */
+
+    if (q.questionImageUrl || q.imageUrl) {
+
+        const imageUrl =
+            q.questionImageUrl ||
+            q.imageUrl;
+
+        html += `
+            <img
+                class="question-image"
+                src="${escapeAttribute(imageUrl)}"
+                alt="Question Image"
+                onerror="this.style.display='none'"
+            >
+        `;
+    }
+
+
+    /* -----------------------------------------------------
+       OPTIONS
+    ----------------------------------------------------- */
+
+    html += `
+        <div class="options">
+    `;
+
+
+    optionTexts.forEach(function (text, index) {
+
+        const optionNumber = index + 1;
+
+        let classes = "option";
+
+        const selected =
+            selectedAnswers[currentQuestion];
+
+        const submitted =
+            submittedAnswers[currentQuestion];
+
+
+        if (
+            selected === optionNumber &&
+            !submitted
+        ) {
+            classes += " selected";
+        }
+
+
+        if (submitted) {
+
+            const correct =
+                Number(q.correctOption);
+
+
+            if (optionNumber === correct) {
+
+                classes += " correct";
+
+            } else if (
+                optionNumber === selected &&
+                selected !== correct
+            ) {
+
+                classes += " wrong";
+
+            }
+
+            classes += " disabled";
+        }
+
+
+        html += `
+            <button
+                type="button"
+                class="${classes}"
+                onclick="selectOption(${optionNumber})"
+            >
+
+                <span class="option-letter">
+                    ${letters[index]}
+                </span>
+
+                <span class="option-text">
+                    ${escapeHTML(text)}
+                </span>
+
+            </button>
+        `;
+
+    });
+
+
+    html += `
+        </div>
+    `;
+
+
+    /* -----------------------------------------------------
+       ANSWER STATUS
+    ----------------------------------------------------- */
+
+    const submitted =
+        submittedAnswers[currentQuestion];
+
+
+    if (submitted) {
+
+        const selected =
+            selectedAnswers[currentQuestion];
+
+        const correct =
+            Number(q.correctOption);
+
+
+        if (selected === correct) {
+
+            html += `
+                <div class="answer-status show correct-status">
+                    ✓ Correct Answer
+                </div>
+            `;
+
+        } else {
+
+            html += `
+                <div class="answer-status show wrong-status">
+                    ✕ Wrong Answer<br>
+                    Correct answer:
+                    ${correct}
+                </div>
+            `;
+
+        }
+
+
+        /* -------------------------------------------------
+           SOLUTION
+        ------------------------------------------------- */
+
+        if (
+            q.solution ||
+            q.reference ||
+            q.ncertReference
+        ) {
+
+            html += `
+                <div class="solution-box show">
+
+                    <div class="solution-title">
+                        💡 Solution
+                    </div>
+
+                    <div class="solution-text">
+                        ${escapeHTML(
+                            q.solution || ""
+                        )}
+                    </div>
+
+                    ${
+                        q.reference ||
+                        q.ncertReference
+                        ? `
+                            <div class="reference-text">
+                                📖 NCERT Reference:
+                                ${escapeHTML(
+                                    q.reference ||
+                                    q.ncertReference ||
+                                    ""
+                                )}
+                            </div>
+                        `
+                        : ""
+                    }
+
+                </div>
+            `;
+        }
 
     }
 
 
-    const question =
-        questions[currentQuestion];
+    /* -----------------------------------------------------
+       ANSWER BUTTON
+    ----------------------------------------------------- */
+
+    if (!submitted) {
+
+        html += `
+            <button
+                id="submitAnswerButton"
+                class="submit-answer-button"
+                onclick="submitAnswer()"
+                ${
+                    selectedAnswers[currentQuestion]
+                    ? ""
+                    : "disabled"
+                }
+            >
+                Submit Answer
+            </button>
+        `;
+
+    }
 
 
-    selectedOption =
-        answers[question.id] ?
-        answers[question.id].selected :
-        null;
+    /* -----------------------------------------------------
+       NAVIGATION
+    ----------------------------------------------------- */
+
+    html += `
+        <div class="quiz-actions">
+
+            <button
+                class="quiz-button previous-button"
+                onclick="previousQuestion()"
+                ${
+                    currentQuestion === 0
+                    ? "disabled"
+                    : ""
+                }
+            >
+                ← Previous
+            </button>
 
 
-    answerSubmitted =
-        answers[question.id] ?
-        answers[question.id].submitted :
-        false;
+            <button
+                class="quiz-button next-button"
+                onclick="nextQuestion()"
+            >
+                ${
+                    currentQuestion ===
+                    questions.length - 1
+                    ? "Finish"
+                    : "Next →"
+                }
+            </button>
+
+        </div>
+    `;
 
 
-    // --------------------------------------------------
-    // QUESTION TIMER
-    // --------------------------------------------------
+    /* -----------------------------------------------------
+       FINAL SUBMIT
+    ----------------------------------------------------- */
 
-    startQuestionTimer();
+    html += `
+        <button
+            class="submit-quiz-button"
+            onclick="submitQuiz()"
+        >
+            Submit Quiz
+        </button>
+    `;
 
 
-    // --------------------------------------------------
-    // COUNTER
-    // --------------------------------------------------
+    html += `
+        </div>
+    `;
+
+
+    container.innerHTML = html;
+
+
+    updateQuizHeader();
+
+}
+
+
+/* =========================================================
+   SELECT OPTION
+========================================================= */
+
+function selectOption(optionNumber) {
+
+    if (submittedAnswers[currentQuestion]) {
+        return;
+    }
+
+    selectedAnswers[currentQuestion] =
+        optionNumber;
+
+    saveProgress();
+
+    renderQuestion();
+
+}
+
+
+/* =========================================================
+   SUBMIT ANSWER
+========================================================= */
+
+function submitAnswer() {
+
+    if (submittedAnswers[currentQuestion]) {
+        return;
+    }
+
+
+    const selected =
+        selectedAnswers[currentQuestion];
+
+
+    if (!selected) {
+
+        alert("Please select an answer first.");
+
+        return;
+    }
+
+
+    submittedAnswers[currentQuestion] = true;
+
+
+    saveProgress();
+
+
+    /*
+       Answer submit হলে question timer stop/reset
+    */
+
+    stopQuestionTimer();
+
+
+    renderQuestion();
+
+}
+
+
+/* =========================================================
+   NEXT QUESTION
+========================================================= */
+
+function nextQuestion() {
+
+    if (
+        currentQuestion <
+        questions.length - 1
+    ) {
+
+        currentQuestion++;
+
+        resetQuestionTimer();
+
+        saveProgress();
+
+        renderQuestion();
+
+    } else {
+
+        submitQuiz();
+
+    }
+
+}
+
+
+/* =========================================================
+   PREVIOUS QUESTION
+========================================================= */
+
+function previousQuestion() {
+
+    if (currentQuestion <= 0) {
+        return;
+    }
+
+    currentQuestion--;
+
+    resetQuestionTimer();
+
+    saveProgress();
+
+    renderQuestion();
+
+}
+
+
+/* =========================================================
+   QUESTION TIMER
+========================================================= */
+
+function startQuestionTimer() {
+
+    stopQuestionTimer();
+
+
+    questionTimerInterval =
+        setInterval(function () {
+
+            if (quizFinished) {
+                return;
+            }
+
+
+            /*
+              Answer already submitted
+            */
+
+            if (
+                submittedAnswers[currentQuestion]
+            ) {
+
+                stopQuestionTimer();
+
+                return;
+            }
+
+
+            questionTimeLeft--;
+
+
+            updateTimerDisplay();
+
+
+            if (questionTimeLeft <= 0) {
+
+                questionTimeExpired();
+
+            }
+
+        }, 1000);
+
+}
+
+
+/* =========================================================
+   QUESTION TIMER EXPIRED
+========================================================= */
+
+function questionTimeExpired() {
+
+    stopQuestionTimer();
+
+
+    /*
+       Automatically submit current answer
+       if selected
+    */
+
+    if (
+        selectedAnswers[currentQuestion] &&
+        !submittedAnswers[currentQuestion]
+    ) {
+
+        submittedAnswers[currentQuestion] = true;
+
+    }
+
+
+    saveProgress();
+
+
+    /*
+       Move automatically
+    */
+
+    if (
+        currentQuestion <
+        questions.length - 1
+    ) {
+
+        currentQuestion++;
+
+        resetQuestionTimer();
+
+        renderQuestion();
+
+    } else {
+
+        submitQuiz();
+
+    }
+
+}
+
+
+/* =========================================================
+   RESET QUESTION TIMER
+========================================================= */
+
+function resetQuestionTimer() {
+
+    stopQuestionTimer();
+
+
+    questionTimeLeft =
+        perQuestionTime;
+
+
+    updateTimerDisplay();
+
+
+    if (
+        !submittedAnswers[currentQuestion] &&
+        !quizFinished
+    ) {
+
+        startQuestionTimer();
+
+    }
+
+}
+
+
+/* =========================================================
+   STOP QUESTION TIMER
+========================================================= */
+
+function stopQuestionTimer() {
+
+    if (questionTimerInterval) {
+
+        clearInterval(
+            questionTimerInterval
+        );
+
+        questionTimerInterval = null;
+    }
+
+}
+
+
+/* =========================================================
+   TOTAL TIMER
+========================================================= */
+
+function startTotalTimer() {
+
+    if (totalTimerInterval) {
+        return;
+    }
+
+
+    totalTimerInterval =
+        setInterval(function () {
+
+            if (quizFinished) {
+                return;
+            }
+
+            totalSeconds++;
+
+            updateTimerDisplay();
+
+            saveProgress();
+
+        }, 1000);
+
+}
+
+
+/* =========================================================
+   STOP TOTAL TIMER
+========================================================= */
+
+function stopTotalTimer() {
+
+    if (totalTimerInterval) {
+
+        clearInterval(
+            totalTimerInterval
+        );
+
+        totalTimerInterval = null;
+    }
+
+}
+
+
+/* =========================================================
+   START TIMERS
+========================================================= */
+
+function startTimers() {
+
+    updateTimerDisplay();
+
+
+    if (
+        !submittedAnswers[currentQuestion]
+    ) {
+
+        startQuestionTimer();
+
+    }
+
+
+    startTotalTimer();
+
+}
+
+
+/* =========================================================
+   UPDATE TIMER DISPLAY
+========================================================= */
+
+function updateTimerDisplay() {
+
+    const questionTimer =
+        document.getElementById(
+            "questionTimer"
+        );
+
+
+    const totalTimer =
+        document.getElementById(
+            "totalTimer"
+        );
+
+
+    if (questionTimer) {
+
+        questionTimer.textContent =
+            questionTimeLeft;
+
+
+        if (questionTimeLeft <= 10) {
+
+            questionTimer.classList.add(
+                "timer-danger"
+            );
+
+        } else {
+
+            questionTimer.classList.remove(
+                "timer-danger"
+            );
+
+        }
+
+    }
+
+
+    if (totalTimer) {
+
+        totalTimer.textContent =
+            formatTime(totalSeconds);
+
+    }
+
+}
+
+
+/* =========================================================
+   UPDATE HEADER
+========================================================= */
+
+function updateQuizHeader() {
 
     const counter =
         document.getElementById(
@@ -419,24 +1045,23 @@ function renderQuestion() {
         );
 
 
-    if (counter) {
-
-        counter.textContent =
-            (currentQuestion + 1) +
-            " / " +
-            questions.length;
-
-    }
-
-
-    // --------------------------------------------------
-    // PROGRESS
-    // --------------------------------------------------
-
     const progress =
         document.getElementById(
             "progressFill"
         );
+
+
+    if (!questions.length) {
+        return;
+    }
+
+
+    if (counter) {
+
+        counter.textContent =
+            `${currentQuestion + 1} / ${questions.length}`;
+
+    }
 
 
     if (progress) {
@@ -453,808 +1078,28 @@ function renderQuestion() {
 
     }
 
-
-    // --------------------------------------------------
-    // CONTAINER
-    // --------------------------------------------------
-
-    const container =
-        document.getElementById(
-            "quizContainer"
-        );
-
-
-    if (!container) {
-
-        return;
-
-    }
-
-
-    // --------------------------------------------------
-    // IMAGE
-    // --------------------------------------------------
-
-    let imageHTML = "";
-
-
-    if (question.imageUrl) {
-
-        imageHTML = `
-
-            <img
-                class="question-image"
-                src="${escapeHTML(question.imageUrl)}"
-                alt="Question Image"
-                onerror="this.style.display='none'"
-            >
-
-        `;
-
-    }
-
-
-    // --------------------------------------------------
-    // OPTIONS
-    // --------------------------------------------------
-
-    const optionData = [
-
-        {
-            number: 1,
-            text: question.option1
-        },
-
-        {
-            number: 2,
-            text: question.option2
-        },
-
-        {
-            number: 3,
-            text: question.option3
-        },
-
-        {
-            number: 4,
-            text: question.option4
-        }
-
-    ];
-
-
-    let optionsHTML = "";
-
-
-    optionData.forEach(function (option) {
-
-        if (!option.text) {
-
-            return;
-
-        }
-
-
-        let classes =
-            "option";
-
-
-        // Selected before submit
-        if (
-            selectedOption === option.number &&
-            !answerSubmitted
-        ) {
-
-            classes +=
-                " selected";
-
-        }
-
-
-        // After submit
-        if (answerSubmitted) {
-
-            if (
-                option.number ===
-                question.correctOption
-            ) {
-
-                classes +=
-                    " correct";
-
-            }
-
-
-            if (
-                selectedOption === option.number &&
-                option.number !==
-                question.correctOption
-            ) {
-
-                classes +=
-                    " wrong";
-
-            }
-
-
-            classes +=
-                " disabled";
-
-        }
-
-
-        optionsHTML += `
-
-            <button
-                type="button"
-                class="${classes}"
-                onclick="selectOption(${option.number})"
-            >
-
-                <span class="option-letter">
-                    ${option.number}
-                </span>
-
-                <span class="option-text">
-                    ${escapeHTML(option.text)}
-                </span>
-
-            </button>
-
-        `;
-
-    });
-
-
-    // --------------------------------------------------
-    // ANSWER STATUS
-    // --------------------------------------------------
-
-    let statusHTML = "";
-
-
-    if (answerSubmitted) {
-
-        const correct =
-            selectedOption ===
-            question.correctOption;
-
-
-        if (correct) {
-
-            statusHTML = `
-
-                <div
-                    class="answer-status
-                    show
-                    correct-status"
-                >
-                    ✅ Correct Answer
-                </div>
-
-            `;
-
-        } else {
-
-            statusHTML = `
-
-                <div
-                    class="answer-status
-                    show
-                    wrong-status"
-                >
-                    ❌ Wrong Answer.
-                    Correct answer:
-                    Option ${question.correctOption}
-                </div>
-
-            `;
-
-        }
-
-    }
-
-
-    // --------------------------------------------------
-    // SOLUTION
-    // --------------------------------------------------
-
-    let solutionHTML = "";
-
-
-    if (
-        answerSubmitted &&
-        (
-            question.solution ||
-            question.reference
-        )
-    ) {
-
-        solutionHTML = `
-
-            <div class="solution-box show">
-
-                <div class="solution-title">
-                    📖 Solution
-                </div>
-
-                <div class="solution-text">
-                    ${escapeHTML(
-                        question.solution ||
-                        "Solution available."
-                    )}
-                </div>
-
-                ${
-                    question.reference
-                    ?
-                    `
-                    <div class="reference-text">
-                        📚 NCERT Reference:
-                        ${escapeHTML(
-                            question.reference
-                        )}
-                    </div>
-                    `
-                    :
-                    ""
-                }
-
-            </div>
-
-        `;
-
-    }
-
-
-    // --------------------------------------------------
-    // SUBMIT BUTTON
-    // --------------------------------------------------
-
-    let submitButtonHTML = "";
-
-
-    if (!answerSubmitted) {
-
-        submitButtonHTML = `
-
-            <button
-                id="submitAnswerButton"
-                class="submit-answer-button"
-                onclick="submitAnswer()"
-                ${selectedOption === null ? "disabled" : ""}
-            >
-                Submit Answer
-            </button>
-
-        `;
-
-    }
-
-
-    // --------------------------------------------------
-    // NAVIGATION
-    // --------------------------------------------------
-
-    const previousDisabled =
-        currentQuestion === 0
-            ? "disabled"
-            : "";
-
-
-    const nextText =
-        currentQuestion ===
-        questions.length - 1
-            ? "Finish Quiz"
-            : "Next →";
-
-
-    container.innerHTML = `
-
-        <div class="question-card">
-
-            ${
-                question.questionText
-                ?
-                `
-                <p class="question-text">
-                    ${escapeHTML(
-                        question.questionText
-                    )}
-                </p>
-                `
-                :
-                ""
-            }
-
-            ${imageHTML}
-
-            <div class="options">
-
-                ${optionsHTML}
-
-            </div>
-
-            ${statusHTML}
-
-            ${solutionHTML}
-
-            ${submitButtonHTML}
-
-        </div>
-
-
-        <div class="quiz-actions">
-
-            <button
-                class="quiz-button previous-button"
-                onclick="previousQuestion()"
-                ${previousDisabled}
-            >
-                ← Previous
-            </button>
-
-
-            <button
-                class="quiz-button next-button"
-                onclick="nextQuestion()"
-            >
-                ${nextText}
-            </button>
-
-        </div>
-
-
-        <button
-            class="submit-quiz-button"
-            onclick="finishQuiz()"
-        >
-            Submit Quiz
-        </button>
-
-    `;
-
 }
 
 
-// ======================================================
-// SELECT OPTION
-// ======================================================
-
-function selectOption(optionNumber) {
-
-    if (answerSubmitted) {
-
-        return;
-
-    }
-
-
-    selectedOption =
-        Number(optionNumber);
-
-
-    const question =
-        questions[currentQuestion];
-
-
-    if (!question) {
-
-        return;
-
-    }
-
-
-    answers[question.id] = {
-
-        selected:
-            selectedOption,
-
-        submitted:
-            false
-
-    };
-
-
-    renderQuestion();
-
-}
-
-
-// ======================================================
-// SUBMIT ANSWER
-// ======================================================
-
-function submitAnswer() {
-
-    if (answerSubmitted) {
-
-        return;
-
-    }
-
-
-    if (selectedOption === null) {
-
-        alert(
-            "প্রথমে একটি answer select করো।"
-        );
-
-        return;
-
-    }
-
-
-    const question =
-        questions[currentQuestion];
-
-
-    if (!question) {
-
-        return;
-
-    }
-
-
-    answers[question.id] = {
-
-        selected:
-            selectedOption,
-
-        submitted:
-            true
-
-    };
-
-
-    answerSubmitted = true;
-
-
-    // Stop question timer
-    stopQuestionTimer();
-
-
-    renderQuestion();
-
-}
-
-
-// ======================================================
-// PREVIOUS QUESTION
-// ======================================================
-
-function previousQuestion() {
-
-    if (currentQuestion <= 0) {
-
-        return;
-
-    }
-
-
-    currentQuestion--;
-
-
-    renderQuestion();
-
-}
-
-
-// ======================================================
-// NEXT QUESTION
-// ======================================================
-
-function nextQuestion() {
-
-    if (
-        currentQuestion >=
-        questions.length - 1
-    ) {
-
-        finishQuiz();
-
-        return;
-
-    }
-
-
-    currentQuestion++;
-
-
-    renderQuestion();
-
-}
-
-
-// ======================================================
-// QUESTION TIMER
-// ======================================================
-
-function startQuestionTimer() {
-
-    stopQuestionTimer();
-
-
-    questionTimer = 60;
-
-
-    updateQuestionTimer();
-
-
-    questionTimerInterval =
-        setInterval(function () {
-
-            if (quizFinished) {
-
-                stopQuestionTimer();
-
-                return;
-
-            }
-
-
-            if (answerSubmitted) {
-
-                stopQuestionTimer();
-
-                return;
-
-            }
-
-
-            questionTimer--;
-
-
-            updateQuestionTimer();
-
-
-            if (questionTimer <= 0) {
-
-                stopQuestionTimer();
-
-
-                autoSubmitCurrentAnswer();
-
-            }
-
-        }, 1000);
-
-}
-
-
-// ======================================================
-// STOP QUESTION TIMER
-// ======================================================
-
-function stopQuestionTimer() {
-
-    if (questionTimerInterval) {
-
-        clearInterval(
-            questionTimerInterval
-        );
-
-        questionTimerInterval = null;
-
-    }
-
-}
-
-
-// ======================================================
-// UPDATE QUESTION TIMER
-// ======================================================
-
-function updateQuestionTimer() {
-
-    const element =
-        document.getElementById(
-            "questionTimer"
-        );
-
-
-    if (!element) {
-
-        return;
-
-    }
-
-
-    element.textContent =
-        questionTimer;
-
-
-    if (questionTimer <= 10) {
-
-        element.classList.add(
-            "timer-danger"
-        );
-
-    } else {
-
-        element.classList.remove(
-            "timer-danger"
-        );
-
-    }
-
-}
-
-
-// ======================================================
-// AUTO SUBMIT
-// ======================================================
-
-function autoSubmitCurrentAnswer() {
-
-    const question =
-        questions[currentQuestion];
-
-
-    if (!question) {
-
-        return;
-
-    }
-
-
-    // If nothing selected,
-    // mark as skipped
-
-    if (selectedOption === null) {
-
-        answers[question.id] = {
-
-            selected:
-                null,
-
-            submitted:
-                true,
-
-            skipped:
-                true
-
-        };
-
-    } else {
-
-        answers[question.id] = {
-
-            selected:
-                selectedOption,
-
-            submitted:
-                true
-
-        };
-
-    }
-
-
-    answerSubmitted = true;
-
-
-    renderQuestion();
-
-}
-
-
-// ======================================================
-// TOTAL TIMER
-// ======================================================
-
-function startTotalTimer() {
-
-    stopTotalTimer();
-
-
-    totalSeconds = 0;
-
-
-    updateTotalTimer();
-
-
-    totalTimerInterval =
-        setInterval(function () {
-
-            if (quizFinished) {
-
-                stopTotalTimer();
-
-                return;
-
-            }
-
-
-            totalSeconds++;
-
-
-            updateTotalTimer();
-
-        }, 1000);
-
-}
-
-
-// ======================================================
-// STOP TOTAL TIMER
-// ======================================================
-
-function stopTotalTimer() {
-
-    if (totalTimerInterval) {
-
-        clearInterval(
-            totalTimerInterval
-        );
-
-        totalTimerInterval = null;
-
-    }
-
-}
-
-
-// ======================================================
-// UPDATE TOTAL TIMER
-// ======================================================
-
-function updateTotalTimer() {
-
-    const element =
-        document.getElementById(
-            "totalTimer"
-        );
-
-
-    if (!element) {
-
-        return;
-
-    }
-
-
-    const minutes =
-        Math.floor(
-            totalSeconds / 60
-        );
-
-
-    const seconds =
-        totalSeconds % 60;
-
-
-    element.textContent =
-        String(minutes).padStart(2, "0") +
-        ":" +
-        String(seconds).padStart(2, "0");
-
-}
-
-
-// ======================================================
-// FINISH QUIZ
-// ======================================================
-
-function finishQuiz() {
+/* =========================================================
+   SUBMIT QUIZ
+========================================================= */
+
+function submitQuiz() {
 
     if (quizFinished) {
-
         return;
-
     }
 
 
-    const confirmed =
+    const confirmSubmit =
         confirm(
-            "Quiz submit করবে?"
+            "Are you sure you want to submit the quiz?"
         );
 
 
-    if (!confirmed) {
-
+    if (!confirmSubmit) {
         return;
-
     }
 
 
@@ -1262,41 +1107,42 @@ function finishQuiz() {
 
 
     stopQuestionTimer();
-
     stopTotalTimer();
 
 
-    // --------------------------------------------------
-    // CALCULATE RESULT
-    // --------------------------------------------------
+    calculateResult();
+
+}
+
+
+/* =========================================================
+   RESULT
+========================================================= */
+
+function calculateResult() {
 
     let correct = 0;
     let wrong = 0;
     let skipped = 0;
 
 
-    questions.forEach(function (question) {
+    questions.forEach(function (q, index) {
 
-        const answer =
-            answers[question.id];
+        const selected =
+            selectedAnswers[index];
 
 
-        if (
-            !answer ||
-            answer.selected === null ||
-            answer.selected === undefined
-        ) {
+        if (!selected) {
 
             skipped++;
 
             return;
-
         }
 
 
         if (
-            Number(answer.selected) ===
-            Number(question.correctOption)
+            Number(selected) ===
+            Number(q.correctOption)
         ) {
 
             correct++;
@@ -1314,112 +1160,479 @@ function finishQuiz() {
         questions.length;
 
 
-    const attempted =
-        correct + wrong;
+    const positiveMark =
+        4;
+
+
+    const negativeMark =
+        1;
 
 
     const score =
-        (correct * 4) -
-        (wrong * 1);
+        (
+            correct * positiveMark
+        ) -
+        (
+            wrong * negativeMark
+        );
 
 
     const accuracy =
-        attempted > 0
-            ?
-            Math.round(
-                (correct / attempted) * 100
-            )
-            :
-            0;
-
-
-    const completion =
         total > 0
-            ?
-            Math.round(
-                (attempted / total) * 100
+            ? Math.round(
+                (correct / total) * 100
             )
-            :
-            0;
-
-
-    // --------------------------------------------------
-    // SAVE RESULT LOCALLY
-    // --------------------------------------------------
-
-    const result = {
-
-        courseId:
-            courseId,
-
-        chapterId:
-            chapterId,
-
-        topicId:
-            topicId,
-
-        quizId:
-            quizId,
-
-        total:
-            total,
-
-        correct:
-            correct,
-
-        wrong:
-            wrong,
-
-        skipped:
-            skipped,
-
-        attempted:
-            attempted,
-
-        score:
-            score,
-
-        accuracy:
-            accuracy,
-
-        completion:
-            completion,
-
-        totalSeconds:
-            totalSeconds,
-
-        date:
-            new Date().toISOString()
-
-    };
+            : 0;
 
 
     localStorage.setItem(
-        "lastQuizResult",
-        JSON.stringify(result)
+        "quizLastResult",
+        JSON.stringify({
+
+            total: total,
+
+            correct: correct,
+
+            wrong: wrong,
+
+            skipped: skipped,
+
+            score: score,
+
+            accuracy: accuracy,
+
+            time: totalSeconds,
+
+            timestamp:
+                Date.now()
+
+        })
     );
 
 
-    // --------------------------------------------------
-    // GO RESULT PAGE
-    // --------------------------------------------------
+    /*
+       Result page থাকলে সেখানে যাবে
+       না থাকলে এখানেই result দেখাবে।
+    */
 
-    window.location.href =
-        "result.html";
+    if (typeof window.showQuizResult === "function") {
+
+        window.showQuizResult();
+
+        return;
+    }
+
+
+    showResultScreen(
+        total,
+        correct,
+        wrong,
+        skipped,
+        score,
+        accuracy
+    );
 
 }
 
 
-// ======================================================
-// BACK TO TOPIC
-// ======================================================
+/* =========================================================
+   RESULT SCREEN
+========================================================= */
+
+function showResultScreen(
+    total,
+    correct,
+    wrong,
+    skipped,
+    score,
+    accuracy
+) {
+
+    const container =
+        document.getElementById(
+            "quizContainer"
+        );
+
+
+    container.innerHTML = `
+
+        <div class="question-card">
+
+            <div style="
+                text-align:center;
+                padding:20px 5px;
+            ">
+
+                <div style="
+                    font-size:46px;
+                    margin-bottom:10px;
+                ">
+                    🎉
+                </div>
+
+
+                <h2 style="
+                    margin:0 0 20px;
+                    color:#ffc107;
+                ">
+                    Quiz Completed
+                </h2>
+
+
+                <div style="
+                    display:grid;
+                    grid-template-columns:
+                        1fr 1fr;
+                    gap:10px;
+                    text-align:center;
+                ">
+
+                    <div style="
+                        padding:15px;
+                        background:#0d192c;
+                        border-radius:12px;
+                    ">
+                        <div style="
+                            color:#8997aa;
+                            font-size:12px;
+                        ">
+                            SCORE
+                        </div>
+
+                        <strong style="
+                            display:block;
+                            font-size:25px;
+                            margin-top:5px;
+                        ">
+                            ${score}
+                        </strong>
+                    </div>
+
+
+                    <div style="
+                        padding:15px;
+                        background:#0d192c;
+                        border-radius:12px;
+                    ">
+                        <div style="
+                            color:#8997aa;
+                            font-size:12px;
+                        ">
+                            ACCURACY
+                        </div>
+
+                        <strong style="
+                            display:block;
+                            font-size:25px;
+                            margin-top:5px;
+                        ">
+                            ${accuracy}%
+                        </strong>
+                    </div>
+
+
+                    <div style="
+                        padding:15px;
+                        background:#0d192c;
+                        border-radius:12px;
+                    ">
+                        <div style="
+                            color:#69e6a2;
+                            font-size:12px;
+                        ">
+                            CORRECT
+                        </div>
+
+                        <strong style="
+                            display:block;
+                            font-size:22px;
+                            margin-top:5px;
+                        ">
+                            ${correct}
+                        </strong>
+                    </div>
+
+
+                    <div style="
+                        padding:15px;
+                        background:#0d192c;
+                        border-radius:12px;
+                    ">
+                        <div style="
+                            color:#ff8585;
+                            font-size:12px;
+                        ">
+                            WRONG
+                        </div>
+
+                        <strong style="
+                            display:block;
+                            font-size:22px;
+                            margin-top:5px;
+                        ">
+                            ${wrong}
+                        </strong>
+                    </div>
+
+
+                    <div style="
+                        padding:15px;
+                        background:#0d192c;
+                        border-radius:12px;
+                    ">
+                        <div style="
+                            color:#8997aa;
+                            font-size:12px;
+                        ">
+                            SKIPPED
+                        </div>
+
+                        <strong style="
+                            display:block;
+                            font-size:22px;
+                            margin-top:5px;
+                        ">
+                            ${skipped}
+                        </strong>
+                    </div>
+
+
+                    <div style="
+                        padding:15px;
+                        background:#0d192c;
+                        border-radius:12px;
+                    ">
+                        <div style="
+                            color:#8997aa;
+                            font-size:12px;
+                        ">
+                            TIME
+                        </div>
+
+                        <strong style="
+                            display:block;
+                            font-size:22px;
+                            margin-top:5px;
+                        ">
+                            ${formatTime(totalSeconds)}
+                        </strong>
+                    </div>
+
+                </div>
+
+
+                <button
+                    onclick="location.reload()"
+                    style="
+                        width:100%;
+                        margin-top:20px;
+                        min-height:48px;
+                        border:0;
+                        border-radius:11px;
+                        background:#ffc107;
+                        color:#111;
+                        font-weight:900;
+                    "
+                >
+                    🔄 Reattempt Quiz
+                </button>
+
+
+                <button
+                    onclick="goBackToTopic()"
+                    style="
+                        width:100%;
+                        margin-top:10px;
+                        min-height:48px;
+                        border:0;
+                        border-radius:11px;
+                        background:#17263d;
+                        color:white;
+                        font-weight:900;
+                    "
+                >
+                    ← Back to Topic
+                </button>
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    document.getElementById(
+        "questionCounter"
+    ).textContent =
+        `${total} / ${total}`;
+
+
+    document.getElementById(
+        "progressFill"
+    ).style.width = "100%";
+
+}
+
+
+/* =========================================================
+   SAVE PROGRESS
+========================================================= */
+
+function saveProgress() {
+
+    try {
+
+        const key =
+            getProgressKey();
+
+
+        localStorage.setItem(
+            key,
+            JSON.stringify({
+
+                currentQuestion:
+                    currentQuestion,
+
+                selectedAnswers:
+                    selectedAnswers,
+
+                submittedAnswers:
+                    submittedAnswers,
+
+                totalSeconds:
+                    totalSeconds,
+
+                savedAt:
+                    Date.now()
+
+            })
+        );
+
+    } catch (error) {
+
+        console.warn(
+            "Progress save error:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   LOAD PROGRESS
+========================================================= */
+
+function loadSavedProgress() {
+
+    try {
+
+        const saved =
+            localStorage.getItem(
+                getProgressKey()
+            );
+
+
+        if (!saved) {
+            return;
+        }
+
+
+        const data =
+            JSON.parse(saved);
+
+
+        /*
+          শুধুমাত্র recent progress restore
+        */
+
+        if (
+            Date.now() -
+            Number(data.savedAt || 0)
+            >
+            24 * 60 * 60 * 1000
+        ) {
+
+            return;
+        }
+
+
+        currentQuestion =
+            Number(
+                data.currentQuestion || 0
+            );
+
+
+        selectedAnswers =
+            data.selectedAnswers || {};
+
+
+        submittedAnswers =
+            data.submittedAnswers || {};
+
+
+        /*
+          Total time restore
+        */
+
+        totalSeconds =
+            Number(
+                data.totalSeconds || 0
+            );
+
+
+        /*
+          Safety
+        */
+
+        if (
+            currentQuestion < 0 ||
+            currentQuestion >= questions.length
+        ) {
+
+            currentQuestion = 0;
+
+        }
+
+    } catch (error) {
+
+        console.warn(
+            "Progress restore error:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   PROGRESS KEY
+========================================================= */
+
+function getProgressKey() {
+
+    return [
+        "mneet_quiz_progress",
+        getCourseId() || "course",
+        getChapterId() || "chapter",
+        getTopicId() || "topic",
+        getQuizId() || "quiz"
+    ].join("_");
+
+}
+
+
+/* =========================================================
+   BACK TO TOPIC
+========================================================= */
 
 function goBackToTopic() {
 
-    stopQuestionTimer();
-
-    stopTotalTimer();
-
+    /*
+       topic.html তোমার topic page হলে
+    */
 
     window.location.href =
         "topic.html";
@@ -1427,33 +1640,11 @@ function goBackToTopic() {
 }
 
 
-// ======================================================
-// SET QUIZ TITLE
-// ======================================================
+/* =========================================================
+   LOADING
+========================================================= */
 
-function setQuizTitle(title) {
-
-    const element =
-        document.getElementById(
-            "quizTitle"
-        );
-
-
-    if (element) {
-
-        element.textContent =
-            title;
-
-    }
-
-}
-
-
-// ======================================================
-// LOADING
-// ======================================================
-
-function setLoading() {
+function showLoading(message) {
 
     const container =
         document.getElementById(
@@ -1462,9 +1653,7 @@ function setLoading() {
 
 
     if (!container) {
-
         return;
-
     }
 
 
@@ -1472,7 +1661,7 @@ function setLoading() {
 
         <div class="quiz-loading">
 
-            Loading questions...
+            ${escapeHTML(message)}
 
         </div>
 
@@ -1481,11 +1670,11 @@ function setLoading() {
 }
 
 
-// ======================================================
-// ERROR
-// ======================================================
+/* =========================================================
+   ERROR
+========================================================= */
 
-function showQuizError(message) {
+function showError(message) {
 
     const container =
         document.getElementById(
@@ -1493,93 +1682,134 @@ function showQuizError(message) {
         );
 
 
-    if (container) {
-
-        container.innerHTML = `
-
-            <div class="quiz-error">
-
-                ⚠️
-
-                <br><br>
-
-                ${escapeHTML(message)}
-
-                <br><br>
-
-                <button
-                    class="quiz-button next-button"
-                    onclick="goBackToTopic()"
-                    style="padding:12px 22px;"
-                >
-                    ← Back to Topic
-                </button>
-
-            </div>
-
-        `;
-
+    if (!container) {
+        return;
     }
 
 
-    setQuizTitle(
-        "Quiz Loading Error"
-    );
+    container.innerHTML = `
+
+        <div class="quiz-error">
+
+            ⚠️
+
+            <br><br>
+
+            ${message}
+
+            <br><br>
+
+            <button
+                onclick="goBackToTopic()"
+                style="
+                    border:0;
+                    border-radius:10px;
+                    padding:12px 20px;
+                    background:#ffc107;
+                    color:#111;
+                    font-weight:900;
+                "
+            >
+                ← Back to Topic
+            </button>
+
+        </div>
+
+    `;
+
+}
 
 
-    const counter =
-        document.getElementById(
-            "questionCounter"
+/* =========================================================
+   FORMAT TIME
+========================================================= */
+
+function formatTime(seconds) {
+
+    seconds =
+        Math.max(
+            0,
+            Number(seconds) || 0
         );
 
 
-    if (counter) {
-
-        counter.textContent =
-            "0 / 0";
-
-    }
+    const minutes =
+        Math.floor(seconds / 60);
 
 
-    console.error(
-        "mNEET Quiz Error:",
-        message
+    const secs =
+        seconds % 60;
+
+
+    return (
+        String(minutes).padStart(2, "0") +
+        ":" +
+        String(secs).padStart(2, "0")
     );
 
 }
 
 
-// ======================================================
-// HTML ESCAPE
-// ======================================================
+/* =========================================================
+   HTML SECURITY
+========================================================= */
 
 function escapeHTML(value) {
 
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+
     return String(value)
-
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-
-        .replace(
-            /</g,
-            "&lt;"
-        )
-
-        .replace(
-            />/g,
-            "&gt;"
-        )
-
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-
-        .replace(
-            /'/g,
-            "&#039;"
-        );
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 
 }
+
+
+function escapeAttribute(value) {
+
+    return escapeHTML(value);
+
+}
+
+
+/* =========================================================
+   PAGE EXIT
+========================================================= */
+
+window.addEventListener(
+    "beforeunload",
+    function () {
+
+        saveProgress();
+
+    }
+);
+
+
+/* =========================================================
+   EXPOSE FUNCTIONS
+========================================================= */
+
+window.selectOption =
+    selectOption;
+
+window.submitAnswer =
+    submitAnswer;
+
+window.nextQuestion =
+    nextQuestion;
+
+window.previousQuestion =
+    previousQuestion;
+
+window.submitQuiz =
+    submitQuiz;
+
+window.goBackToTopic =
+    goBackToTopic;
