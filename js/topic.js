@@ -2,6 +2,8 @@
 // mNEET - Topic Page
 // ==========================================
 
+let currentUser = null;
+
 let courseId = null;
 let chapterId = null;
 let topicId = null;
@@ -27,6 +29,14 @@ document.addEventListener(
                 }
 
 
+                currentUser = user;
+
+
+                /*
+                 * Read the same IDs saved
+                 * by chapter.js.
+                 */
+
                 courseId =
                     localStorage.getItem(
                         "activeCourse"
@@ -51,12 +61,9 @@ document.addEventListener(
                     !topicId
                 ) {
 
-                    alert(
-                        "Topic information is missing."
+                    showError(
+                        "Topic information is missing. Please open the topic from the Chapter page."
                     );
-
-                    window.location.href =
-                        "student.html";
 
                     return;
                 }
@@ -85,60 +92,68 @@ function loadTopic() {
         .doc(topicId)
         .get()
 
-        .then(function (doc) {
+        .then(
+            function (doc) {
 
-            if (!doc.exists) {
+                if (!doc.exists) {
 
-                showError(
-                    "Topic not found."
+                    showError(
+                        "Topic not found in Firebase."
+                    );
+
+                    return;
+                }
+
+
+                const topic =
+                    doc.data();
+
+
+                document.getElementById(
+                    "topicTitle"
+                ).textContent =
+                    topic.name ||
+                    topic.title ||
+                    "Biology Topic";
+
+
+                document.getElementById(
+                    "topicDescription"
+                ).textContent =
+                    topic.description ||
+                    "Practice questions and study notes for this topic.";
+
+
+                renderPracticeCards();
+
+            }
+        )
+
+        .catch(
+            function (error) {
+
+                console.error(
+                    "Topic loading error:",
+                    error
                 );
 
-                return;
+
+                showError(
+                    "Unable to load topic: " +
+                    (
+                        error.message ||
+                        "Unknown Firebase error."
+                    )
+                );
+
             }
-
-
-            const data =
-                doc.data();
-
-
-            document.getElementById(
-                "topicTitle"
-            ).textContent =
-                data.name ||
-                data.title ||
-                "Biology Topic";
-
-
-            document.getElementById(
-                "topicDescription"
-            ).textContent =
-                data.description ||
-                "Practice questions and study notes for this topic.";
-
-
-            renderPracticeCards();
-
-        })
-
-        .catch(function (error) {
-
-            console.error(
-                "Topic error:",
-                error
-            );
-
-
-            showError(
-                "Unable to load topic."
-            );
-
-        });
+        );
 
 }
 
 
 // ==========================================
-// PRACTICE CARDS
+// RENDER PRACTICE CARDS
 // ==========================================
 
 function renderPracticeCards() {
@@ -151,15 +166,24 @@ function renderPracticeCards() {
 
     container.innerHTML = `
 
+        <!-- QUIZ -->
+
         <div class="practice-card">
 
+
             <div class="practice-icon">
+
                 📝
+
             </div>
 
+
             <div class="practice-title">
+
                 Practice Quiz
+
             </div>
+
 
             <div class="practice-description">
 
@@ -169,26 +193,40 @@ function renderPracticeCards() {
 
             </div>
 
+
             <button
                 class="practice-button"
+                type="button"
                 onclick="openQuiz()"
             >
-                Start Quiz
+
+                Start Quiz →
+
             </button>
+
 
         </div>
 
 
 
+        <!-- NOTES -->
+
         <div class="practice-card">
 
+
             <div class="practice-icon">
+
                 📖
+
             </div>
 
+
             <div class="practice-title">
+
                 Topic Notes
+
             </div>
+
 
             <div class="practice-description">
 
@@ -199,12 +237,20 @@ function renderPracticeCards() {
 
             </div>
 
+
             <button
-                class="practice-button notes"
+                class="
+                    practice-button
+                    notes
+                "
+                type="button"
                 onclick="openNotes()"
             >
-                Open Notes
+
+                Open Notes →
+
             </button>
+
 
         </div>
 
@@ -218,6 +264,11 @@ function renderPracticeCards() {
 // ==========================================
 
 function openQuiz() {
+
+    /*
+     * Keep separate quiz keys because
+     * quiz.js may already use these.
+     */
 
     localStorage.setItem(
         "quizCourse",
@@ -233,6 +284,28 @@ function openQuiz() {
 
     localStorage.setItem(
         "quizTopic",
+        topicId
+    );
+
+
+    /*
+     * Also keep the common active IDs.
+     */
+
+    localStorage.setItem(
+        "activeCourse",
+        courseId
+    );
+
+
+    localStorage.setItem(
+        "activeChapter",
+        chapterId
+    );
+
+
+    localStorage.setItem(
+        "activeTopic",
         topicId
     );
 
@@ -267,6 +340,28 @@ function openNotes() {
     );
 
 
+    /*
+     * Keep common active IDs too.
+     */
+
+    localStorage.setItem(
+        "activeCourse",
+        courseId
+    );
+
+
+    localStorage.setItem(
+        "activeChapter",
+        chapterId
+    );
+
+
+    localStorage.setItem(
+        "activeTopic",
+        topicId
+    );
+
+
     window.location.href =
         "notes.html";
 
@@ -274,10 +369,16 @@ function openNotes() {
 
 
 // ==========================================
-// BACK
+// BACK TO CHAPTER
 // ==========================================
 
 function goBack() {
+
+    /*
+     * IDs remain saved,
+     * so chapter.js can load
+     * the correct chapter.
+     */
 
     window.location.href =
         "chapter.html";
@@ -291,17 +392,70 @@ function goBack() {
 
 function showError(message) {
 
+    const title =
+        document.getElementById(
+            "topicTitle"
+        );
+
+
+    const description =
+        document.getElementById(
+            "topicDescription"
+        );
+
+
+    if (title) {
+
+        title.textContent =
+            "Topic Error";
+
+    }
+
+
+    if (description) {
+
+        description.textContent =
+            "The topic could not be loaded.";
+
+    }
+
+
     const container =
         document.getElementById(
             "practiceGrid"
         );
 
 
+    if (!container) {
+
+        return;
+
+    }
+
+
     container.innerHTML = `
 
-        <div class="loading">
+        <div class="error-card">
 
-            ${escapeHTML(message)}
+            <div class="icon">
+
+                ⚠️
+
+            </div>
+
+
+            <h3>
+
+                Unable to open topic
+
+            </h3>
+
+
+            <p>
+
+                ${escapeHTML(message)}
+
+            </p>
 
         </div>
 
@@ -311,7 +465,7 @@ function showError(message) {
 
 
 // ==========================================
-// ESCAPE
+// HTML ESCAPE
 // ==========================================
 
 function escapeHTML(value) {
