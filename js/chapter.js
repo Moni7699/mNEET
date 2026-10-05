@@ -15,44 +15,53 @@ document.addEventListener(
     "DOMContentLoaded",
     function () {
 
-        auth.onAuthStateChanged(function (user) {
+        auth.onAuthStateChanged(
+            function (user) {
 
-            if (!user) {
+                if (!user) {
 
-                window.location.href =
-                    "index.html";
+                    window.location.href =
+                        "index.html";
 
-                return;
+                    return;
+                }
+
+
+                currentUser = user;
+
+
+                activeCourseId =
+                    localStorage.getItem(
+                        "activeCourse"
+                    );
+
+
+                activeChapterId =
+                    localStorage.getItem(
+                        "activeChapter"
+                    );
+
+
+                if (
+                    !activeCourseId ||
+                    !activeChapterId
+                ) {
+
+                    alert(
+                        "Chapter information is missing."
+                    );
+
+                    window.location.href =
+                        "student.html";
+
+                    return;
+                }
+
+
+                loadChapter();
+
             }
-
-            currentUser = user;
-
-            activeCourseId =
-                localStorage.getItem(
-                    "activeCourse"
-                );
-
-            activeChapterId =
-                localStorage.getItem(
-                    "activeChapter"
-                );
-
-
-            if (
-                !activeCourseId ||
-                !activeChapterId
-            ) {
-
-                window.location.href =
-                    "student.html";
-
-                return;
-            }
-
-
-            loadChapter();
-
-        });
+        );
 
     }
 );
@@ -70,55 +79,60 @@ function loadChapter() {
         .doc(activeChapterId)
         .get()
 
-        .then(function (doc) {
+        .then(
+            function (doc) {
 
-            if (!doc.exists) {
+                if (!doc.exists) {
 
-                alert(
-                    "Chapter not found."
+                    alert(
+                        "Chapter not found."
+                    );
+
+                    goBackToCourse();
+
+                    return;
+                }
+
+
+                const chapter =
+                    doc.data();
+
+
+                document.getElementById(
+                    "chapterTitle"
+                ).textContent =
+                    chapter.name ||
+                    chapter.title ||
+                    "Biology Chapter";
+
+
+                document.getElementById(
+                    "chapterDescription"
+                ).textContent =
+                    chapter.description ||
+                    "Select a topic to start learning.";
+
+
+                loadTopics();
+
+            }
+        )
+
+        .catch(
+            function (error) {
+
+                console.error(
+                    "Chapter loading error:",
+                    error
                 );
 
-                goBackToCourse();
 
-                return;
+                showError(
+                    "Unable to load chapter."
+                );
+
             }
-
-
-            const chapter =
-                doc.data();
-
-
-            document.getElementById(
-                "chapterTitle"
-            ).textContent =
-                chapter.name ||
-                chapter.title ||
-                "Biology Chapter";
-
-
-            document.getElementById(
-                "chapterDescription"
-            ).textContent =
-                chapter.description ||
-                "Select a topic to start learning.";
-
-
-            loadTopics();
-
-        })
-
-        .catch(function (error) {
-
-            console.error(
-                "Chapter loading error:",
-                error
-            );
-
-            alert(
-                "Unable to load chapter."
-            );
-
-        });
+        );
 
 }
 
@@ -136,9 +150,13 @@ function loadTopics() {
 
 
     topicList.innerHTML = `
-        <div class="course-loading">
+
+        <div class="chapter-loading">
+
             Loading topics...
+
         </div>
+
     `;
 
 
@@ -147,129 +165,147 @@ function loadTopics() {
         .collection("chapters")
         .doc(activeChapterId)
         .collection("topics")
-        .orderBy("order", "asc")
         .get()
 
-        .then(function (snapshot) {
+        .then(
+            function (snapshot) {
 
-            topicList.innerHTML = "";
-
-
-            if (snapshot.empty) {
-
-                topicList.innerHTML = `
-                    <div class="empty-state">
-
-                        <div class="empty-icon">
-                            📚
-                        </div>
-
-                        <h3>
-                            No topics available
-                        </h3>
-
-                        <p>
-                            Topics will appear here
-                            when they are added.
-                        </p>
-
-                    </div>
-                `;
+                topicList.innerHTML = "";
 
 
-                updateTopicCount(0);
+                if (snapshot.empty) {
 
-                return;
-            }
+                    showEmpty(
+                        "📚",
+                        "No topics available",
+                        "Topics will appear here when they are added."
+                    );
 
-
-            let topicNumber = 0;
-
-
-            snapshot.forEach(function (doc) {
-
-                const topic =
-                    doc.data();
-
-
-                if (
-                    topic.published === false
-                ) {
+                    updateTopicCount(0);
 
                     return;
                 }
 
 
-                topicNumber++;
+                const topicDocs = [];
 
 
-                createTopicCard(
-                    doc.id,
-                    topic,
-                    topicNumber,
-                    topicList
+                snapshot.forEach(
+                    function (doc) {
+
+                        const topic =
+                            doc.data();
+
+
+                        if (
+                            topic.published === false
+                        ) {
+
+                            return;
+                        }
+
+
+                        topicDocs.push({
+                            id: doc.id,
+                            data: topic
+                        });
+
+                    }
                 );
 
-            });
+
+                // Sort by order if available
+
+                topicDocs.sort(
+                    function (a, b) {
+
+                        const orderA =
+                            Number(
+                                a.data.order
+                            ) || 999999;
 
 
-            updateTopicCount(
-                topicNumber
-            );
+                        const orderB =
+                            Number(
+                                b.data.order
+                            ) || 999999;
 
 
-            if (topicNumber === 0) {
+                        return orderA - orderB;
+
+                    }
+                );
+
+
+                updateTopicCount(
+                    topicDocs.length
+                );
+
+
+                if (
+                    topicDocs.length === 0
+                ) {
+
+                    showEmpty(
+                        "🔒",
+                        "No published topics",
+                        "Please check again later."
+                    );
+
+                    return;
+                }
+
+
+                topicDocs.forEach(
+                    function (item, index) {
+
+                        createTopicCard(
+                            item.id,
+                            item.data,
+                            index + 1,
+                            topicList
+                        );
+
+                    }
+                );
+
+            }
+        )
+
+        .catch(
+            function (error) {
+
+                console.error(
+                    "Topic loading error:",
+                    error
+                );
+
 
                 topicList.innerHTML = `
+
                     <div class="empty-state">
 
                         <div class="empty-icon">
-                            🔒
+                            ⚠️
                         </div>
 
                         <h3>
-                            No published topics
+                            Unable to load topics
                         </h3>
 
                         <p>
-                            Please check again later.
+                            ${escapeHTML(
+                                error.message ||
+                                "Please check your Firebase setup."
+                            )}
                         </p>
 
                     </div>
+
                 `;
 
             }
-
-        })
-
-        .catch(function (error) {
-
-            console.error(
-                "Topic loading error:",
-                error
-            );
-
-
-            topicList.innerHTML = `
-                <div class="empty-state">
-
-                    <div class="empty-icon">
-                        ⚠️
-                    </div>
-
-                    <h3>
-                        Unable to load topics
-                    </h3>
-
-                    <p>
-                        Please check your
-                        internet connection.
-                    </p>
-
-                </div>
-            `;
-
-        });
+        );
 
 }
 
@@ -293,66 +329,54 @@ function createTopicCard(
 
     const description =
         topic.description ||
-        "Practice questions and notes";
+        "Practice questions and study notes.";
 
 
     const card =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
 
     card.className =
-        "course-card";
+        "topic-card";
 
 
     card.innerHTML = `
 
-        <div class="course-image">
+        <div class="topic-number">
 
-            <div
-                style="
-                    font-size:52px;
-                    font-weight:900;
-                    color:#ffc107;
-                "
-            >
-                ${topicNumber}
-            </div>
+            ${topicNumber}
 
         </div>
 
 
-        <div class="course-content">
+        <div class="topic-card-content">
 
-            <div class="course-badge">
+            <div class="topic-badge">
+
                 TOPIC ${topicNumber}
+
             </div>
 
 
-            <h3 class="course-title">
+            <h3 class="topic-card-title">
+
                 ${escapeHTML(title)}
+
             </h3>
 
 
-            <p class="course-description">
+            <p class="topic-card-description">
+
                 ${escapeHTML(description)}
+
             </p>
 
 
-            <div class="course-bottom">
+            <div class="topic-open-label">
 
-                <div class="course-price">
-                    Quiz + Notes
-                </div>
-
-
-                <button
-                    class="course-button"
-                    onclick="
-                        openTopic('${topicId}')
-                    "
-                >
-                    Open
-                </button>
+                Open Topic →
 
             </div>
 
@@ -361,7 +385,19 @@ function createTopicCard(
     `;
 
 
-    container.appendChild(card);
+    card.addEventListener(
+        "click",
+        function () {
+
+            openTopic(topicId);
+
+        }
+    );
+
+
+    container.appendChild(
+        card
+    );
 
 }
 
@@ -374,15 +410,19 @@ function openTopic(topicId) {
 
     if (!topicId) {
 
+        alert(
+            "Topic ID is missing."
+        );
+
         return;
     }
 
 
-    localStorage.setItem(
-        "activeTopic",
-        topicId
-    );
-
+    /*
+     * Save all three IDs.
+     * This makes Topic → Quiz → Notes
+     * navigation reliable.
+     */
 
     localStorage.setItem(
         "activeCourse",
@@ -393,6 +433,12 @@ function openTopic(topicId) {
     localStorage.setItem(
         "activeChapter",
         activeChapterId
+    );
+
+
+    localStorage.setItem(
+        "activeTopic",
+        topicId
     );
 
 
@@ -427,6 +473,92 @@ function updateTopicCount(count) {
                 ? " Topic"
                 : " Topics"
         );
+
+}
+
+
+// ==========================================
+// EMPTY STATE
+// ==========================================
+
+function showEmpty(
+    icon,
+    title,
+    description
+) {
+
+    const topicList =
+        document.getElementById(
+            "topicList"
+        );
+
+
+    topicList.innerHTML = `
+
+        <div class="empty-state">
+
+            <div class="empty-icon">
+
+                ${icon}
+
+            </div>
+
+            <h3>
+
+                ${escapeHTML(title)}
+
+            </h3>
+
+            <p>
+
+                ${escapeHTML(description)}
+
+            </p>
+
+        </div>
+
+    `;
+
+}
+
+
+// ==========================================
+// ERROR
+// ==========================================
+
+function showError(message) {
+
+    const topicList =
+        document.getElementById(
+            "topicList"
+        );
+
+
+    topicList.innerHTML = `
+
+        <div class="empty-state">
+
+            <div class="empty-icon">
+
+                ⚠️
+
+            </div>
+
+            <h3>
+
+                Something went wrong
+
+            </h3>
+
+            <p>
+
+                ${escapeHTML(message)}
+
+            </p>
+
+        </div>
+
+    `;
 
 }
 
