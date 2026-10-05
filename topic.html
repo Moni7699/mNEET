@@ -12,29 +12,76 @@
 
     <title>mNEET - Topic</title>
 
+
+    <!-- ======================================
+         MAIN CSS
+    ======================================= -->
+
     <link
         rel="stylesheet"
         href="css/style.css"
     >
 
+
+    <!-- ======================================
+         FIREBASE
+    ======================================= -->
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+
+
+    <!-- ======================================
+         TOPIC PAGE CSS
+    ======================================= -->
+
     <style>
 
-        /* =====================================
-           TOPIC PAGE
-           ===================================== */
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            background:
+                linear-gradient(
+                    180deg,
+                    #071226 0%,
+                    #050c1c 100%
+                );
+
+            color: white;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            min-height: 100vh;
+        }
+
+
+        /* ======================================
+           PAGE
+        ======================================= */
 
         .topic-page {
 
             min-height: 100vh;
 
-            padding-bottom: 30px;
-
+            padding-bottom: 40px;
         }
 
 
-        /* =====================================
+        /* ======================================
            HEADER
-           ===================================== */
+        ======================================= */
 
         .topic-header {
 
@@ -42,71 +89,89 @@
 
             top: 0;
 
-            z-index: 50;
+            z-index: 100;
+
+            height: 82px;
 
             display: flex;
 
             align-items: center;
 
-            gap: 12px;
+            gap: 16px;
 
-            padding: 13px 16px;
+            padding: 0 22px;
 
             background:
-                rgba(4,10,21,0.96);
+                rgba(3, 9, 20, 0.96);
 
-            backdrop-filter: blur(16px);
+            backdrop-filter: blur(18px);
 
             border-bottom:
                 1px solid
-                rgba(255,255,255,0.07);
-
+                rgba(255,255,255,0.06);
         }
 
+
+        /* BACK BUTTON */
 
         .topic-back {
 
-            width: 38px;
+            width: 52px;
 
-            height: 38px;
+            height: 52px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
 
             border: none;
 
-            border-radius: 10px;
+            border-radius: 15px;
 
             background:
-                rgba(255,255,255,0.06);
+                #111a2c;
 
             color: white;
 
-            font-size: 21px;
+            font-size: 28px;
 
             cursor: pointer;
 
+            transition: 0.2s;
         }
 
 
+        .topic-back:active {
+
+            transform: scale(0.94);
+        }
+
+
+        /* LOGO */
+
         .brand {
 
-            color: #ffc107;
-
-            font-size: 21px;
+            font-size: 30px;
 
             font-weight: 900;
 
+            letter-spacing: -1px;
+
+            color: #ffc107;
         }
 
 
         .brand span {
 
             color: white;
-
         }
 
 
-        /* =====================================
+        /* ======================================
            MAIN
-           ===================================== */
+        ======================================= */
 
         .topic-main {
 
@@ -114,77 +179,127 @@
 
             max-width: 900px;
 
-            margin: auto;
+            margin: 0 auto;
 
-            padding: 20px 15px;
-
+            padding:
+                26px 20px 50px;
         }
 
 
-        /* =====================================
-           HERO
-           ===================================== */
+        /* ======================================
+           TOPIC HERO
+        ======================================= */
 
         .topic-hero {
 
-            padding: 21px;
+            position: relative;
 
-            border-radius: 19px;
+            overflow: hidden;
+
+            padding:
+                28px 24px;
+
+            border-radius: 22px;
 
             background:
                 linear-gradient(
                     145deg,
-                    #10213b,
-                    #07101f
+                    #102342,
+                    #081326
                 );
 
             border:
                 1px solid
-                rgba(255,193,7,0.15);
+                rgba(255,193,7,0.20);
 
+            box-shadow:
+                0 15px 45px
+                rgba(0,0,0,0.25);
         }
 
+
+        .topic-hero::after {
+
+            content: "";
+
+            position: absolute;
+
+            width: 180px;
+
+            height: 180px;
+
+            right: -80px;
+
+            top: -90px;
+
+            border-radius: 50%;
+
+            background:
+                rgba(255,193,7,0.06);
+        }
+
+
+        /* LABEL */
 
         .topic-label {
 
+            position: relative;
+
+            z-index: 2;
+
             color: #ffc107;
-
-            font-size: 9px;
-
-            font-weight: 900;
-
-            letter-spacing: 1px;
-
-        }
-
-
-        .topic-title {
-
-            color: white;
-
-            font-size: 24px;
-
-            line-height: 1.25;
-
-            margin: 7px 0;
-
-        }
-
-
-        .topic-description {
-
-            color: #8997aa;
 
             font-size: 12px;
 
-            line-height: 1.6;
+            font-weight: 900;
 
+            letter-spacing: 1.2px;
+
+            margin-bottom: 9px;
         }
 
 
-        /* =====================================
+        /* TITLE */
+
+        .topic-title {
+
+            position: relative;
+
+            z-index: 2;
+
+            margin: 0;
+
+            color: white;
+
+            font-size: 30px;
+
+            line-height: 1.2;
+
+            font-weight: 900;
+        }
+
+
+        /* DESCRIPTION */
+
+        .topic-description {
+
+            position: relative;
+
+            z-index: 2;
+
+            margin-top: 10px;
+
+            color: #9ba9bd;
+
+            font-size: 14px;
+
+            line-height: 1.6;
+        }
+
+
+        /* ======================================
            PRACTICE GRID
-           ===================================== */
+        ======================================= */
 
         .practice-grid {
 
@@ -193,42 +308,62 @@
             grid-template-columns:
                 repeat(2, minmax(0, 1fr));
 
-            gap: 12px;
+            gap: 16px;
 
-            margin-top: 15px;
-
+            margin-top: 20px;
         }
 
 
-        /* =====================================
+        /* ======================================
            PRACTICE CARD
-           ===================================== */
+        ======================================= */
 
         .practice-card {
 
-            padding: 17px;
+            padding: 20px;
 
-            border-radius: 16px;
+            min-height: 220px;
+
+            border-radius: 18px;
 
             background:
                 linear-gradient(
                     145deg,
-                    #101f35,
-                    #0b1628
+                    #101d32,
+                    #0a1425
                 );
 
             border:
                 1px solid
                 rgba(255,255,255,0.07);
 
+            box-shadow:
+                0 10px 30px
+                rgba(0,0,0,0.18);
+
+            transition:
+                transform 0.2s,
+                border-color 0.2s;
         }
 
 
+        .practice-card:hover {
+
+            transform:
+                translateY(-3px);
+
+            border-color:
+                rgba(255,193,7,0.25);
+        }
+
+
+        /* ICON */
+
         .practice-icon {
 
-            width: 43px;
+            width: 50px;
 
-            height: 43px;
+            height: 50px;
 
             display: flex;
 
@@ -236,212 +371,278 @@
 
             justify-content: center;
 
-            border-radius: 11px;
+            border-radius: 14px;
 
             background:
-                rgba(255,193,7,0.08);
+                rgba(255,193,7,0.09);
 
-            font-size: 21px;
+            border:
+                1px solid
+                rgba(255,193,7,0.12);
 
-            margin-bottom: 11px;
+            font-size: 24px;
 
+            margin-bottom: 15px;
         }
 
+
+        /* TITLE */
 
         .practice-title {
 
             color: white;
 
-            font-size: 15px;
+            font-size: 18px;
 
             font-weight: 900;
 
-            margin-bottom: 5px;
-
+            margin-bottom: 8px;
         }
 
+
+        /* DESCRIPTION */
 
         .practice-description {
 
-            color: #8997aa;
+            color: #8f9db1;
 
-            font-size: 11px;
+            font-size: 13px;
 
-            line-height: 1.5;
+            line-height: 1.55;
 
-            margin-bottom: 13px;
+            min-height: 60px;
 
+            margin-bottom: 18px;
         }
 
+
+        /* BUTTON */
 
         .practice-button {
 
             width: 100%;
 
-            min-height: 40px;
+            min-height: 44px;
 
             border: none;
 
-            border-radius: 9px;
+            border-radius: 11px;
 
-            background: #ffc107;
+            background:
+                #ffc107;
 
-            color: #171717;
+            color:
+                #111827;
+
+            font-size: 14px;
 
             font-weight: 900;
 
-            font-size: 11px;
-
             cursor: pointer;
 
+            transition: 0.2s;
         }
 
+
+        .practice-button:active {
+
+            transform:
+                scale(0.97);
+        }
+
+
+        /* NOTES BUTTON */
 
         .practice-button.notes {
 
-            background: #17263d;
+            background:
+                #17263d;
 
-            color: #ffc107;
+            color:
+                #ffc107;
 
             border:
                 1px solid
-                rgba(255,193,7,0.20);
-
+                rgba(255,193,7,0.22);
         }
 
 
-        /* =====================================
-           TIP
-           ===================================== */
+        /* ======================================
+           LOADING
+        ======================================= */
+
+        .loading {
+
+            grid-column:
+                1 / -1;
+
+            min-height: 150px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            text-align: center;
+
+            padding: 30px;
+
+            color: #94a3b8;
+
+            font-size: 15px;
+        }
+
+
+        /* ======================================
+           INFO BOX
+        ======================================= */
 
         .quiz-info {
 
-            margin-top: 14px;
+            margin-top: 20px;
 
-            padding: 14px;
+            padding: 18px 19px;
 
-            border-radius: 13px;
+            border-radius: 16px;
 
             background:
-                rgba(255,193,7,0.05);
+                rgba(255,193,7,0.045);
 
             border:
                 1px solid
-                rgba(255,193,7,0.11);
+                rgba(255,193,7,0.13);
 
-            color: #9ba8ba;
+            color: #9aa8ba;
 
-            font-size: 11px;
+            font-size: 13px;
 
-            line-height: 1.6;
-
+            line-height: 1.65;
         }
 
 
         .quiz-info strong {
 
             color: #ffc107;
-
         }
 
 
-        /* =====================================
-           LOADING / ERROR
-           ===================================== */
-
-        .loading {
-
-            padding: 40px 15px;
-
-            text-align: center;
-
-            color: #8997aa;
-
-            font-size: 12px;
-
-        }
-
-
-        .error-card {
-
-            padding: 35px 18px;
-
-            text-align: center;
-
-            border-radius: 16px;
-
-            background: #0d192c;
-
-            border:
-                1px solid
-                rgba(255,255,255,0.06);
-
-        }
-
-
-        .error-card .icon {
-
-            font-size: 30px;
-
-            margin-bottom: 8px;
-
-        }
-
-
-        .error-card h3 {
-
-            margin: 0 0 6px;
-
-            color: white;
-
-            font-size: 15px;
-
-        }
-
-
-        .error-card p {
-
-            margin: 0;
-
-            color: #8997aa;
-
-            font-size: 11px;
-
-        }
-
-
-        /* =====================================
+        /* ======================================
            MOBILE
-           ===================================== */
+        ======================================= */
 
         @media (max-width: 600px) {
 
-            .practice-grid {
+            .topic-header {
 
-                grid-template-columns: 1fr;
+                height: 72px;
 
+                padding: 0 15px;
+
+                gap: 13px;
+            }
+
+
+            .topic-back {
+
+                width: 48px;
+
+                height: 48px;
+
+                border-radius: 14px;
+
+                font-size: 25px;
+            }
+
+
+            .brand {
+
+                font-size: 27px;
             }
 
 
             .topic-main {
 
                 padding:
-                    16px 12px;
-
+                    18px 14px 40px;
             }
 
 
             .topic-hero {
 
-                padding: 18px;
+                padding:
+                    24px 20px;
 
+                border-radius: 20px;
             }
 
 
             .topic-title {
 
-                font-size: 21px;
+                font-size: 27px;
+            }
 
+
+            .topic-description {
+
+                font-size: 13px;
+            }
+
+
+            .practice-grid {
+
+                grid-template-columns:
+                    1fr;
+
+                gap: 13px;
+
+                margin-top: 16px;
+            }
+
+
+            .practice-card {
+
+                min-height: auto;
+
+                padding: 18px;
+            }
+
+
+            .practice-description {
+
+                min-height: auto;
+
+                margin-bottom: 15px;
+            }
+
+
+            .quiz-info {
+
+                margin-top: 16px;
+
+                padding: 16px;
+
+                font-size: 12px;
+            }
+
+        }
+
+
+        /* ======================================
+           DESKTOP
+        ======================================= */
+
+        @media (min-width: 900px) {
+
+            .topic-main {
+
+                padding-top: 35px;
+            }
+
+
+            .topic-title {
+
+                font-size: 34px;
             }
 
         }
@@ -457,7 +658,9 @@
 <div class="topic-page">
 
 
-    <!-- HEADER -->
+    <!-- ======================================
+         HEADER
+    ======================================= -->
 
     <header class="topic-header">
 
@@ -466,8 +669,11 @@
             class="topic-back"
             type="button"
             onclick="goBack()"
+            aria-label="Back"
         >
+
             ←
+
         </button>
 
 
@@ -482,10 +688,16 @@
 
 
 
-    <!-- MAIN -->
+    <!-- ======================================
+         MAIN
+    ======================================= -->
 
     <main class="topic-main">
 
+
+        <!-- ==================================
+             TOPIC HERO
+        =================================== -->
 
         <section class="topic-hero">
 
@@ -521,10 +733,15 @@
 
 
 
+        <!-- ==================================
+             PRACTICE CARDS
+        =================================== -->
+
         <section
             id="practiceGrid"
             class="practice-grid"
         >
+
 
             <div class="loading">
 
@@ -532,9 +749,14 @@
 
             </div>
 
+
         </section>
 
 
+
+        <!-- ==================================
+             INFO
+        =================================== -->
 
         <div class="quiz-info">
 
@@ -544,9 +766,9 @@
                 mNEET Practice Tip:
             </strong>
 
-            First read the topic notes,
-            then attempt the quiz and review
-            the solution after answering.
+            First read the topic notes carefully,
+            then attempt the quiz and review the
+            solution after answering.
 
         </div>
 
@@ -557,10 +779,18 @@
 </div>
 
 
+
+<!-- ==========================================
+     JAVASCRIPT
+=========================================== -->
+
+<!-- Firebase configuration -->
 <script src="js/firebase.js"></script>
 
+<!-- Authentication -->
 <script src="js/auth.js"></script>
 
+<!-- Topic page -->
 <script src="js/topic.js"></script>
 
 
