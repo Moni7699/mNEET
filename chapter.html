@@ -12,10 +12,20 @@
 
     <title>mNEET - Chapter</title>
 
+
+    <!-- ==================================================
+         MAIN CSS
+    =================================================== -->
+
     <link
         rel="stylesheet"
         href="css/style.css"
     >
+
+
+    <!-- ==================================================
+         FIREBASE
+    =================================================== -->
 
     <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
 
@@ -23,21 +33,55 @@
 
     <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 
+
+    <!-- ==================================================
+         CHAPTER PAGE CSS
+    =================================================== -->
+
     <style>
 
-        /* =====================================
-           CHAPTER PAGE
-           ===================================== */
-
-        .chapter-page {
-            min-height: 100vh;
-            padding-bottom: 85px;
+        * {
+            box-sizing: border-box;
         }
 
 
-        /* =====================================
+        body {
+
+            margin: 0;
+
+            min-height: 100vh;
+
+            background:
+                linear-gradient(
+                    180deg,
+                    #071226 0%,
+                    #050c1c 100%
+                );
+
+            color: white;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+        }
+
+
+        /* ==================================================
+           PAGE
+        =================================================== */
+
+        .chapter-page {
+
+            min-height: 100vh;
+
+            padding-bottom: 50px;
+        }
+
+
+        /* ==================================================
            HEADER
-           ===================================== */
+        =================================================== */
 
         .chapter-header {
 
@@ -45,125 +89,426 @@
 
             top: 0;
 
-            z-index: 50;
+            z-index: 100;
+
+            height: 76px;
 
             display: flex;
 
             align-items: center;
 
-            justify-content: space-between;
+            gap: 14px;
 
-            padding: 13px 16px;
+            padding: 0 20px;
 
             background:
-                rgba(4,10,21,0.96);
+                rgba(3, 9, 20, 0.97);
 
-            backdrop-filter: blur(16px);
+            backdrop-filter:
+                blur(18px);
 
             border-bottom:
                 1px solid
-                rgba(255,255,255,0.07);
-
+                rgba(255,255,255,0.06);
         }
 
 
-        .header-left {
+        /* BACK */
+
+        .chapter-back {
+
+            width: 48px;
+
+            height: 48px;
 
             display: flex;
 
             align-items: center;
 
-            gap: 12px;
+            justify-content: center;
 
-            min-width: 0;
+            border: none;
 
+            border-radius: 14px;
+
+            background:
+                #111a2c;
+
+            color: white;
+
+            font-size: 26px;
+
+            cursor: pointer;
+
+            transition: 0.2s;
         }
 
 
-        .header-back {
+        .chapter-back:active {
 
-            width: 38px;
+            transform:
+                scale(0.94);
+        }
 
-            height: 38px;
+
+        /* BRAND */
+
+        .brand {
+
+            font-size: 28px;
+
+            font-weight: 900;
+
+            letter-spacing: -1px;
+
+            color: #ffc107;
+        }
+
+
+        .brand span {
+
+            color: white;
+        }
+
+
+        /* ==================================================
+           MAIN
+        =================================================== */
+
+        .chapter-main {
+
+            width: 100%;
+
+            max-width: 950px;
+
+            margin: 0 auto;
+
+            padding:
+                28px 20px 60px;
+        }
+
+
+        /* ==================================================
+           HERO
+        =================================================== */
+
+        .chapter-hero {
+
+            position: relative;
+
+            overflow: hidden;
+
+            padding:
+                28px 25px;
+
+            border-radius: 23px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #102342,
+                    #081326
+                );
+
+            border:
+                1px solid
+                rgba(255,193,7,0.20);
+
+            box-shadow:
+                0 18px 50px
+                rgba(0,0,0,0.25);
+        }
+
+
+        .chapter-hero::after {
+
+            content: "";
+
+            position: absolute;
+
+            width: 220px;
+
+            height: 220px;
+
+            right: -100px;
+
+            top: -120px;
+
+            border-radius: 50%;
+
+            background:
+                rgba(255,193,7,0.055);
+        }
+
+
+        .chapter-label {
+
+            position: relative;
+
+            z-index: 2;
+
+            color: #ffc107;
+
+            font-size: 11px;
+
+            font-weight: 900;
+
+            letter-spacing: 1.4px;
+
+            margin-bottom: 9px;
+        }
+
+
+        .chapter-title {
+
+            position: relative;
+
+            z-index: 2;
+
+            margin: 0;
+
+            color: white;
+
+            font-size: 31px;
+
+            line-height: 1.2;
+
+            font-weight: 900;
+        }
+
+
+        .chapter-description {
+
+            position: relative;
+
+            z-index: 2;
+
+            margin-top: 11px;
+
+            color: #9ba9bd;
+
+            font-size: 14px;
+
+            line-height: 1.65;
+        }
+
+
+        /* ==================================================
+           SECTION HEADER
+        =================================================== */
+
+        .section-head {
+
+            margin-top: 27px;
+
+            margin-bottom: 13px;
+        }
+
+
+        .section-label {
+
+            color: #ffc107;
+
+            font-size: 11px;
+
+            font-weight: 900;
+
+            letter-spacing: 1.3px;
+
+            margin-bottom: 5px;
+        }
+
+
+        .section-title {
+
+            margin: 0;
+
+            color: white;
+
+            font-size: 21px;
+
+            font-weight: 900;
+        }
+
+
+        .section-description {
+
+            margin-top: 6px;
+
+            color: #7f8da2;
+
+            font-size: 12px;
+
+            line-height: 1.5;
+        }
+
+
+        /* ==================================================
+           TYPE PRACTICE GRID
+        =================================================== */
+
+        #typePracticeGrid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+
+            gap: 14px;
+        }
+
+
+        /* ==================================================
+           TYPE CARD
+        =================================================== */
+
+        .type-card {
+
+            min-height: 155px;
+
+            display: flex;
+
+            flex-direction: column;
+
+            padding: 18px;
+
+            border-radius: 18px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #101d32,
+                    #0a1425
+                );
+
+            border:
+                1px solid
+                rgba(255,255,255,0.07);
+
+            box-shadow:
+                0 10px 28px
+                rgba(0,0,0,0.18);
+
+            transition:
+                transform 0.2s,
+                border-color 0.2s;
+        }
+
+
+        .type-card:hover {
+
+            transform:
+                translateY(-3px);
+
+            border-color:
+                rgba(255,193,7,0.28);
+        }
+
+
+        .type-icon {
+
+            width: 46px;
+
+            height: 46px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            border-radius: 13px;
+
+            background:
+                rgba(255,193,7,0.09);
+
+            border:
+                1px solid
+                rgba(255,193,7,0.13);
+
+            font-size: 22px;
+
+            margin-bottom: 12px;
+        }
+
+
+        .type-content {
+
+            flex: 1;
+        }
+
+
+        .type-title {
+
+            color: white;
+
+            font-size: 16px;
+
+            font-weight: 900;
+
+            line-height: 1.3;
+
+            margin-bottom: 6px;
+        }
+
+
+        .type-description {
+
+            color: #8997aa;
+
+            font-size: 12px;
+
+            line-height: 1.5;
+        }
+
+
+        .type-button {
+
+            width: 100%;
+
+            min-height: 42px;
+
+            margin-top: 14px;
 
             border: none;
 
             border-radius: 10px;
 
             background:
-                rgba(255,255,255,0.06);
+                #ffc107;
 
-            color: white;
+            color: #111827;
 
-            font-size: 21px;
-
-            cursor: pointer;
-
-        }
-
-
-        .brand-logo {
-
-            color: #ffc107;
-
-            font-size: 21px;
+            font-size: 13px;
 
             font-weight: 900;
 
-        }
-
-
-        .brand-logo span {
-
-            color: white;
-
-        }
-
-
-        .header-logout {
-
-            border: 1px solid
-                rgba(255,255,255,0.10);
-
-            background: transparent;
-
-            color: #aab5c5;
-
-            border-radius: 8px;
-
-            padding: 8px 11px;
-
-            font-size: 11px;
-
-            font-weight: 800;
-
             cursor: pointer;
 
+            transition: 0.2s;
         }
 
 
-        /* =====================================
-           MAIN
-           ===================================== */
+        .type-button:active {
 
-        .chapter-main {
-
-            width: 100%;
-
-            max-width: 1000px;
-
-            margin: auto;
-
-            padding: 20px 15px;
-
+            transform:
+                scale(0.97);
         }
 
 
-        /* =====================================
-           HERO
-           ===================================== */
+        /* ==================================================
+           TOPIC LIST
+        =================================================== */
 
-        .chapter-hero {
+        #topicList {
+
+            display: grid;
+
+            gap: 11px;
+        }
+
+
+        .topic-card {
 
             display: flex;
 
@@ -171,27 +516,33 @@
 
             justify-content: space-between;
 
-            gap: 18px;
+            gap: 15px;
 
-            padding: 21px;
+            padding: 17px;
 
-            border-radius: 19px;
+            border-radius: 16px;
 
             background:
-                linear-gradient(
-                    145deg,
-                    #10213b,
-                    #07101f
-                );
+                #0d192c;
 
             border:
                 1px solid
-                rgba(255,193,7,0.15);
+                rgba(255,255,255,0.06);
 
+            transition:
+                border-color 0.2s,
+                transform 0.2s;
         }
 
 
-        .hero-small {
+        .topic-card:hover {
+
+            border-color:
+                rgba(255,193,7,0.22);
+        }
+
+
+        .topic-number {
 
             color: #ffc107;
 
@@ -201,445 +552,305 @@
 
             letter-spacing: 1px;
 
-            margin-bottom: 6px;
+            text-transform: uppercase;
 
+            margin-bottom: 5px;
         }
 
 
-        .chapter-hero h1 {
-
-            margin: 0 0 7px;
+        .topic-name {
 
             color: white;
-
-            font-size: 24px;
-
-            line-height: 1.25;
-
-        }
-
-
-        .chapter-hero p {
-
-            margin: 0;
-
-            color: #8997aa;
-
-            font-size: 12px;
-
-            line-height: 1.5;
-
-        }
-
-
-        .hero-icon {
-
-            width: 58px;
-
-            height: 58px;
-
-            flex-shrink: 0;
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            border-radius: 16px;
-
-            background:
-                rgba(255,193,7,0.08);
-
-            font-size: 29px;
-
-        }
-
-
-        /* =====================================
-           SECTION HEADING
-           ===================================== */
-
-        .section-heading {
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: space-between;
-
-            margin: 20px 2px 11px;
-
-        }
-
-
-        .section-heading h2 {
-
-            margin: 0;
-
-            color: white;
-
-            font-size: 17px;
-
-        }
-
-
-        .section-heading span {
-
-            color: #8492a7;
-
-            font-size: 10px;
-
-        }
-
-
-        /* =====================================
-           COMPACT TOPIC GRID
-           ===================================== */
-
-        .topic-grid {
-
-            display: grid;
-
-            grid-template-columns:
-                repeat(2, minmax(0, 1fr));
-
-            gap: 11px;
-
-        }
-
-
-        /* =====================================
-           TOPIC CARD
-           ===================================== */
-
-        .topic-card {
-
-            display: flex;
-
-            align-items: center;
-
-            gap: 12px;
-
-            min-height: 105px;
-
-            padding: 12px;
-
-            border-radius: 15px;
-
-            background:
-                linear-gradient(
-                    145deg,
-                    #101f35,
-                    #0b1628
-                );
-
-            border:
-                1px solid
-                rgba(255,255,255,0.07);
-
-            cursor: pointer;
-
-            transition:
-                transform .18s ease,
-                border-color .18s ease;
-
-        }
-
-
-        .topic-card:hover {
-
-            transform:
-                translateY(-2px);
-
-            border-color:
-                rgba(255,193,7,0.28);
-
-        }
-
-
-        .topic-number {
-
-            width: 43px;
-
-            height: 43px;
-
-            flex-shrink: 0;
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            border-radius: 11px;
-
-            background:
-                rgba(255,193,7,0.09);
-
-            border:
-                1px solid
-                rgba(255,193,7,0.17);
-
-            color: #ffc107;
 
             font-size: 16px;
 
             font-weight: 900;
-
         }
 
 
-        .topic-card-content {
-
-            min-width: 0;
-
-            flex: 1;
-
-        }
-
-
-        .topic-badge {
-
-            color: #ffc107;
-
-            font-size: 8px;
-
-            font-weight: 900;
-
-            letter-spacing: .7px;
-
-            margin-bottom: 3px;
-
-        }
-
-
-        .topic-card-title {
-
-            margin: 0 0 4px;
-
-            color: white;
-
-            font-size: 13px;
-
-            font-weight: 900;
-
-            line-height: 1.3;
-
-        }
-
-
-        .topic-card-description {
-
-            margin: 0 0 7px;
+        .topic-description {
 
             color: #7f8da2;
 
-            font-size: 9px;
+            font-size: 11px;
 
-            line-height: 1.35;
+            line-height: 1.45;
 
-            display: -webkit-box;
-
-            -webkit-line-clamp: 2;
-
-            -webkit-box-orient: vertical;
-
-            overflow: hidden;
-
+            margin-top: 4px;
         }
 
 
-        .topic-open-label {
+        .topic-button {
+
+            flex-shrink: 0;
+
+            min-width: 78px;
+
+            min-height: 40px;
+
+            padding: 0 15px;
+
+            border-radius: 10px;
+
+            border:
+                1px solid
+                rgba(255,193,7,0.25);
+
+            background:
+                #17263d;
 
             color: #ffc107;
 
-            font-size: 9px;
+            font-size: 12px;
 
             font-weight: 900;
 
+            cursor: pointer;
         }
 
 
-        /* =====================================
-           LOADING / EMPTY
-           ===================================== */
+        .topic-button:active {
 
-        .chapter-loading {
-
-            padding: 40px 15px;
-
-            text-align: center;
-
-            color: #8997aa;
-
-            font-size: 12px;
-
+            transform:
+                scale(0.96);
         }
 
 
-        .empty-state {
+        /* ==================================================
+           EMPTY / LOADING
+        =================================================== */
 
-            padding: 40px 15px;
+        .chapter-empty {
+
+            grid-column:
+                1 / -1;
+
+            min-height: 130px;
+
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: center;
+
+            justify-content: center;
 
             text-align: center;
 
-            border-radius: 15px;
+            padding: 25px;
 
-            background: #0d192c;
+            border-radius: 16px;
+
+            background:
+                #0d192c;
 
             border:
                 1px solid
                 rgba(255,255,255,0.06);
 
+            color: #8d9aae;
+
+            font-size: 13px;
+
+            line-height: 1.6;
         }
 
 
-        .empty-icon {
-
-            font-size: 30px;
-
-            margin-bottom: 8px;
-
-        }
-
-
-        .empty-state h3 {
-
-            margin: 0 0 5px;
-
-            color: white;
-
-            font-size: 15px;
-
-        }
-
-
-        .empty-state p {
-
-            margin: 0;
-
-            color: #8492a7;
-
-            font-size: 11px;
-
-        }
-
-
-        /* =====================================
-           BOTTOM NAV
-           ===================================== */
-
-        .chapter-bottom-nav {
-
-            position: fixed;
-
-            left: 0;
-
-            right: 0;
-
-            bottom: 0;
-
-            z-index: 60;
-
-            display: flex;
-
-            justify-content: space-around;
-
-            padding: 8px 6px;
-
-            background:
-                rgba(4,10,21,0.97);
-
-            border-top:
-                1px solid
-                rgba(255,255,255,0.07);
-
-            backdrop-filter: blur(15px);
-
-        }
-
-
-        .bottom-item {
-
-            flex: 1;
+        .error-button {
 
             border: none;
 
-            background: transparent;
+            border-radius: 10px;
 
-            color: #748197;
+            padding:
+                11px 20px;
 
-            padding: 5px;
+            background:
+                #ffc107;
+
+            color: #111;
+
+            font-weight: 900;
 
             cursor: pointer;
-
         }
 
 
-        .bottom-item span {
+        /* ==================================================
+           INFO BOX
+        =================================================== */
 
-            display: block;
+        .chapter-info {
 
-            font-size: 17px;
+            margin-top: 22px;
 
-            margin-bottom: 2px;
+            padding: 17px 18px;
 
+            border-radius: 16px;
+
+            background:
+                rgba(255,193,7,0.045);
+
+            border:
+                1px solid
+                rgba(255,193,7,0.13);
+
+            color: #909eb1;
+
+            font-size: 12px;
+
+            line-height: 1.65;
         }
 
 
-        .bottom-item small {
-
-            font-size: 8px;
-
-            font-weight: 800;
-
-        }
-
-
-        .bottom-item.active {
+        .chapter-info strong {
 
             color: #ffc107;
-
         }
 
 
-        /* =====================================
-           RESPONSIVE
-           ===================================== */
+        /* ==================================================
+           MOBILE
+        =================================================== */
 
-        @media (max-width: 650px) {
+        @media (max-width: 600px) {
 
-            .topic-grid {
+            .chapter-header {
 
-                grid-template-columns: 1fr;
+                height: 70px;
 
+                padding: 0 14px;
+            }
+
+
+            .chapter-back {
+
+                width: 46px;
+
+                height: 46px;
+
+                font-size: 24px;
+            }
+
+
+            .brand {
+
+                font-size: 26px;
+            }
+
+
+            .chapter-main {
+
+                padding:
+                    18px 14px 45px;
             }
 
 
             .chapter-hero {
 
-                padding: 18px;
+                padding:
+                    23px 19px;
 
+                border-radius: 20px;
             }
 
 
-            .chapter-hero h1 {
+            .chapter-title {
 
-                font-size: 21px;
+                font-size: 26px;
+            }
 
+
+            .chapter-description {
+
+                font-size: 13px;
+            }
+
+
+            #typePracticeGrid {
+
+                grid-template-columns:
+                    1fr;
+
+                gap: 11px;
+            }
+
+
+            .type-card {
+
+                min-height: 145px;
+
+                padding: 16px;
+            }
+
+
+            .type-title {
+
+                font-size: 16px;
+            }
+
+
+            .topic-card {
+
+                padding: 15px;
+
+                gap: 10px;
+            }
+
+
+            .topic-name {
+
+                font-size: 15px;
+            }
+
+
+            .topic-description {
+
+                font-size: 10px;
+            }
+
+
+            .topic-button {
+
+                min-width: 68px;
+
+                min-height: 38px;
+
+                padding:
+                    0 12px;
+            }
+
+
+            .section-title {
+
+                font-size: 19px;
             }
 
         }
 
 
-        @media (min-width: 1000px) {
+        /* ==================================================
+           DESKTOP
+        =================================================== */
 
-            .topic-grid {
+        @media (min-width: 900px) {
+
+            .chapter-main {
+
+                padding-top: 35px;
+            }
+
+
+            .chapter-title {
+
+                font-size: 35px;
+            }
+
+
+            #typePracticeGrid {
 
                 grid-template-columns:
                     repeat(3, minmax(0, 1fr));
-
             }
 
         }
@@ -655,84 +866,73 @@
 <div class="chapter-page">
 
 
-    <!-- HEADER -->
+    <!-- ==================================================
+         HEADER
+    =================================================== -->
 
     <header class="chapter-header">
 
 
-        <div class="header-left">
+        <button
+            type="button"
+            class="chapter-back"
+            onclick="goBack()"
+            aria-label="Back"
+        >
+
+            ←
+
+        </button>
 
 
-            <button
-                class="header-back"
-                type="button"
-                onclick="goBackToCourse()"
-            >
-                ←
-            </button>
+        <div class="brand">
 
-
-            <div class="brand-logo">
-
-                <span>m</span>NEET
-
-            </div>
-
+            <span>m</span>NEET
 
         </div>
-
-
-        <button
-            class="header-logout"
-            type="button"
-            onclick="logoutUser()"
-        >
-            Logout
-        </button>
 
 
     </header>
 
 
 
-    <!-- MAIN -->
+    <!-- ==================================================
+         MAIN
+    =================================================== -->
 
     <main class="chapter-main">
 
 
-        <!-- HERO -->
+        <!-- ==================================================
+             HERO
+        =================================================== -->
 
         <section class="chapter-hero">
 
 
-            <div>
+            <div class="chapter-label">
 
-                <div class="hero-small">
-
-                    NEET BIOLOGY CHAPTER
-
-                </div>
-
-
-                <h1 id="chapterTitle">
-
-                    Loading Chapter...
-
-                </h1>
-
-
-                <p id="chapterDescription">
-
-                    Please wait...
-
-                </p>
+                NEET BIOLOGY • CHAPTER
 
             </div>
 
 
-            <div class="hero-icon">
+            <h1
+                id="chapterTitle"
+                class="chapter-title"
+            >
 
-                🧬
+                Loading...
+
+            </h1>
+
+
+            <div
+                id="chapterDescription"
+                class="chapter-description"
+            >
+
+                Please wait...
 
             </div>
 
@@ -741,34 +941,91 @@
 
 
 
-        <!-- TOPICS -->
+        <!-- ==================================================
+             CHAPTER WISE PRACTICE
+        =================================================== -->
 
-        <div class="section-heading">
+        <div class="section-head">
 
 
-            <h2>
+            <div class="section-label">
 
-                Topics
+                CHAPTER WISE PRACTICE
+
+            </div>
+
+
+            <h2 class="section-title">
+
+                Practice by Question Type
 
             </h2>
 
 
-            <span id="topicCount">
+            <div class="section-description">
 
-                0 Topics
+                Choose a question type and start
+                your NEET Biology practice.
 
-            </span>
+            </div>
 
 
         </div>
 
 
+
         <section
-            id="topicList"
-            class="topic-grid"
+            id="typePracticeGrid"
         >
 
-            <div class="chapter-loading">
+            <div class="chapter-empty">
+
+                Loading practice...
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ==================================================
+             TOPIC WISE PRACTICE
+        =================================================== -->
+
+        <div class="section-head">
+
+
+            <div class="section-label">
+
+                TOPIC WISE PRACTICE
+
+            </div>
+
+
+            <h2 class="section-title">
+
+                Chapter Topics
+
+            </h2>
+
+
+            <div class="section-description">
+
+                Open a topic for quiz practice
+                and topic notes.
+
+            </div>
+
+
+        </div>
+
+
+
+        <section
+            id="topicList"
+        >
+
+            <div class="chapter-empty">
 
                 Loading topics...
 
@@ -777,72 +1034,37 @@
         </section>
 
 
+
+        <!-- ==================================================
+             INFO
+        =================================================== -->
+
+        <div class="chapter-info">
+
+            💡
+
+            <strong>
+                mNEET Practice Tip:
+            </strong>
+
+            Start with Topic Wise Practice
+            to learn the concepts. Then use
+            Assertion, Statement, Match,
+            Diagram, PYQ and Rapid Revision
+            for exam-level practice.
+
+        </div>
+
+
     </main>
-
-
-
-    <!-- BOTTOM NAV -->
-
-    <nav class="chapter-bottom-nav">
-
-
-        <button
-            class="bottom-item"
-            type="button"
-            onclick="goBackToStudent()"
-        >
-
-            <span>🏠</span>
-
-            <small>Home</small>
-
-        </button>
-
-
-        <button
-            class="bottom-item active"
-            type="button"
-            onclick="goBackToCourse()"
-        >
-
-            <span>📝</span>
-
-            <small>Practice</small>
-
-        </button>
-
-
-        <button
-            class="bottom-item"
-            type="button"
-            onclick="openNCERT()"
-        >
-
-            <span>📖</span>
-
-            <small>NCERT</small>
-
-        </button>
-
-
-        <button
-            class="bottom-item"
-            type="button"
-            onclick="openVideos()"
-        >
-
-            <span>▶️</span>
-
-            <small>Videos</small>
-
-        </button>
-
-
-    </nav>
-
 
 </div>
 
+
+
+<!-- ==================================================
+     JAVASCRIPT
+=================================================== -->
 
 <script src="js/firebase.js"></script>
 
