@@ -1,702 +1,620 @@
-// ==========================================
-// mNEET - Student Dashboard
-// ==========================================
+// ==========================================================
+// mNEET - STUDENT DASHBOARD
+// Firebase Firestore Progress Version
+// ==========================================================
 
-
-// ==========================================
-// GLOBAL VARIABLES
-// ==========================================
+"use strict";
 
 let currentUser = null;
+let courses = [];
+let overallProgress = {};
 
-let currentCourseId = null;
 
-
-// ==========================================
-// PAGE LOAD
-// ==========================================
+// ==========================================================
+// PAGE START
+// ==========================================================
 
 document.addEventListener("DOMContentLoaded", function () {
 
-    auth.onAuthStateChanged(function (user) {
-
-        // --------------------------------------
-        // User NOT logged in
-        // --------------------------------------
-
-        if (!user) {
-
-            window.location.href =
-                "index.html";
-
-            return;
-        }
-
-
-        // --------------------------------------
-        // User logged in
-        // --------------------------------------
-
-        currentUser = user;
-
-
-        // Load dashboard
-
-        loadStudentProfile();
-
-        loadCourses();
-
-        loadProgress();
-
-    });
+    waitForFirebase();
 
 });
 
 
-// ==========================================
-// LOAD STUDENT PROFILE
-// ==========================================
+// ==========================================================
+// WAIT FOR FIREBASE
+// ==========================================================
 
-function loadStudentProfile() {
+function waitForFirebase() {
 
-    if (!currentUser) {
+    if (
+        typeof firebase === "undefined" ||
+        typeof firebase.auth !== "function"
+    ) {
+
+        setTimeout(
+            waitForFirebase,
+            300
+        );
 
         return;
-
     }
 
 
-    db.collection("users")
-        .doc(currentUser.uid)
-        .get()
+    firebase.auth().onAuthStateChanged(
+        function (user) {
 
-        .then(function (doc) {
+            if (!user) {
 
-            if (doc.exists) {
+                window.location.href =
+                    "index.html";
 
-                const data =
-                    doc.data();
-
-
-                const name =
-                    data.name ||
-                    "Student";
-
-
-                const welcome =
-                    document.getElementById(
-                        "welcomeText"
-                    );
-
-
-                if (welcome) {
-
-                    welcome.textContent =
-                        "Welcome, " + name;
-
-                }
-
+                return;
             }
 
-        })
 
-        .catch(function (error) {
+            currentUser = user;
 
-            console.error(
-                "Profile loading error:",
-                error
-            );
+            loadDashboard();
 
-        });
+        }
+    );
 
 }
 
 
-// ==========================================
-// LOAD COURSES
-// ==========================================
+// ==========================================================
+// LOAD DASHBOARD
+// ==========================================================
 
-function loadCourses() {
+async function loadDashboard() {
 
-    const courseList =
-        document.getElementById(
-            "courseList"
+    showDashboardLoading();
+
+
+    try {
+
+        const db =
+            firebase.firestore();
+
+
+        /*
+          Load user progress first
+        */
+
+        await loadOverallProgress(
+            db
         );
 
 
-    if (!courseList) {
+        /*
+          Load available courses
+        */
 
-        return;
+        await loadCourses(
+            db
+        );
+
+
+        /*
+          Update dashboard
+        */
+
+        renderDashboard();
+
+
+    } catch (error) {
+
+        console.error(
+            "Dashboard loading error:",
+            error
+        );
+
+
+        showDashboardError(
+            "Dashboard load করতে সমস্যা হয়েছে।"
+        );
 
     }
 
-
-    courseList.innerHTML = `
-        <div class="course-loading">
-            Loading courses...
-        </div>
-    `;
+}
 
 
-    db.collection("courses")
-        .get()
+// ==========================================================
+// LOAD OVERALL PROGRESS
+// ==========================================================
 
-        .then(function (snapshot) {
+async function loadOverallProgress(db) {
 
-            courseList.innerHTML = "";
+    overallProgress = {};
 
 
-            // No courses
+    try {
 
-            if (snapshot.empty) {
+        const progressRef =
+            db
+                .collection("users")
+                .doc(currentUser.uid)
+                .collection("progress")
+                .doc("overall");
 
-                courseList.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">
-                            📚
-                        </div>
 
-                        <h3>
-                            No courses available
-                        </h3>
+        const snap =
+            await progressRef.get();
 
-                        <p>
-                            Courses will appear here
-                            when they are published.
-                        </p>
-                    </div>
-                `;
 
-                updateCourseCount(0);
+        if (snap.exists) {
+
+            overallProgress =
+                snap.data() || {};
+
+        }
+
+
+    } catch (error) {
+
+        console.warn(
+            "Overall progress not found:",
+            error
+        );
+
+
+        overallProgress = {};
+
+    }
+
+}
+
+
+// ==========================================================
+// LOAD COURSES
+// ==========================================================
+
+async function loadCourses(db) {
+
+    courses = [];
+
+
+    const snapshot =
+        await db
+            .collection("courses")
+            .get();
+
+
+    snapshot.forEach(
+        function (doc) {
+
+            const data =
+                doc.data() || {};
+
+
+            /*
+              Published false হলে
+              student দেখবে না।
+            */
+
+            if (
+                data.published !== undefined &&
+                data.published === false
+            ) {
 
                 return;
 
             }
 
 
-            let totalCourses = 0;
+            courses.push({
 
-
-            snapshot.forEach(function (doc) {
-
-                const course =
-                    doc.data();
-
-
-                // ----------------------------------
-                // Only published courses
-                // ----------------------------------
-
-                if (
-                    course.published === false
-                ) {
-
-                    return;
-
-                }
-
-
-                totalCourses++;
-
-
-                createCourseCard(
+                id:
                     doc.id,
-                    course,
-                    courseList
-                );
+
+                ...data
 
             });
 
+        }
+    );
 
-            updateCourseCount(
-                totalCourses
+
+    /*
+      Sort by order
+    */
+
+    courses.sort(
+        function (a, b) {
+
+            return (
+                Number(a.order || 0) -
+                Number(b.order || 0)
             );
 
-
-            if (totalCourses === 0) {
-
-                courseList.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">
-                            📚
-                        </div>
-
-                        <h3>
-                            No published courses
-                        </h3>
-
-                        <p>
-                            Please check again later.
-                        </p>
-                    </div>
-                `;
-
-            }
-
-        })
-
-        .catch(function (error) {
-
-            console.error(
-                "Course loading error:",
-                error
-            );
-
-
-            courseList.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">
-                        ⚠️
-                    </div>
-
-                    <h3>
-                        Unable to load courses
-                    </h3>
-
-                    <p>
-                        Please check your
-                        internet connection.
-                    </p>
-                </div>
-            `;
-
-        });
-
-}
-
-
-// ==========================================
-// CREATE COURSE CARD
-// ==========================================
-
-function createCourseCard(
-    courseId,
-    course,
-    container
-) {
-
-
-    const name =
-        course.name ||
-        course.title ||
-        "Biology Course";
-
-
-    const description =
-        course.description ||
-        "NEET Biology preparation course.";
-
-
-    const price =
-        course.price !== undefined
-            ? course.price
-            : 0;
-
-
-    const image =
-        course.image ||
-        "assets/logo.png";
-
-
-    const card =
-        document.createElement("div");
-
-
-    card.className =
-        "course-card";
-
-
-    card.innerHTML = `
-
-        <div class="course-image">
-
-            <img
-                src="${image}"
-                alt="${escapeHTML(name)}"
-                onerror="
-                    this.style.display='none';
-                "
-            >
-
-        </div>
-
-
-        <div class="course-content">
-
-            <div class="course-badge">
-                NEET BIOLOGY
-            </div>
-
-
-            <h3 class="course-title">
-
-                ${escapeHTML(name)}
-
-            </h3>
-
-
-            <p class="course-description">
-
-                ${escapeHTML(description)}
-
-            </p>
-
-
-            <div class="course-bottom">
-
-                <div class="course-price">
-
-                    ${
-                        price > 0
-                            ? "₹" + price
-                            : "Free"
-                    }
-
-                </div>
-
-
-                <button
-                    class="course-button"
-                    onclick="
-                        openCourse('${courseId}')
-                    "
-                >
-
-                    Open
-
-                </button>
-
-            </div>
-
-        </div>
-
-    `;
-
-
-    container.appendChild(card);
-
-
-    // Check purchase
-
-    checkPurchase(
-        courseId,
-        card
+        }
     );
 
 }
 
 
-// ==========================================
-// CHECK COURSE PURCHASE
-// ==========================================
+// ==========================================================
+// RENDER DASHBOARD
+// ==========================================================
 
-function checkPurchase(
-    courseId,
-    card
-) {
+function renderDashboard() {
 
-    if (!currentUser) {
+    /*
+      Welcome
+    */
 
-        return;
-
-    }
-
-
-    db.collection("purchases")
-        .doc(currentUser.uid)
-        .get()
-
-        .then(function (doc) {
-
-            if (!doc.exists) {
-
-                return;
-
-            }
+    const welcome =
+        document.getElementById(
+            "welcomeText"
+        );
 
 
-            const purchases =
-                doc.data();
+    if (welcome) {
+
+        const name =
+            currentUser.displayName ||
+            currentUser.email ||
+            "Student";
 
 
-            if (
-                purchases[courseId] === true
-            ) {
-
-                card.classList.add(
-                    "purchased"
-                );
-
-
-                const badge =
-                    card.querySelector(
-                        ".course-badge"
-                    );
-
-
-                if (badge) {
-
-                    badge.textContent =
-                        "PURCHASED";
-
-                }
-
-            }
-
-        })
-
-        .catch(function (error) {
-
-            console.error(
-                "Purchase check error:",
-                error
-            );
-
-        });
-
-}
-
-
-// ==========================================
-// OPEN COURSE
-// ==========================================
-
-function openCourse(courseId) {
-
-    if (!courseId) {
-
-        return;
+        welcome.textContent =
+            "Welcome, " +
+            name;
 
     }
 
 
-    currentCourseId =
-        courseId;
-
-
-    localStorage.setItem(
-        "activeCourse",
-        courseId
-    );
-
-
-    window.location.href =
-        "course.html";
-
-}
-
-
-// ==========================================
-// LOAD PROGRESS
-// ==========================================
-
-function loadProgress() {
-
-    if (!currentUser) {
-
-        return;
-
-    }
-
-
-    db.collection("users")
-        .doc(currentUser.uid)
-        .collection("progress")
-        .doc("overall")
-        .get()
-
-        .then(function (doc) {
-
-            if (!doc.exists) {
-
-                setProgress(0);
-
-                setText(
-                    "lastScore",
-                    "--"
-                );
-
-                setText(
-                    "accuracy",
-                    "--"
-                );
-
-                setText(
-                    "bestScore",
-                    "--"
-                );
-
-                return;
-
-            }
-
-
-            const data =
-                doc.data();
-
-
-            const progress =
-                Number(
-                    data.percent || 0
-                );
-
-
-            const lastScore =
-                data.lastScore !== undefined
-                    ? data.lastScore
-                    : "--";
-
-
-            const accuracy =
-                data.accuracy !== undefined
-                    ? data.accuracy + "%"
-                    : "--";
-
-
-            const bestScore =
-                data.bestScore !== undefined
-                    ? data.bestScore
-                    : "--";
-
-
-            setProgress(
-                progress
-            );
-
-
-            setText(
-                "lastScore",
-                lastScore
-            );
-
-
-            setText(
-                "accuracy",
-                accuracy
-            );
-
-
-            setText(
-                "bestScore",
-                bestScore
-            );
-
-
-            if (data.lastCourseId) {
-
-                currentCourseId =
-                    data.lastCourseId;
-
-            }
-
-
-            if (data.lastTopicName) {
-
-                setText(
-                    "continueTitle",
-                    data.lastTopicName
-                );
-
-            }
-
-
-            if (data.lastActivity) {
-
-                setText(
-                    "continueText",
-                    data.lastActivity
-                );
-
-            }
-
-        })
-
-        .catch(function (error) {
-
-            console.error(
-                "Progress loading error:",
-                error
-            );
-
-        });
-
-}
-
-
-// ==========================================
-// SET PROGRESS
-// ==========================================
-
-function setProgress(percent) {
-
-    let value =
-        Number(percent);
-
-
-    // Keep between 0 and 100
-
-    if (value < 0) {
-
-        value = 0;
-
-    }
-
-
-    if (value > 100) {
-
-        value = 100;
-
-    }
-
-
-    value =
-        Math.round(value);
+    /*
+      Progress
+    */
+
+    const progress =
+        getOverallPercent();
 
 
     setText(
         "progressPercent",
-        value + "%"
+        progress + "%"
     );
 
 
     setText(
         "progressCircleText",
-        value + "%"
+        progress + "%"
     );
 
 
-    const bar =
+    const progressBar =
         document.getElementById(
             "progressBar"
         );
 
 
-    if (bar) {
+    if (progressBar) {
 
-        bar.style.width =
-            value + "%";
+        progressBar.style.width =
+            progress + "%";
+
+    }
+
+
+    /*
+      Last score
+    */
+
+    const lastScore =
+        Number(
+            overallProgress.lastScore || 0
+        );
+
+
+    setText(
+        "lastScore",
+        lastScore
+    );
+
+
+    /*
+      Accuracy
+    */
+
+    const accuracy =
+        Number(
+            overallProgress.accuracy ||
+            overallProgress.lastAccuracy ||
+            0
+        );
+
+
+    setText(
+        "accuracy",
+        accuracy + "%"
+    );
+
+
+    /*
+      Best score
+    */
+
+    const bestScore =
+        Number(
+            overallProgress.bestScore || 0
+        );
+
+
+    setText(
+        "bestScore",
+        bestScore
+    );
+
+
+    /*
+      Course count
+    */
+
+    setText(
+        "courseCount",
+        courses.length
+    );
+
+
+    /*
+      Continue
+    */
+
+    renderContinue();
+
+
+    /*
+      Course list
+    */
+
+    renderCourseList();
+
+}
+
+
+// ==========================================================
+// OVERALL PERCENT
+// ==========================================================
+
+function getOverallPercent() {
+
+    let percent =
+        Number(
+            overallProgress.percent || 0
+        );
+
+
+    if (
+        !Number.isFinite(percent)
+    ) {
+
+        percent = 0;
+
+    }
+
+
+    return Math.max(
+        0,
+        Math.min(
+            100,
+            Math.round(percent)
+        )
+    );
+
+}
+
+
+// ==========================================================
+// CONTINUE SECTION
+// ==========================================================
+
+function renderContinue() {
+
+    const continueTitle =
+        document.getElementById(
+            "continueTitle"
+        );
+
+
+    const continueText =
+        document.getElementById(
+            "continueText"
+        );
+
+
+    const continueButton =
+        document.getElementById(
+            "continueButton"
+        );
+
+
+    const lastCourseId =
+        overallProgress.lastCourseId ||
+        localStorage.getItem(
+            "activeCourse"
+        );
+
+
+    const lastTopicName =
+        overallProgress.lastTopicName ||
+        "";
+
+
+    if (!lastCourseId) {
+
+        if (continueTitle) {
+
+            continueTitle.textContent =
+                "Start Your Course";
+
+        }
+
+
+        if (continueText) {
+
+            continueText.textContent =
+                courses.length
+                    ? "Choose a course and start practicing."
+                    : "No course available yet.";
+
+        }
+
+
+        if (continueButton) {
+
+            continueButton.textContent =
+                courses.length
+                    ? "Browse Courses"
+                    : "No Course";
+
+            continueButton.disabled =
+                courses.length === 0;
+
+
+            continueButton.onclick =
+                function () {
+
+                    const list =
+                        document.getElementById(
+                            "courseList"
+                        );
+
+
+                    if (list) {
+
+                        list.scrollIntoView({
+                            behavior:
+                                "smooth"
+                        });
+
+                    }
+
+                };
+
+        }
+
+
+        return;
+    }
+
+
+    if (continueTitle) {
+
+        continueTitle.textContent =
+            "Continue Practice";
+
+    }
+
+
+    if (continueText) {
+
+        continueText.textContent =
+            lastTopicName
+                ? lastTopicName
+                : "Continue your latest practice.";
+
+    }
+
+
+    if (continueButton) {
+
+        continueButton.disabled =
+            false;
+
+        continueButton.textContent =
+            "Continue";
+
+
+        continueButton.onclick =
+            function () {
+
+                continuePractice();
+
+            };
 
     }
 
 }
 
 
-// ==========================================
-// CONTINUE LEARNING
-// ==========================================
+// ==========================================================
+// CONTINUE PRACTICE
+// ==========================================================
 
-function continueLearning() {
+function continuePractice() {
 
-    const savedCourse =
+    const courseId =
+        overallProgress.lastCourseId ||
         localStorage.getItem(
             "activeCourse"
         );
 
 
-    const courseId =
-        currentCourseId ||
-        savedCourse;
+    const chapterId =
+        overallProgress.lastChapterId ||
+        localStorage.getItem(
+            "activeChapter"
+        );
 
+
+    const topicId =
+        overallProgress.lastTopicId ||
+        localStorage.getItem(
+            "activeTopic"
+        );
+
+
+    if (
+        courseId &&
+        chapterId &&
+        topicId
+    ) {
+
+        localStorage.setItem(
+            "activeCourse",
+            courseId
+        );
+
+
+        localStorage.setItem(
+            "activeChapter",
+            chapterId
+        );
+
+
+        localStorage.setItem(
+            "activeTopic",
+            topicId
+        );
+
+
+        window.location.href =
+            "topic.html" +
+            "?courseId=" +
+            encodeURIComponent(
+                courseId
+            ) +
+            "&chapterId=" +
+            encodeURIComponent(
+                chapterId
+            ) +
+            "&topicId=" +
+            encodeURIComponent(
+                topicId
+            );
+
+
+        return;
+    }
+
+
+    /*
+      Course available but no
+      previous topic found.
+    */
 
     if (courseId) {
 
@@ -707,26 +625,32 @@ function continueLearning() {
 
 
         window.location.href =
-            "course.html";
+            "course.html" +
+            "?courseId=" +
+            encodeURIComponent(
+                courseId
+            );
 
 
         return;
-
     }
 
 
-    // No course selected
+    /*
+      Nothing to continue.
+    */
 
-    const courseList =
+    const list =
         document.getElementById(
             "courseList"
         );
 
 
-    if (courseList) {
+    if (list) {
 
-        courseList.scrollIntoView({
-            behavior: "smooth"
+        list.scrollIntoView({
+            behavior:
+                "smooth"
         });
 
     }
@@ -734,213 +658,194 @@ function continueLearning() {
 }
 
 
-// ==========================================
-// QUICK PRACTICE
-// ==========================================
+// ==========================================================
+// COURSE LIST
+// ==========================================================
 
-function openTopicPractice() {
+function renderCourseList() {
 
-    const courseId =
-        getActiveCourse();
-
-
-    if (!courseId) {
-
-        showDashboardMessage(
-            "Please open a course first."
-        );
-
-        return;
-
-    }
-
-
-    localStorage.setItem(
-        "practiceMode",
-        "topic"
-    );
-
-
-    window.location.href =
-        "course.html";
-
-}
-
-
-// ==========================================
-// CHAPTER PRACTICE
-// ==========================================
-
-function openChapterPractice() {
-
-    const courseId =
-        getActiveCourse();
-
-
-    if (!courseId) {
-
-        showDashboardMessage(
-            "Please open a course first."
-        );
-
-        return;
-
-    }
-
-
-    localStorage.setItem(
-        "practiceMode",
-        "chapter"
-    );
-
-
-    window.location.href =
-        "course.html";
-
-}
-
-
-// ==========================================
-// NCERT
-// ==========================================
-
-function openNCERT() {
-
-    const courseId =
-        getActiveCourse();
-
-
-    if (!courseId) {
-
-        showDashboardMessage(
-            "Please open a course first."
-        );
-
-        return;
-
-    }
-
-
-    window.location.href =
-        "ncert.html";
-
-}
-
-
-// ==========================================
-// VIDEOS
-// ==========================================
-
-function openVideos() {
-
-    const courseId =
-        getActiveCourse();
-
-
-    if (!courseId) {
-
-        showDashboardMessage(
-            "Please open a course first."
-        );
-
-        return;
-
-    }
-
-
-    window.location.href =
-        "video.html";
-
-}
-
-
-// ==========================================
-// PROFILE
-// ==========================================
-
-function openProfile() {
-
-    showDashboardMessage(
-        "Profile section will be added soon."
-    );
-
-}
-
-
-// ==========================================
-// HOME
-// ==========================================
-
-function goHome() {
-
-    window.scrollTo({
-
-        top: 0,
-
-        behavior: "smooth"
-
-    });
-
-}
-
-
-// ==========================================
-// ACTIVE COURSE
-// ==========================================
-
-function getActiveCourse() {
-
-    return (
-        currentCourseId ||
-        localStorage.getItem(
-            "activeCourse"
-        )
-    );
-
-}
-
-
-// ==========================================
-// COURSE COUNT
-// ==========================================
-
-function updateCourseCount(count) {
-
-    const element =
+    const container =
         document.getElementById(
-            "courseCount"
+            "courseList"
         );
 
 
-    if (!element) {
-
+    if (!container) {
         return;
-
     }
 
 
-    element.textContent =
-        count + (
-            count === 1
-                ? " Course"
-                : " Courses"
+    if (!courses.length) {
+
+        container.innerHTML = `
+
+            <div class="course-loading">
+
+                No courses available.
+
+            </div>
+
+        `;
+
+        return;
+    }
+
+
+    container.innerHTML = "";
+
+
+    courses.forEach(
+        function (course) {
+
+            const card =
+                document.createElement(
+                    "div"
+                );
+
+
+            card.className =
+                "course-card";
+
+
+            const badge =
+                escapeHTML(
+                    course.badge ||
+                    "NEET BIOLOGY"
+                );
+
+
+            const title =
+                escapeHTML(
+                    course.name ||
+                    course.title ||
+                    "Biology Course"
+                );
+
+
+            const description =
+                escapeHTML(
+                    course.description ||
+                    "NEET Biology complete practice course."
+                );
+
+
+            const price =
+                course.price !== undefined
+                    ? "₹" +
+                      Number(
+                          course.price
+                      )
+                    : "";
+
+
+            card.innerHTML = `
+
+                <div class="course-badge">
+                    ${badge}
+                </div>
+
+                <div class="course-title">
+                    ${title}
+                </div>
+
+                <div class="course-description">
+                    ${description}
+                </div>
+
+                ${
+                    price
+                        ? `
+                            <div
+                                style="
+                                    color:#ffc107;
+                                    font-size:20px;
+                                    font-weight:900;
+                                    margin:10px 0;
+                                "
+                            >
+                                ${price}
+                            </div>
+                          `
+                        : ""
+                }
+
+                <button
+                    type="button"
+                    class="course-button"
+                >
+                    Open Course
+                </button>
+
+            `;
+
+
+            const button =
+                card.querySelector(
+                    ".course-button"
+                );
+
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    openCourse(
+                        course.id
+                    );
+
+                }
+            );
+
+
+            container.appendChild(
+                card
+            );
+
+        }
+    );
+
+}
+
+
+// ==========================================================
+// OPEN COURSE
+// ==========================================================
+
+function openCourse(courseId) {
+
+    if (!courseId) {
+        return;
+    }
+
+
+    localStorage.setItem(
+        "activeCourse",
+        courseId
+    );
+
+
+    window.location.href =
+        "course.html" +
+        "?courseId=" +
+        encodeURIComponent(
+            courseId
         );
 
 }
 
 
-// ==========================================
-// SET TEXT
-// ==========================================
+// ==========================================================
+// SAFE TEXT
+// ==========================================================
 
 function setText(
-    elementId,
+    id,
     value
 ) {
 
     const element =
         document.getElementById(
-            elementId
+            id
         );
 
 
@@ -954,22 +859,73 @@ function setText(
 }
 
 
-// ==========================================
-// DASHBOARD MESSAGE
-// ==========================================
+// ==========================================================
+// LOADING
+// ==========================================================
 
-function showDashboardMessage(
-    message
-) {
+function showDashboardLoading() {
 
-    alert(message);
+    const list =
+        document.getElementById(
+            "courseList"
+        );
+
+
+    if (list) {
+
+        list.innerHTML = `
+
+            <div class="course-loading">
+
+                Loading courses...
+
+            </div>
+
+        `;
+
+    }
 
 }
 
 
-// ==========================================
+// ==========================================================
+// ERROR
+// ==========================================================
+
+function showDashboardError(message) {
+
+    const list =
+        document.getElementById(
+            "courseList"
+        );
+
+
+    if (list) {
+
+        list.innerHTML = `
+
+            <div
+                class="course-loading"
+                style="color:#ff6b6b;"
+            >
+
+                ⚠️
+                <br><br>
+
+                ${escapeHTML(message)}
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+
+// ==========================================================
 // HTML ESCAPE
-// ==========================================
+// ==========================================================
 
 function escapeHTML(value) {
 
@@ -1000,4 +956,4 @@ function escapeHTML(value) {
             "&#039;"
         );
 
-      }
+}
