@@ -1,305 +1,199 @@
-/* =====================================================
-   mNEET RESULT ENGINE
-   ===================================================== */
+// ==========================================
+// mNEET - RESULT SYSTEM
+// ==========================================
 
-let resultData = null;
+let resultData = {};
 
 
-/* =====================================================
-   PAGE LOAD
-   ===================================================== */
+// ==========================================
+// PAGE LOAD
+// ==========================================
 
-document.addEventListener(
-    "DOMContentLoaded",
-    function(){
+document.addEventListener("DOMContentLoaded", function () {
 
-        if(
-            typeof firebase === "undefined"
-        ){
+    if (typeof auth === "undefined") {
+        console.error("Firebase Auth not loaded");
+        return;
+    }
 
-            console.error(
-                "Firebase not loaded."
-            );
+    auth.onAuthStateChanged(function (user) {
 
+        if (!user) {
+            window.location.href = "index.html";
             return;
         }
 
+        loadResult();
 
-        auth.onAuthStateChanged(
-            function(user){
+    });
 
-                if(!user){
-
-                    window.location.href =
-                        "index.html";
-
-                    return;
-                }
+});
 
 
-                loadResult();
+// ==========================================
+// LOAD RESULT
+// ==========================================
 
-            }
-        );
+function loadResult() {
 
-    }
-);
+    const raw =
+        localStorage.getItem("quizResult");
 
+    if (!raw) {
 
-/* =====================================================
-   LOAD RESULT
-   ===================================================== */
+        console.error("quizResult not found");
 
-function loadResult(){
-
-    /*
-      First try localStorage
-    */
-
-    let savedResult =
-        localStorage.getItem(
-            "quizResult"
-        );
-
-
-    /*
-      If missing, try sessionStorage
-    */
-
-    if(!savedResult){
-
-        savedResult =
-            sessionStorage.getItem(
-                "quizResult"
-            );
-    }
-
-
-    if(!savedResult){
-
-        console.error(
-            "No quiz result found."
-        );
-
-        window.location.href =
-            "student.html";
+        window.location.href = "student.html";
 
         return;
     }
 
+    try {
 
-    try{
+        resultData = JSON.parse(raw);
 
-        resultData =
-            JSON.parse(
-                savedResult
-            );
-
-    }catch(error){
+    } catch (error) {
 
         console.error(
-            "Result parse error:",
+            "Cannot read quizResult:",
             error
         );
+
+        window.location.href = "student.html";
 
         return;
     }
 
 
     console.log(
-        "mNEET RESULT:",
+        "RESULT DATA:",
         resultData
     );
 
 
     displayResult();
 
-
     saveProgress();
 
 }
 
 
-/* =====================================================
-   DISPLAY RESULT
-   ===================================================== */
+// ==========================================
+// DISPLAY RESULT
+// ==========================================
 
-function displayResult(){
-
-    if(!resultData){
-
-        return;
-    }
-
-
-    /*
-      Support BOTH old and new names
-    */
+function displayResult() {
 
     const total =
-        Number(
-            resultData.totalQuestions ??
-            resultData.total ??
-            resultData.questionCount ??
-            0
-        );
-
+        getNumber(resultData.total);
 
     const correct =
-        Number(
-            resultData.correct ??
-            0
-        );
-
+        getNumber(resultData.correct);
 
     const incorrect =
-        Number(
-            resultData.incorrect ??
-            0
-        );
-
+        getNumber(resultData.incorrect);
 
     const skipped =
-        Number(
-            resultData.skipped ??
-            0
-        );
+        getNumber(resultData.skipped);
 
 
-    const score =
-        Number(
-            resultData.score ??
-            0
-        );
+    let score =
+        getNumber(resultData.score);
 
 
-    const accuracy =
-        Number(
-            resultData.accuracy ??
-            0
-        );
+    let accuracy =
+        getNumber(resultData.accuracy);
 
 
     const time =
-        Number(
-            resultData.totalTime ??
-            resultData.time ??
-            0
+        getNumber(
+            resultData.time ||
+            resultData.totalTime
         );
 
 
-    const title =
-        resultData.quizTitle ||
-        "Quiz Result";
+    /*
+     * IMPORTANT
+     * যদি quiz.js score/accuracy না পাঠায়,
+     * এখানেই আবার calculate হবে।
+     */
 
+    if (
+        score === 0 &&
+        (
+            correct > 0 ||
+            incorrect > 0
+        )
+    ) {
 
-    const scoreEl =
-        document.getElementById(
-            "score"
-        );
+        score =
+            (correct * 4) -
+            (incorrect * 1);
 
-
-    const correctEl =
-        document.getElementById(
-            "correct"
-        );
-
-
-    const incorrectEl =
-        document.getElementById(
-            "incorrect"
-        );
-
-
-    const skippedEl =
-        document.getElementById(
-            "skipped"
-        );
-
-
-    const timeEl =
-        document.getElementById(
-            "time"
-        );
-
-
-    const accuracyEl =
-        document.getElementById(
-            "accuracy"
-        );
-
-
-    const fillEl =
-        document.getElementById(
-            "accuracyFill"
-        );
-
-
-    const titleEl =
-        document.getElementById(
-            "resultTitle"
-        );
-
-
-    if(scoreEl){
-
-        scoreEl.textContent =
-            score;
     }
 
 
-    if(correctEl){
+    if (total > 0) {
 
-        correctEl.textContent =
-            correct;
+        accuracy =
+            Math.round(
+                (correct / total) * 100
+            );
+
     }
 
 
-    if(incorrectEl){
+    setText(
+        "score",
+        score
+    );
 
-        incorrectEl.textContent =
-            incorrect;
-    }
+    setText(
+        "correct",
+        correct
+    );
 
+    setText(
+        "incorrect",
+        incorrect
+    );
 
-    if(skippedEl){
+    setText(
+        "skipped",
+        skipped
+    );
 
-        skippedEl.textContent =
-            skipped;
-    }
-
-
-    if(timeEl){
-
-        timeEl.textContent =
-            formatTime(time);
-    }
-
-
-    if(accuracyEl){
-
-        accuracyEl.textContent =
-            accuracy + "%";
-    }
+    setText(
+        "accuracy",
+        accuracy + "%"
+    );
 
 
-    if(fillEl){
+    document.getElementById(
+        "accuracyFill"
+    ).style.width =
+        Math.min(
+            100,
+            Math.max(
+                0,
+                accuracy
+            )
+        ) + "%";
 
-        fillEl.style.width =
-            Math.min(
-                100,
-                Math.max(
-                    0,
-                    accuracy
-                )
-            ) + "%";
-    }
+
+    setText(
+        "time",
+        formatTime(time)
+    );
 
 
-    if(titleEl){
+    if (resultData.title) {
 
-        titleEl.textContent =
-            title;
+        setText(
+            "resultTitle",
+            resultData.title
+        );
+
     }
 
 
@@ -312,283 +206,271 @@ function displayResult(){
 }
 
 
-/* =====================================================
-   MESSAGE
-   ===================================================== */
+// ==========================================
+// NUMBER HELPER
+// ==========================================
+
+function getNumber(value) {
+
+    const number =
+        Number(value);
+
+    if (
+        Number.isFinite(number)
+    ) {
+
+        return number;
+
+    }
+
+    return 0;
+
+}
+
+
+// ==========================================
+// TEXT HELPER
+// ==========================================
+
+function setText(
+    id,
+    value
+) {
+
+    const element =
+        document.getElementById(id);
+
+    if (!element) {
+        return;
+    }
+
+    element.textContent =
+        String(value);
+
+}
+
+
+// ==========================================
+// MESSAGE
+// ==========================================
 
 function updateMessage(
     accuracy,
     correct,
     total
-){
+) {
 
     const element =
         document.getElementById(
             "resultMessage"
         );
 
-
-    if(!element){
-
+    if (!element) {
         return;
     }
 
 
-    if(total <= 0){
+    if (total <= 0) {
 
         element.textContent =
-            "No questions were found in this attempt.";
+            "No questions were attempted.";
 
         return;
     }
 
 
-    if(accuracy >= 90){
+    if (accuracy >= 90) {
 
         element.textContent =
             "Excellent performance! Keep this level of preparation for NEET.";
 
-    }else if(accuracy >= 75){
+    } else if (accuracy >= 75) {
 
         element.textContent =
             "Great work! A little more practice can make your performance even stronger.";
 
-    }else if(accuracy >= 50){
+    } else if (accuracy >= 50) {
 
         element.textContent =
             "Good attempt. Review the incorrect questions and try again.";
 
-    }else{
+    } else {
 
         element.textContent =
-            "Keep practicing. Review the solutions and NCERT concepts carefully.";
+            "Keep practicing. Read the NCERT concepts carefully and reattempt the quiz.";
 
     }
 
 }
 
 
-/* =====================================================
-   SAVE PROGRESS
-   ===================================================== */
+// ==========================================
+// SAVE PROGRESS
+// ==========================================
 
-function saveProgress(){
+function saveProgress() {
 
     const user =
         firebase.auth().currentUser;
 
 
-    if(
+    if (
         !user ||
-        !resultData
-    ){
+        !resultData.courseId ||
+        !resultData.chapterId ||
+        !resultData.topicId
+    ) {
+
+        console.log(
+            "Progress not saved: missing IDs"
+        );
 
         return;
     }
 
 
     const total =
-        Number(
-            resultData.totalQuestions ??
-            resultData.total ??
-            0
+        getNumber(
+            resultData.total
         );
 
-
     const correct =
-        Number(
-            resultData.correct ??
-            0
+        getNumber(
+            resultData.correct
+        );
+
+    const score =
+        getNumber(
+            resultData.score
         );
 
 
     const percent =
         total > 0
             ? Math.round(
-                (
-                    correct /
-                    total
-                ) * 100
+                (correct / total) * 100
             )
             : 0;
 
 
-    const courseId =
-        resultData.courseId ||
-        localStorage.getItem(
-            "activeCourse"
-        );
-
-
-    const chapterId =
-        resultData.chapterId ||
-        localStorage.getItem(
-            "activeChapter"
-        );
-
-
-    const topicId =
-        resultData.topicId ||
-        localStorage.getItem(
-            "activeTopic"
-        );
-
-
-    if(
-        !courseId ||
-        !chapterId ||
-        !topicId
-    ){
-
-        return;
-    }
-
-
     const progressId =
-        courseId +
+        resultData.courseId +
         "_" +
-        chapterId +
+        resultData.chapterId +
         "_" +
-        topicId;
+        resultData.topicId;
 
 
-    const progressRef =
+    const ref =
         db.collection("users")
-          .doc(user.uid)
-          .collection("progress")
-          .doc(progressId);
+            .doc(user.uid)
+            .collection("progress")
+            .doc(progressId);
 
 
-    progressRef.get()
+    ref.get()
 
-    .then(function(doc){
+        .then(function (doc) {
 
-        let attempts = 0;
-
-        let bestScore = 0;
-
-
-        if(doc.exists){
-
-            const old =
-                doc.data() || {};
+            let oldAttempts = 0;
+            let oldBestScore = 0;
 
 
-            attempts =
-                Number(
-                    old.attempts || 0
+            if (doc.exists) {
+
+                const old =
+                    doc.data();
+
+                oldAttempts =
+                    getNumber(
+                        old.attempts
+                    );
+
+                oldBestScore =
+                    getNumber(
+                        old.bestScore
+                    );
+
+            }
+
+
+            const bestScore =
+                Math.max(
+                    oldBestScore,
+                    score
                 );
 
 
-            bestScore =
-                Number(
-                    old.bestScore || 0
-                );
+            return ref.set({
 
-        }
+                courseId:
+                    resultData.courseId,
 
+                chapterId:
+                    resultData.chapterId,
 
-        const currentScore =
-            Number(
-                resultData.score || 0
+                topicId:
+                    resultData.topicId,
+
+                attempts:
+                    oldAttempts + 1,
+
+                percent:
+                    percent,
+
+                bestScore:
+                    bestScore,
+
+                lastScore:
+                    score,
+
+                lastAccuracy:
+                    getNumber(
+                        resultData.accuracy
+                    ),
+
+                lastAttemptAt:
+                    firebase.firestore
+                        .FieldValue
+                        .serverTimestamp()
+
+            }, {
+                merge: true
+            });
+
+        })
+
+        .then(function () {
+
+            console.log(
+                "Progress saved successfully"
             );
 
+        })
 
-        return progressRef.set({
+        .catch(function (error) {
 
-            courseId:
-                courseId,
+            console.error(
+                "Progress save error:",
+                error
+            );
 
-            chapterId:
-                chapterId,
-
-            topicId:
-                topicId,
-
-            attempts:
-                attempts + 1,
-
-            percent:
-                percent,
-
-            bestScore:
-                Math.max(
-                    bestScore,
-                    currentScore
-                ),
-
-            lastScore:
-                currentScore,
-
-            lastAccuracy:
-                Number(
-                    resultData.accuracy || 0
-                ),
-
-            lastCorrect:
-                Number(
-                    resultData.correct || 0
-                ),
-
-            lastIncorrect:
-                Number(
-                    resultData.incorrect || 0
-                ),
-
-            lastSkipped:
-                Number(
-                    resultData.skipped || 0
-                ),
-
-            lastTime:
-                Number(
-                    resultData.totalTime ??
-                    resultData.time ??
-                    0
-                ),
-
-            lastAttemptAt:
-                firebase.firestore
-                    .FieldValue
-                    .serverTimestamp()
-
-        },{
-            merge:true
         });
-
-    })
-
-    .catch(function(error){
-
-        console.error(
-            "Progress save error:",
-            error
-        );
-
-    });
 
 }
 
 
-/* =====================================================
-   REATTEMPT
-   ===================================================== */
+// ==========================================
+// REATTEMPT
+// ==========================================
 
-function reattemptQuiz(){
-
-    if(!resultData){
-
-        return;
-    }
-
-
-    /*
-      IMPORTANT:
-      Remove old attempt so quiz starts fresh.
-    */
+function reattemptQuiz() {
 
     const courseId =
         resultData.courseId ||
+        localStorage.getItem(
+            "quizCourse"
+        ) ||
         localStorage.getItem(
             "activeCourse"
         );
@@ -597,6 +479,9 @@ function reattemptQuiz(){
     const chapterId =
         resultData.chapterId ||
         localStorage.getItem(
+            "quizChapter"
+        ) ||
+        localStorage.getItem(
             "activeChapter"
         );
 
@@ -604,15 +489,41 @@ function reattemptQuiz(){
     const topicId =
         resultData.topicId ||
         localStorage.getItem(
+            "quizTopic"
+        ) ||
+        localStorage.getItem(
             "activeTopic"
         );
 
 
-    const quizId =
-        resultData.quizId ||
-        localStorage.getItem(
-            "activeQuiz"
+    if (
+        !courseId ||
+        !chapterId ||
+        !topicId
+    ) {
+
+        alert(
+            "Quiz information is missing."
         );
+
+        return;
+    }
+
+
+    localStorage.setItem(
+        "quizCourse",
+        courseId
+    );
+
+    localStorage.setItem(
+        "quizChapter",
+        chapterId
+    );
+
+    localStorage.setItem(
+        "quizTopic",
+        topicId
+    );
 
 
     localStorage.setItem(
@@ -620,69 +531,34 @@ function reattemptQuiz(){
         courseId
     );
 
-
     localStorage.setItem(
         "activeChapter",
         chapterId
     );
 
-
     localStorage.setItem(
         "activeTopic",
         topicId
-    );
-
-
-    if(quizId){
-
-        localStorage.setItem(
-            "activeQuiz",
-            quizId
-        );
-    }
-
-
-    /*
-      Clear previous quiz attempt
-    */
-
-    const attemptKey =
-        [
-            "mneet_attempt",
-            courseId,
-            chapterId,
-            topicId,
-            quizId || "quiz-01"
-        ].join("_");
-
-
-    localStorage.removeItem(
-        attemptKey
     );
 
 
     window.location.href =
         "quiz.html";
+
 }
 
 
-/* =====================================================
-   TOPIC
-   ===================================================== */
+// ==========================================
+// BACK TO TOPIC
+// ==========================================
 
-function goToTopic(){
-
-    if(!resultData){
-
-        window.location.href =
-            "student.html";
-
-        return;
-    }
-
+function goToTopic() {
 
     const courseId =
         resultData.courseId ||
+        localStorage.getItem(
+            "quizCourse"
+        ) ||
         localStorage.getItem(
             "activeCourse"
         );
@@ -690,6 +566,9 @@ function goToTopic(){
 
     const chapterId =
         resultData.chapterId ||
+        localStorage.getItem(
+            "quizChapter"
+        ) ||
         localStorage.getItem(
             "activeChapter"
         );
@@ -698,40 +577,14 @@ function goToTopic(){
     const topicId =
         resultData.topicId ||
         localStorage.getItem(
+            "quizTopic"
+        ) ||
+        localStorage.getItem(
             "activeTopic"
         );
 
 
-    localStorage.setItem(
-        "activeCourse",
-        courseId
-    );
-
-
-    localStorage.setItem(
-        "activeChapter",
-        chapterId
-    );
-
-
-    localStorage.setItem(
-        "activeTopic",
-        topicId
-    );
-
-
-    window.location.href =
-        "topic.html";
-}
-
-
-/* =====================================================
-   CHAPTER
-   ===================================================== */
-
-function goToChapter(){
-
-    if(!resultData){
+    if (!courseId || !chapterId) {
 
         window.location.href =
             "student.html";
@@ -740,8 +593,44 @@ function goToChapter(){
     }
 
 
+    localStorage.setItem(
+        "activeCourse",
+        courseId
+    );
+
+    localStorage.setItem(
+        "activeChapter",
+        chapterId
+    );
+
+
+    if (topicId) {
+
+        localStorage.setItem(
+            "activeTopic",
+            topicId
+        );
+
+    }
+
+
+    window.location.href =
+        "topic.html";
+
+}
+
+
+// ==========================================
+// BACK TO CHAPTER
+// ==========================================
+
+function goToChapter() {
+
     const courseId =
         resultData.courseId ||
+        localStorage.getItem(
+            "quizCourse"
+        ) ||
         localStorage.getItem(
             "activeCourse"
         );
@@ -750,15 +639,29 @@ function goToChapter(){
     const chapterId =
         resultData.chapterId ||
         localStorage.getItem(
+            "quizChapter"
+        ) ||
+        localStorage.getItem(
             "activeChapter"
         );
+
+
+    if (
+        !courseId ||
+        !chapterId
+    ) {
+
+        window.location.href =
+            "student.html";
+
+        return;
+    }
 
 
     localStorage.setItem(
         "activeCourse",
         courseId
     );
-
 
     localStorage.setItem(
         "activeChapter",
@@ -768,39 +671,30 @@ function goToChapter(){
 
     window.location.href =
         "chapter.html";
+
 }
 
 
-/* =====================================================
-   DASHBOARD
-   ===================================================== */
+// ==========================================
+// DASHBOARD
+// ==========================================
 
-function goToStudent(){
+function goToStudent() {
 
     window.location.href =
         "student.html";
+
 }
 
 
-/* =====================================================
-   FORMAT TIME
-   ===================================================== */
+// ==========================================
+// TIME FORMAT
+// ==========================================
 
-function formatTime(seconds){
+function formatTime(seconds) {
 
     seconds =
-        Number(
-            seconds || 0
-        );
-
-
-    if(
-        !Number.isFinite(seconds) ||
-        seconds < 0
-    ){
-
-        seconds = 0;
-    }
+        getNumber(seconds);
 
 
     const minutes =
@@ -809,7 +703,7 @@ function formatTime(seconds){
         );
 
 
-    const remainingSeconds =
+    const remaining =
         Math.floor(
             seconds % 60
         );
@@ -817,11 +711,11 @@ function formatTime(seconds){
 
     return (
         String(minutes)
-            .padStart(2,"0")
+            .padStart(2, "0")
         +
         ":" +
-        String(remainingSeconds)
-            .padStart(2,"0")
+        String(remaining)
+            .padStart(2, "0")
     );
 
 }
