@@ -3,6 +3,8 @@
 // Firebase Firestore Version
 // ==========================================
 
+"use strict";
+
 let courseId = "";
 let chapterId = "";
 let topicId = "";
@@ -14,62 +16,129 @@ let topicId = "";
 
 document.addEventListener("DOMContentLoaded", function () {
 
-    // Firebase ready কিনা check
+    waitForFirebase();
+
+});
+
+
+// ==========================================
+// WAIT FOR FIREBASE
+// ==========================================
+
+function waitForFirebase() {
+
     if (
         typeof firebase === "undefined" ||
         typeof db === "undefined" ||
         typeof auth === "undefined"
     ) {
-        showPageError(
-            "Firebase library load হয়নি।"
+
+        setTimeout(
+            waitForFirebase,
+            300
         );
+
         return;
     }
 
 
-    // User login check
     auth.onAuthStateChanged(function (user) {
 
         if (!user) {
 
-            window.location.href = "index.html";
-            return;
-
-        }
-
-
-        // LocalStorage থেকে ID নেওয়া
-        courseId =
-            localStorage.getItem("activeCourse");
-
-        chapterId =
-            localStorage.getItem("activeChapter");
-
-        topicId =
-            localStorage.getItem("activeTopic");
-
-
-        // ID missing হলে
-        if (
-            !courseId ||
-            !chapterId ||
-            !topicId
-        ) {
-
-            showPageError(
-                "Topic information পাওয়া যায়নি।"
-            );
+            window.location.href =
+                "index.html";
 
             return;
         }
 
 
-        // Topic load
-        loadTopic();
+        loadActiveIds();
 
     });
 
-});
+}
+
+
+// ==========================================
+// LOAD ACTIVE IDS
+// ==========================================
+
+function loadActiveIds() {
+
+    courseId =
+        getValue(
+            "activeCourse",
+            "courseId"
+        );
+
+
+    chapterId =
+        getValue(
+            "activeChapter",
+            "chapterId"
+        );
+
+
+    topicId =
+        getValue(
+            "activeTopic",
+            "topicId"
+        );
+
+
+    if (
+        !courseId ||
+        !chapterId ||
+        !topicId
+    ) {
+
+        showPageError(
+            "Topic information পাওয়া যায়নি।"
+        );
+
+        return;
+    }
+
+
+    // Save again to keep everything synchronized
+
+    localStorage.setItem(
+        "activeCourse",
+        courseId
+    );
+
+    localStorage.setItem(
+        "activeChapter",
+        chapterId
+    );
+
+    localStorage.setItem(
+        "activeTopic",
+        topicId
+    );
+
+
+    loadTopic();
+
+}
+
+
+// ==========================================
+// GET VALUE
+// ==========================================
+
+function getValue(primaryKey, secondaryKey) {
+
+    return (
+        localStorage.getItem(primaryKey) ||
+        sessionStorage.getItem(primaryKey) ||
+        localStorage.getItem(secondaryKey) ||
+        sessionStorage.getItem(secondaryKey) ||
+        ""
+    ).trim();
+
+}
 
 
 // ==========================================
@@ -102,12 +171,8 @@ function loadTopic() {
 
 
             const topic =
-                doc.data();
+                doc.data() || {};
 
-
-            // ==============================
-            // TITLE
-            // ==============================
 
             const title =
                 topic.name ||
@@ -121,7 +186,9 @@ function loadTopic() {
 
 
             const titleElement =
-                document.getElementById("topicTitle");
+                document.getElementById(
+                    "topicTitle"
+                );
 
 
             const descriptionElement =
@@ -146,10 +213,6 @@ function loadTopic() {
             }
 
 
-            // ==============================
-            // PRACTICE CARDS
-            // ==============================
-
             renderPracticeCards();
 
         })
@@ -172,7 +235,7 @@ function loadTopic() {
 
 
 // ==========================================
-// LOADING STATE
+// LOADING
 // ==========================================
 
 function setLoading() {
@@ -274,6 +337,7 @@ function renderPracticeCards() {
 
 
             <button
+                type="button"
                 class="practice-button"
                 onclick="openQuiz()"
             >
@@ -283,7 +347,6 @@ function renderPracticeCards() {
             </button>
 
         </div>
-
 
 
         <!-- NOTES CARD -->
@@ -310,6 +373,7 @@ function renderPracticeCards() {
 
 
             <button
+                type="button"
                 class="practice-button notes"
                 onclick="openNotes()"
             >
@@ -345,6 +409,53 @@ function openQuiz() {
     }
 
 
+    /*
+      IMPORTANT
+
+      quiz.js expects:
+
+      activeCourse
+      activeChapter
+      activeTopic
+      activeQuiz
+
+      So all four are saved here.
+    */
+
+
+    const quizId =
+        "quiz-01";
+
+
+    localStorage.setItem(
+        "activeCourse",
+        courseId
+    );
+
+
+    localStorage.setItem(
+        "activeChapter",
+        chapterId
+    );
+
+
+    localStorage.setItem(
+        "activeTopic",
+        topicId
+    );
+
+
+    localStorage.setItem(
+        "activeQuiz",
+        quizId
+    );
+
+
+    /*
+      Old keys are also kept
+      for compatibility.
+    */
+
     localStorage.setItem(
         "quizCourse",
         courseId
@@ -363,7 +474,10 @@ function openQuiz() {
     );
 
 
-    // নতুন quiz page
+    /*
+      Open quiz page
+    */
+
     window.location.href =
         "quiz.html";
 
@@ -408,6 +522,24 @@ function openNotes() {
     );
 
 
+    localStorage.setItem(
+        "activeCourse",
+        courseId
+    );
+
+
+    localStorage.setItem(
+        "activeChapter",
+        chapterId
+    );
+
+
+    localStorage.setItem(
+        "activeTopic",
+        topicId
+    );
+
+
     window.location.href =
         "notes.html";
 
@@ -427,7 +559,7 @@ function goBack() {
 
 
 // ==========================================
-// ERROR PAGE
+// ERROR
 // ==========================================
 
 function showPageError(message) {
@@ -494,11 +626,14 @@ function showPageError(message) {
                         margin-bottom:20px;
                     "
                 >
+
                     ${escapeHTML(message)}
+
                 </div>
 
 
                 <button
+                    type="button"
                     onclick="goBack()"
                     style="
                         border:none;
@@ -510,7 +645,9 @@ function showPageError(message) {
                         cursor:pointer;
                     "
                 >
+
                     ← Back to Chapters
+
                 </button>
 
             </div>
@@ -530,14 +667,29 @@ function escapeHTML(value) {
 
     return String(value)
 
-        .replace(/&/g, "&amp;")
+        .replace(
+            /&/g,
+            "&amp;"
+        )
 
-        .replace(/</g, "&lt;")
+        .replace(
+            /</g,
+            "&lt;"
+        )
 
-        .replace(/>/g, "&gt;")
+        .replace(
+            />/g,
+            "&gt;"
+        )
 
-        .replace(/"/g, "&quot;")
+        .replace(
+            /"/g,
+            "&quot;"
+        )
 
-        .replace(/'/g, "&#039;");
+        .replace(
+            /'/g,
+            "&#039;"
+        );
 
 }
