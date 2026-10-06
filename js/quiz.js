@@ -1,5 +1,6 @@
 /* =========================================================
    mNEET QUIZ ENGINE
+   FINAL FIXED VERSION
    Firebase Firestore Compatible
    ========================================================= */
 
@@ -36,6 +37,7 @@
 
     let quizPath = "";
 
+
     /* =====================================================
        FIREBASE
     ===================================================== */
@@ -48,7 +50,7 @@
                 return null;
             }
 
-            if (firebase.apps.length === 0) {
+            if (!firebase.apps || firebase.apps.length === 0) {
                 return null;
             }
 
@@ -56,7 +58,10 @@
 
         } catch (error) {
 
-            console.error("Firestore error:", error);
+            console.error(
+                "Firestore error:",
+                error
+            );
 
             return null;
         }
@@ -64,27 +69,56 @@
 
 
     /* =====================================================
-       HELPERS
+       URL PARAMETER
     ===================================================== */
 
     function getParam(name) {
 
-        const params = new URLSearchParams(window.location.search);
+        try {
 
-        return params.get(name);
+            const params =
+                new URLSearchParams(
+                    window.location.search
+                );
+
+            return params.get(name) || "";
+
+        } catch (error) {
+
+            return "";
+        }
     }
 
+
+    /* =====================================================
+       STORAGE
+    ===================================================== */
 
     function getStorage(...keys) {
 
         for (const key of keys) {
 
-            const value =
-                localStorage.getItem(key) ||
+            const localValue =
+                localStorage.getItem(key);
+
+            if (
+                localValue !== null &&
+                localValue !== ""
+            ) {
+
+                return localValue;
+            }
+
+
+            const sessionValue =
                 sessionStorage.getItem(key);
 
-            if (value) {
-                return value;
+            if (
+                sessionValue !== null &&
+                sessionValue !== ""
+            ) {
+
+                return sessionValue;
             }
         }
 
@@ -92,13 +126,27 @@
     }
 
 
+    /* =====================================================
+       CLEAN VALUE
+    ===================================================== */
+
     function cleanValue(value) {
 
-        if (!value) return "";
+        if (
+            value === null ||
+            value === undefined
+        ) {
+
+            return "";
+        }
 
         return String(value).trim();
     }
 
+
+    /* =====================================================
+       GET IDS
+    ===================================================== */
 
     function getIds() {
 
@@ -107,6 +155,7 @@
             getParam("course") ||
             getStorage(
                 "activeCourse",
+                "quizCourse",
                 "courseId"
             ) ||
             "course-01";
@@ -117,6 +166,7 @@
             getParam("chapter") ||
             getStorage(
                 "activeChapter",
+                "quizChapter",
                 "chapterId"
             ) ||
             "chapter-01";
@@ -127,6 +177,7 @@
             getParam("topic") ||
             getStorage(
                 "activeTopic",
+                "quizTopic",
                 "topicId"
             ) ||
             "topic-01";
@@ -153,17 +204,28 @@
 
 
         return {
-            courseId: cleanValue(courseId),
-            chapterId: cleanValue(chapterId),
-            topicId: cleanValue(topicId),
-            quizId: cleanValue(quizId),
-            typeId: cleanValue(typeId)
+
+            courseId:
+                cleanValue(courseId),
+
+            chapterId:
+                cleanValue(chapterId),
+
+            topicId:
+                cleanValue(topicId),
+
+            quizId:
+                cleanValue(quizId),
+
+            typeId:
+                cleanValue(typeId)
+
         };
     }
 
 
     /* =====================================================
-       SAVE ACTIVE IDS
+       SAVE IDS
     ===================================================== */
 
     function saveIds(ids) {
@@ -188,51 +250,70 @@
             ids.quizId
         );
 
+        /*
+          Keep quiz-specific IDs too.
+        */
+
+        localStorage.setItem(
+            "quizCourse",
+            ids.courseId
+        );
+
+        localStorage.setItem(
+            "quizChapter",
+            ids.chapterId
+        );
+
+        localStorage.setItem(
+            "quizTopic",
+            ids.topicId
+        );
+
         if (ids.typeId) {
 
             localStorage.setItem(
                 "activeType",
                 ids.typeId
             );
-
         }
     }
 
 
     /* =====================================================
-       FIND QUIZ PATH
+       LOAD QUIZ DOCUMENT
     ===================================================== */
 
     async function loadQuizDocument(ids) {
 
         /*
-          NORMAL TOPIC:
+          MAIN TOPIC QUIZ PATH
 
           courses
-            /courseId
-              /chapters
-                /chapterId
-                  /topics
-                    /topicId
-                      /quiz
-                        /quizId
+            / courseId
+              / chapters
+                / chapterId
+                  / topics
+                    / topicId
+                      / quiz
+                        / quizId
         */
 
         const normalRef =
             db.collection("courses")
-              .doc(ids.courseId)
-              .collection("chapters")
-              .doc(ids.chapterId)
-              .collection("topics")
-              .doc(ids.topicId)
-              .collection("quiz")
-              .doc(ids.quizId);
+                .doc(ids.courseId)
+                .collection("chapters")
+                .doc(ids.chapterId)
+                .collection("topics")
+                .doc(ids.topicId)
+                .collection("quiz")
+                .doc(ids.quizId);
 
 
-        let snap = await normalRef.get();
+        const normalSnap =
+            await normalRef.get();
 
 
-        if (snap.exists) {
+        if (normalSnap.exists) {
 
             quizPath =
                 "courses/" +
@@ -244,35 +325,35 @@
                 "/quiz/" +
                 ids.quizId;
 
+
             return {
-                ref: normalRef,
-                data: snap.data(),
-                mode: "topic"
+
+                ref:
+                    normalRef,
+
+                data:
+                    normalSnap.data() || {},
+
+                mode:
+                    "topic"
+
             };
         }
 
 
         /*
-          TYPE PRACTICE:
-
-          courses
-            /courseId
-              /chapters
-                /chapterId
-                  /typePractice
-                    /typeId
-                      /questions
+          TYPE PRACTICE BACKUP
         */
 
         if (ids.typeId) {
 
             const typeRef =
                 db.collection("courses")
-                  .doc(ids.courseId)
-                  .collection("chapters")
-                  .doc(ids.chapterId)
-                  .collection("typePractice")
-                  .doc(ids.typeId);
+                    .doc(ids.courseId)
+                    .collection("chapters")
+                    .doc(ids.chapterId)
+                    .collection("typePractice")
+                    .doc(ids.typeId);
 
 
             const typeSnap =
@@ -289,37 +370,53 @@
                     "/typePractice/" +
                     ids.typeId;
 
+
                 return {
-                    ref: typeRef,
-                    data: typeSnap.data(),
-                    mode: "type",
-                    typeRef: typeRef
+
+                    ref:
+                        typeRef,
+
+                    data:
+                        typeSnap.data() || {},
+
+                    mode:
+                        "type",
+
+                    typeRef:
+                        typeRef
+
                 };
             }
         }
 
 
         /*
-          BACKUP:
-          Some projects may have quiz document
-          directly with questions subcollection.
+          Return main reference so the error
+          can show the correct expected path.
         */
 
-        const backupRef =
-            db.collection("courses")
-              .doc(ids.courseId)
-              .collection("chapters")
-              .doc(ids.chapterId)
-              .collection("topics")
-              .doc(ids.topicId)
-              .collection("quiz")
-              .doc(ids.quizId);
+        quizPath =
+            "courses/" +
+            ids.courseId +
+            "/chapters/" +
+            ids.chapterId +
+            "/topics/" +
+            ids.topicId +
+            "/quiz/" +
+            ids.quizId;
 
 
         return {
-            ref: backupRef,
-            data: {},
-            mode: "topic"
+
+            ref:
+                normalRef,
+
+            data:
+                {},
+
+            mode:
+                "topic"
+
         };
     }
 
@@ -328,59 +425,88 @@
        LOAD QUESTIONS
     ===================================================== */
 
-    async function loadQuestions(quizInfo, ids) {
+    async function loadQuestions(
+        quizInfo
+    ) {
 
         let questionRef = null;
 
-        if (quizInfo.mode === "topic") {
+
+        if (
+            quizInfo.mode === "type" &&
+            quizInfo.typeRef
+        ) {
 
             questionRef =
-                quizInfo.ref.collection("questions");
+                quizInfo.typeRef
+                    .collection("questions");
 
         } else {
 
             questionRef =
-                quizInfo.typeRef.collection("questions");
-
+                quizInfo.ref
+                    .collection("questions");
         }
 
 
-        let snap;
+        let snap = null;
 
 
         /*
-          FIRST TRY:
-          published == true + order
+          FIRST:
+          published true + order
         */
 
         try {
 
             snap =
                 await questionRef
-                    .where("published", "==", true)
-                    .orderBy("order", "asc")
+                    .where(
+                        "published",
+                        "==",
+                        true
+                    )
+                    .orderBy(
+                        "order",
+                        "asc"
+                    )
                     .get();
 
         } catch (error) {
 
             console.warn(
-                "Published/order query failed. Trying simple query.",
+                "Published/order query failed:",
                 error
             );
+
+
+            /*
+              SECOND:
+              order only
+            */
 
             try {
 
                 snap =
                     await questionRef
-                        .orderBy("order", "asc")
+                        .orderBy(
+                            "order",
+                            "asc"
+                        )
                         .get();
 
             } catch (error2) {
 
                 console.warn(
-                    "Order query failed. Loading all questions.",
+                    "Order query failed:",
                     error2
                 );
+
+
+                /*
+                  THIRD:
+                  all questions
+                */
 
                 snap =
                     await questionRef.get();
@@ -388,51 +514,271 @@
         }
 
 
-        let list = [];
+        const list = [];
 
 
-        snap.forEach(function (doc) {
+        snap.forEach(
+            function (doc) {
 
-            const data = doc.data() || {};
+                const data =
+                    doc.data() || {};
 
-            /*
-              If published field exists and is false,
-              do not show it.
-            */
 
-            if (
-                data.published !== undefined &&
-                data.published === false
-            ) {
-                return;
+                /*
+                  If published exists and false,
+                  don't show it.
+                */
+
+                if (
+                    data.published !== undefined &&
+                    data.published === false
+                ) {
+
+                    return;
+                }
+
+
+                list.push({
+
+                    id:
+                        doc.id,
+
+                    ...data
+
+                });
+
             }
-
-
-            list.push({
-                id: doc.id,
-                ...data
-            });
-
-        });
+        );
 
 
         /*
-          Manual sorting fallback
+          Manual order sorting.
         */
 
-        list.sort(function (a, b) {
+        list.sort(
+            function (a, b) {
 
-            const aOrder =
-                Number(a.order || 0);
+                const aOrder =
+                    Number(
+                        a.order || 0
+                    );
 
-            const bOrder =
-                Number(b.order || 0);
+                const bOrder =
+                    Number(
+                        b.order || 0
+                    );
 
-            return aOrder - bOrder;
-        });
+
+                return (
+                    aOrder -
+                    bOrder
+                );
+            }
+        );
 
 
         return list;
+    }
+
+
+    /* =====================================================
+       GET QUESTION TEXT
+    ===================================================== */
+
+    function getQuestionText(q) {
+
+        if (!q) {
+            return "Question not available";
+        }
+
+
+        /*
+          Your current Firestore format:
+          question:
+        */
+
+        const fields = [
+
+            q.question,
+
+            q.questionText,
+
+            q.questionTitle,
+
+            q.text,
+
+            q.title
+
+        ];
+
+
+        for (
+            const value of fields
+        ) {
+
+            if (
+                value !== undefined &&
+                value !== null &&
+                String(value).trim() !== ""
+            ) {
+
+                /*
+                  Normal text
+                */
+
+                if (
+                    typeof value === "string" ||
+                    typeof value === "number"
+                ) {
+
+                    return String(value);
+                }
+
+
+                /*
+                  Object fallback
+                */
+
+                if (
+                    typeof value === "object"
+                ) {
+
+                    if (
+                        value.text !== undefined
+                    ) {
+
+                        return String(
+                            value.text
+                        );
+                    }
+
+
+                    if (
+                        value.question !== undefined
+                    ) {
+
+                        return String(
+                            value.question
+                        );
+                    }
+
+
+                    if (
+                        value.value !== undefined
+                    ) {
+
+                        return String(
+                            value.value
+                        );
+                    }
+                }
+            }
+        }
+
+
+        return "Question not available";
+    }
+
+
+    /* =====================================================
+       GET CORRECT OPTION
+    ===================================================== */
+
+    function getCorrectOption(q) {
+
+        if (!q) {
+            return 0;
+        }
+
+
+        /*
+          Your Firestore:
+          answer:
+        */
+
+        const value =
+            q.correctOption ??
+            q.answer ??
+            q.correctAnswer ??
+            q.correct ??
+            0;
+
+
+        /*
+          Number:
+          1 / 2 / 3 / 4
+        */
+
+        const number =
+            Number(value);
+
+
+        if (
+            Number.isFinite(number) &&
+            number >= 1 &&
+            number <= 4
+        ) {
+
+            return number;
+        }
+
+
+        /*
+          Letter:
+          A / B / C / D
+        */
+
+        const text =
+            String(value)
+                .trim()
+                .toUpperCase();
+
+
+        const map = {
+
+            A: 1,
+
+            B: 2,
+
+            C: 3,
+
+            D: 4
+
+        };
+
+
+        return map[text] || 0;
+    }
+
+
+    /* =====================================================
+       GET OPTION TEXT
+    ===================================================== */
+
+    function getOptionText(
+        q,
+        number
+    ) {
+
+        if (!q) {
+            return "";
+        }
+
+
+        const value =
+            q["option" + number];
+
+
+        if (
+            value === undefined ||
+            value === null
+        ) {
+
+            return "";
+        }
+
+
+        return String(value);
     }
 
 
@@ -447,7 +793,8 @@
         );
 
 
-        db = getFirestore();
+        db =
+            getFirestore();
 
 
         if (!db) {
@@ -461,21 +808,29 @@
         }
 
 
-        const ids = getIds();
+        const ids =
+            getIds();
+
 
         saveIds(ids);
 
 
         console.log(
-            "Quiz IDs:",
+            "mNEET Quiz IDs:",
             ids
         );
 
 
         try {
 
+            /*
+              Get quiz
+            */
+
             const quizInfo =
-                await loadQuizDocument(ids);
+                await loadQuizDocument(
+                    ids
+                );
 
 
             quizData =
@@ -508,23 +863,43 @@
                 );
 
 
-            /*
-              QUESTION TIME
+            if (
+                !Number.isFinite(
+                    positiveMark
+                )
+            ) {
 
-              Firestore screenshot:
-              timePerQuestion
+                positiveMark = 4;
+            }
+
+
+            if (
+                !Number.isFinite(
+                    negativeMark
+                )
+            ) {
+
+                negativeMark = 1;
+            }
+
+
+            /*
+              TIME
             */
 
             perQuestionTime =
                 Number(
                     quizData.timePerQuestion ??
                     quizData.timePerQuestionSeconds ??
+                    quizData.questionTime ??
                     60
                 );
 
 
             if (
-                !Number.isFinite(perQuestionTime) ||
+                !Number.isFinite(
+                    perQuestionTime
+                ) ||
                 perQuestionTime <= 0
             ) {
 
@@ -532,26 +907,42 @@
             }
 
 
+            /*
+              LOAD QUESTIONS
+            */
+
             questions =
                 await loadQuestions(
-                    quizInfo,
-                    ids
+                    quizInfo
                 );
 
 
             console.log(
                 "Questions loaded:",
-                questions.length,
+                questions.length
+            );
+
+
+            console.log(
+                "Question data:",
                 questions
             );
 
 
-            if (!questions.length) {
+            if (
+                !questions.length
+            ) {
 
                 showError(
-                    "এই quiz-এ কোনো published question পাওয়া যায়নি।<br><br>" +
-                    "Firestore path:<br>" +
-                    "<b>" + quizPath + "/questions</b>"
+                    "এই quiz-এ কোনো question পাওয়া যায়নি।<br><br>" +
+
+                    "Expected Firestore path:<br>" +
+
+                    "<b>" +
+                    quizPath +
+                    "/questions</b><br><br>" +
+
+                    "Check করুন যে questions collection-এর ভিতরে question documents আছে।"
                 );
 
                 return;
@@ -568,13 +959,14 @@
 
 
             /*
-              RESTORE ATTEMPT
+              RESTORE
             */
 
             restoreAttempt();
 
 
-            quizFinished = false;
+            quizFinished =
+                false;
 
 
             updateQuizHeader();
@@ -598,7 +990,10 @@
 
             showError(
                 "Quiz load করতে সমস্যা হয়েছে।<br><br>" +
-                error.message
+                escapeHTML(
+                    error.message ||
+                    String(error)
+                )
             );
         }
     }
@@ -612,6 +1007,7 @@
 
         const title =
             quizData.title ||
+            quizData.name ||
             "Practice Quiz";
 
 
@@ -632,6 +1028,10 @@
     }
 
 
+    /* =====================================================
+       UPDATE COUNTER
+    ===================================================== */
+
     function updateCounter() {
 
         const counter =
@@ -644,7 +1044,11 @@
 
             counter.textContent =
                 questions.length
-                    ? `${currentIndex + 1} / ${questions.length}`
+                    ? (
+                        (currentIndex + 1) +
+                        " / " +
+                        questions.length
+                    )
                     : "0 / 0";
         }
 
@@ -655,12 +1059,16 @@
             );
 
 
-        if (fill && questions.length) {
+        if (
+            fill &&
+            questions.length
+        ) {
 
             const percent =
-                ((currentIndex + 1) /
-                questions.length) *
-                100;
+                (
+                    (currentIndex + 1) /
+                    questions.length
+                ) * 100;
 
 
             fill.style.width =
@@ -675,13 +1083,21 @@
 
     function renderQuestion() {
 
-        if (!questions.length) {
+        if (
+            !questions.length
+        ) {
+
             return;
         }
 
 
         const q =
             questions[currentIndex];
+
+
+        if (!q) {
+            return;
+        }
 
 
         const container =
@@ -704,35 +1120,36 @@
 
 
         const correctOption =
-            Number(
-                q.correctOption
-            );
+            getCorrectOption(q);
 
 
         let html = "";
 
+
+        /* =================================================
+           QUESTION CARD
+        ================================================= */
 
         html += `
             <div class="question-card">
 
                 <p class="question-text">
                     ${escapeHTML(
-                        q.questionText ||
-                        q.question ||
-                        "Question"
+                        getQuestionText(q)
                     )}
                 </p>
         `;
 
 
-        /*
-          IMAGE
-        */
+        /* =================================================
+           QUESTION IMAGE
+        ================================================= */
 
         const imageUrl =
             q.questionImageUrl ||
             q.imageUrl ||
             q.imageURL ||
+            q.questionImage ||
             "";
 
 
@@ -740,7 +1157,9 @@
 
             html += `
                 <img
-                    src="${escapeAttribute(imageUrl)}"
+                    src="${escapeAttribute(
+                        imageUrl
+                    )}"
                     class="question-image"
                     alt="Question Image"
                     onerror="this.style.display='none'"
@@ -749,9 +1168,9 @@
         }
 
 
-        /*
-          OPTIONS
-        */
+        /* =================================================
+           OPTIONS
+        ================================================= */
 
         html += `
             <div class="options">
@@ -765,13 +1184,21 @@
         ) {
 
             const optionText =
-                q["option" + i] ?? "";
+                getOptionText(
+                    q,
+                    i
+                );
 
+
+            /*
+              Don't render completely
+              empty options.
+            */
 
             if (
-                optionText === "" &&
-                optionText !== 0
+                optionText === ""
             ) {
+
                 continue;
             }
 
@@ -779,6 +1206,10 @@
             let classes =
                 "option";
 
+
+            /*
+              Selected
+            */
 
             if (
                 Number(selected) === i &&
@@ -790,14 +1221,28 @@
             }
 
 
+            /*
+              After submit
+            */
+
             if (submitted) {
 
-                if (i === correctOption) {
+                /*
+                  Correct answer green
+                */
+
+                if (
+                    i === correctOption
+                ) {
 
                     classes +=
                         " correct";
                 }
 
+
+                /*
+                  Selected wrong answer red
+                */
 
                 if (
                     Number(selected) === i &&
@@ -830,7 +1275,7 @@
 
                     <span class="option-text">
                         ${escapeHTML(
-                            String(optionText)
+                            optionText
                         )}
                     </span>
 
@@ -844,18 +1289,21 @@
         `;
 
 
-        /*
-          ANSWER STATUS
-        */
+        /* =================================================
+           ANSWER STATUS
+        ================================================= */
 
         if (submitted) {
 
             const isCorrect =
                 Number(selected) ===
-                correctOption;
+                Number(correctOption);
 
 
-            if (isCorrect) {
+            if (
+                isCorrect &&
+                selected
+            ) {
 
                 html += `
                     <div class="answer-status show correct-status">
@@ -865,7 +1313,10 @@
                     </div>
                 `;
 
-            } else if (selected) {
+            } else if (
+                selected &&
+                !isCorrect
+            ) {
 
                 html += `
                     <div class="answer-status show wrong-status">
@@ -897,17 +1348,21 @@
             }
 
 
-            /*
-              SOLUTION
-            */
+            /* =============================================
+               SOLUTION
+            ============================================= */
 
             const solution =
-                q.solution || "";
+                q.solution ||
+                q.explanation ||
+                q.explain ||
+                "";
 
 
             const reference =
                 q.reference ||
                 q.ncertReference ||
+                q.ncert ||
                 "";
 
 
@@ -923,12 +1378,17 @@
                             📖 Solution
                         </div>
 
-                        <div class="solution-text">
-                            ${escapeHTML(
-                                solution ||
-                                "Solution not available."
-                            )}
-                        </div>
+                        ${
+                            solution
+                                ? `
+                                    <div class="solution-text">
+                                        ${escapeHTML(
+                                            solution
+                                        )}
+                                    </div>
+                                  `
+                                : ""
+                        }
 
                         ${
                             reference
@@ -949,9 +1409,9 @@
         }
 
 
-        /*
-          ANSWER SUBMIT
-        */
+        /* =================================================
+           SUBMIT ANSWER
+        ================================================= */
 
         if (!submitted) {
 
@@ -969,9 +1429,9 @@
         }
 
 
-        /*
-          NAVIGATION
-        */
+        /* =================================================
+           NAVIGATION
+        ================================================= */
 
         html += `
             <div class="quiz-actions">
@@ -1002,9 +1462,9 @@
         `;
 
 
-        /*
-          SUBMIT QUIZ
-        */
+        /* =================================================
+           SUBMIT QUIZ
+        ================================================= */
 
         if (submitted) {
 
@@ -1033,7 +1493,7 @@
 
 
         /*
-          Restore timer
+          Timer
         */
 
         if (submitted) {
@@ -1074,6 +1534,7 @@
             if (
                 submittedAnswers[q.id]
             ) {
+
                 return;
             }
 
@@ -1083,6 +1544,7 @@
 
 
             renderQuestion();
+
 
             saveAttempt();
         };
@@ -1110,7 +1572,10 @@
 
 
             const selected =
-                selectedAnswers[q.id];
+                Number(
+                    selectedAnswers[q.id] ||
+                    0
+                );
 
 
             if (!selected) {
@@ -1144,7 +1609,10 @@
     window.previousQuestion =
         function () {
 
-            if (currentIndex <= 0) {
+            if (
+                currentIndex <= 0
+            ) {
+
                 return;
             }
 
@@ -1191,6 +1659,11 @@
                 currentIndex >=
                 questions.length - 1
             ) {
+
+                /*
+                  Last question:
+                  Finish
+                */
 
                 finishQuiz();
 
@@ -1247,20 +1720,23 @@
         }
 
 
+        /*
+          Already submitted
+        */
+
         if (
             submittedAnswers[q.id]
         ) {
 
-            updateQuestionTimer(
-                0
-            );
+            updateQuestionTimer(0);
 
             return;
         }
 
 
         /*
-          Fresh question
+          If no valid remaining time,
+          start fresh.
         */
 
         if (
@@ -1291,7 +1767,7 @@
 
 
                     /*
-                      If answer already submitted
+                      Answer submitted
                     */
 
                     if (
@@ -1311,7 +1787,8 @@
                         questionTimeLeft <= 0
                     ) {
 
-                        questionTimeLeft = 0;
+                        questionTimeLeft =
+                            0;
 
 
                         updateQuestionTimer(
@@ -1323,7 +1800,6 @@
 
 
                         autoSubmitOnTimeout();
-
 
                         return;
                     }
@@ -1339,6 +1815,10 @@
     }
 
 
+    /* =====================================================
+       STOP QUESTION TIMER
+    ===================================================== */
+
     function stopQuestionTimer() {
 
         if (questionTimer) {
@@ -1352,7 +1832,13 @@
     }
 
 
-    function updateQuestionTimer(seconds) {
+    /* =====================================================
+       UPDATE QUESTION TIMER
+    ===================================================== */
+
+    function updateQuestionTimer(
+        seconds
+    ) {
 
         const el =
             document.getElementById(
@@ -1365,15 +1851,19 @@
         }
 
 
-        el.textContent =
+        const value =
             Math.max(
                 0,
-                Number(seconds)
+                Number(seconds) || 0
             );
 
 
+        el.textContent =
+            value;
+
+
         if (
-            Number(seconds) <= 10
+            value <= 10
         ) {
 
             el.classList.add(
@@ -1390,7 +1880,7 @@
 
 
     /* =====================================================
-       AUTO SUBMIT WHEN QUESTION TIME ENDS
+       AUTO SUBMIT TIMEOUT
     ===================================================== */
 
     function autoSubmitOnTimeout() {
@@ -1407,31 +1897,21 @@
         if (
             submittedAnswers[q.id]
         ) {
+
             return;
         }
 
 
         /*
-          If user selected answer,
-          automatically submit it.
+          Whether selected or not,
+          mark the question as submitted.
+
+          If no selected answer,
+          result will count it as skipped.
         */
 
-        if (
-            selectedAnswers[q.id]
-        ) {
-
-            submittedAnswers[q.id] =
-                true;
-
-        } else {
-
-            /*
-              Mark as submitted but skipped
-            */
-
-            submittedAnswers[q.id] =
-                true;
-        }
+        submittedAnswers[q.id] =
+            true;
 
 
         renderQuestion();
@@ -1448,7 +1928,10 @@
     function startTotalTimer() {
 
         if (totalTimer) {
-            clearInterval(totalTimer);
+
+            clearInterval(
+                totalTimer
+            );
         }
 
 
@@ -1464,6 +1947,8 @@
                         clearInterval(
                             totalTimer
                         );
+
+                        totalTimer = null;
 
                         return;
                     }
@@ -1482,6 +1967,10 @@
             );
     }
 
+
+    /* =====================================================
+       UPDATE TOTAL TIMER
+    ===================================================== */
 
     function updateTotalTimer() {
 
@@ -1503,7 +1992,7 @@
 
 
         const seconds =
-                totalSeconds % 60;
+            totalSeconds % 60;
 
 
         el.textContent =
@@ -1530,10 +2019,19 @@
 
             const unanswered =
                 questions.filter(
-                    q =>
-                        !submittedAnswers[q.id]
+                    function (q) {
+
+                        return !submittedAnswers[
+                            q.id
+                        ];
+
+                    }
                 ).length;
 
+
+            /*
+              Ask confirmation if unanswered.
+            */
 
             if (
                 unanswered > 0
@@ -1553,19 +2051,21 @@
 
 
                 /*
-                  Mark remaining as submitted
-                  so result can calculate skipped.
+                  Mark all remaining as submitted.
                 */
 
                 questions.forEach(
                     function (q) {
 
                         if (
-                            !submittedAnswers[q.id]
+                            !submittedAnswers[
+                                q.id
+                            ]
                         ) {
 
-                            submittedAnswers[q.id] =
-                                true;
+                            submittedAnswers[
+                                q.id
+                            ] = true;
                         }
 
                     }
@@ -1573,7 +2073,8 @@
             }
 
 
-            quizFinished = true;
+            quizFinished =
+                true;
 
 
             stopQuestionTimer();
@@ -1616,16 +2117,14 @@
 
                 const selected =
                     Number(
-                        selectedAnswers[q.id] ||
-                        0
+                        selectedAnswers[
+                            q.id
+                        ] || 0
                     );
 
 
                 const correctAnswer =
-                    Number(
-                        q.correctOption ||
-                        0
-                    );
+                    getCorrectOption(q);
 
 
                 /*
@@ -1666,6 +2165,10 @@
         );
 
 
+        const total =
+            questions.length;
+
+
         const attempted =
             correct +
             incorrect;
@@ -1682,25 +2185,79 @@
                 : 0;
 
 
+        /*
+          FINAL RESULT OBJECT
+
+          IMPORTANT:
+          Both old and new property names
+          are saved so result.js can read it.
+        */
+
         const result = {
 
-            score: score,
+            /*
+              Score
+            */
 
-            correct: correct,
+            score:
+                score,
 
-            incorrect: incorrect,
 
-            skipped: skipped,
+            /*
+              Counts
+            */
 
-            accuracy: accuracy,
+            correct:
+                correct,
+
+            incorrect:
+                incorrect,
+
+            skipped:
+                skipped,
+
+
+            /*
+              Total
+            */
+
+            total:
+                total,
 
             totalQuestions:
-                questions.length,
+                total,
 
-            attempted: attempted,
+
+            /*
+              Attempted
+            */
+
+            attempted:
+                attempted,
+
+
+            /*
+              Accuracy
+            */
+
+            accuracy:
+                accuracy,
+
+
+            /*
+              Time
+            */
+
+            time:
+                totalSeconds,
 
             totalTime:
                 totalSeconds,
+
+
+            /*
+              Marking
+            */
 
             positiveMark:
                 positiveMark,
@@ -1708,9 +2265,20 @@
             negativeMark:
                 negativeMark,
 
+
+            /*
+              Quiz
+            */
+
             quizTitle:
                 quizData.title ||
+                quizData.name ||
                 "Practice Quiz",
+
+
+            /*
+              IDs
+            */
 
             courseId:
                 getIds().courseId,
@@ -1724,10 +2292,22 @@
             quizId:
                 getIds().quizId,
 
+
+            /*
+              Question IDs
+            */
+
             questionIds:
                 questions.map(
-                    q => q.id
+                    function (q) {
+                        return q.id;
+                    }
                 ),
+
+
+            /*
+              Answers
+            */
 
             selectedAnswers:
                 selectedAnswers,
@@ -1735,14 +2315,30 @@
             submittedAnswers:
                 submittedAnswers,
 
+
+            /*
+              Completion
+            */
+
+            completed:
+                true,
+
+
             completedAt:
                 Date.now()
+
         };
+
+
+        console.log(
+            "FINAL QUIZ RESULT:",
+            result
+        );
 
 
         /*
           MOST IMPORTANT:
-          Result page will read this.
+          Save result before redirect.
         */
 
         localStorage.setItem(
@@ -1758,12 +2354,8 @@
 
 
         /*
-          Keep separate result history
+          History
         */
-
-        const historyKey =
-            "quizHistory";
-
 
         let history = [];
 
@@ -1773,11 +2365,11 @@
             history =
                 JSON.parse(
                     localStorage.getItem(
-                        historyKey
+                        "quizHistory"
                     )
                 ) || [];
 
-        } catch (e) {
+        } catch (error) {
 
             history = [];
         }
@@ -1785,10 +2377,6 @@
 
         history.unshift(result);
 
-
-        /*
-          Keep latest 20 attempts
-        */
 
         history =
             history.slice(
@@ -1798,7 +2386,7 @@
 
 
         localStorage.setItem(
-            historyKey,
+            "quizHistory",
             JSON.stringify(history)
         );
 
@@ -1820,7 +2408,7 @@
 
 
     /* =====================================================
-       SAVE ATTEMPT
+       ATTEMPT KEY
     ===================================================== */
 
     function getAttemptKey() {
@@ -1830,14 +2418,24 @@
 
 
         return [
+
             "mneet_attempt",
+
             ids.courseId,
+
             ids.chapterId,
+
             ids.topicId,
+
             ids.quizId
+
         ].join("_");
     }
 
+
+    /* =====================================================
+       SAVE ATTEMPT
+    ===================================================== */
 
     function saveAttempt() {
 
@@ -1845,6 +2443,7 @@
             !questions.length ||
             quizFinished
         ) {
+
             return;
         }
 
@@ -1868,13 +2467,24 @@
 
             savedAt:
                 Date.now()
+
         };
 
 
-        localStorage.setItem(
-            getAttemptKey(),
-            JSON.stringify(attempt)
-        );
+        try {
+
+            localStorage.setItem(
+                getAttemptKey(),
+                JSON.stringify(attempt)
+            );
+
+        } catch (error) {
+
+            console.warn(
+                "Could not save attempt:",
+                error
+            );
+        }
     }
 
 
@@ -1914,8 +2524,7 @@
 
 
             /*
-              Only restore recent attempt
-              within 6 hours.
+              Only restore within 6 hours.
             */
 
             if (
@@ -1927,18 +2536,29 @@
 
                 clearAttempt();
 
+                currentIndex = 0;
+
+                selectedAnswers = {};
+
+                submittedAnswers = {};
+
+                questionTimeLeft =
+                    perQuestionTime;
+
+                totalSeconds = 0;
+
                 return;
             }
 
 
             currentIndex =
                 Number(
-                    attempt.currentIndex ||
-                    0
+                    attempt.currentIndex || 0
                 );
 
 
             if (
+                currentIndex < 0 ||
                 currentIndex >=
                 questions.length
             ) {
@@ -1970,6 +2590,24 @@
                     0
                 );
 
+
+            /*
+              If current question was already
+              submitted, don't restore old timer.
+            */
+
+            const q =
+                questions[currentIndex];
+
+
+            if (
+                q &&
+                submittedAnswers[q.id]
+            ) {
+
+                questionTimeLeft = 0;
+            }
+
         } catch (error) {
 
             console.warn(
@@ -1998,9 +2636,19 @@
 
     function clearAttempt() {
 
-        localStorage.removeItem(
-            getAttemptKey()
-        );
+        try {
+
+            localStorage.removeItem(
+                getAttemptKey()
+            );
+
+        } catch (error) {
+
+            console.warn(
+                "Clear attempt error:",
+                error
+            );
+        }
     }
 
 
@@ -2015,9 +2663,21 @@
                 getIds();
 
 
-            /*
-              Try topic page first.
-            */
+            localStorage.setItem(
+                "activeCourse",
+                ids.courseId
+            );
+
+            localStorage.setItem(
+                "activeChapter",
+                ids.chapterId
+            );
+
+            localStorage.setItem(
+                "activeTopic",
+                ids.topicId
+            );
+
 
             window.location.href =
                 "topic.html?courseId=" +
@@ -2039,7 +2699,9 @@
        LOADING
     ===================================================== */
 
-    function showLoading(message) {
+    function showLoading(
+        message
+    ) {
 
         const container =
             document.getElementById(
@@ -2067,7 +2729,9 @@
        ERROR
     ===================================================== */
 
-    function showError(message) {
+    function showError(
+        message
+    ) {
 
         const container =
             document.getElementById(
@@ -2092,6 +2756,7 @@
                 <br><br>
 
                 <button
+                    type="button"
                     onclick="goBackToTopic()"
                     style="
                         border:0;
@@ -2111,10 +2776,12 @@
 
 
     /* =====================================================
-       SECURITY / HTML ESCAPE
+       ESCAPE HTML
     ===================================================== */
 
-    function escapeHTML(value) {
+    function escapeHTML(
+        value
+    ) {
 
         return String(value)
             .replace(
@@ -2140,7 +2807,13 @@
     }
 
 
-    function escapeAttribute(value) {
+    /* =====================================================
+       ESCAPE ATTRIBUTE
+    ===================================================== */
+
+    function escapeAttribute(
+        value
+    ) {
 
         return escapeHTML(value);
     }
@@ -2151,10 +2824,6 @@
     ===================================================== */
 
     function start() {
-
-        /*
-          Wait for Firebase scripts.
-        */
 
         if (
             typeof firebase ===
@@ -2174,9 +2843,9 @@
     }
 
 
-    /*
-      DOM READY
-    */
+    /* =====================================================
+       DOM READY
+    ===================================================== */
 
     if (
         document.readyState ===
