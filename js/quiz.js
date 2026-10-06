@@ -1,8 +1,8 @@
 // ==========================================
-// mNEET - QUIZ SYSTEM
+// mNEET - QUIZ.JS
+// Firestore path:
+// courses/{courseId}/chapters/{chapterId}/topics/{topicId}/quiz
 // ==========================================
-
-let currentUser = null;
 
 let courseId = null;
 let chapterId = null;
@@ -20,8 +20,6 @@ let totalTimer = null;
 let questionTimeLeft = 60;
 let totalSeconds = 0;
 
-let quizStarted = false;
-
 
 // ==========================================
 // PAGE LOAD
@@ -29,69 +27,42 @@ let quizStarted = false;
 
 document.addEventListener("DOMContentLoaded", function () {
 
-    if (typeof auth === "undefined") {
-
-        console.error("Firebase Auth not loaded");
-
-        showQuizError(
-            "Firebase Auth load হয়নি।"
-        );
-
-        return;
-    }
-
-
     auth.onAuthStateChanged(function (user) {
 
         if (!user) {
-
-            window.location.href =
-                "index.html";
-
+            window.location.href = "index.html";
             return;
         }
-
-
-        currentUser = user;
-
 
         courseId =
             localStorage.getItem("quizCourse") ||
             localStorage.getItem("activeCourse");
 
-
         chapterId =
             localStorage.getItem("quizChapter") ||
             localStorage.getItem("activeChapter");
-
 
         topicId =
             localStorage.getItem("quizTopic") ||
             localStorage.getItem("activeTopic");
 
 
-        console.log("QUIZ IDS:", {
-            courseId,
-            chapterId,
-            topicId
-        });
+        console.log("COURSE:", courseId);
+        console.log("CHAPTER:", chapterId);
+        console.log("TOPIC:", topicId);
 
 
-        if (
-            !courseId ||
-            !chapterId ||
-            !topicId
-        ) {
+        if (!courseId || !chapterId || !topicId) {
 
-            showQuizError(
-                "Quiz information missing. Topic থেকে আবার Quiz খুলুন।"
+            showError(
+                "Quiz information missing. Topic থেকে আবার Quiz খুলুন."
             );
 
             return;
         }
 
 
-        loadQuestions();
+        loadQuiz();
 
     });
 
@@ -99,153 +70,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 // ==========================================
-// LOAD QUESTIONS
+// LOAD QUIZ
 // ==========================================
 
-function loadQuestions() {
+function loadQuiz() {
 
     const container =
-        document.getElementById(
-            "quizContainer"
-        );
+        document.getElementById("quizContainer");
 
 
-    if (container) {
+    container.innerHTML = `
+        <div class="quiz-loading">
+            Loading questions...
+        </div>
+    `;
 
-        container.innerHTML = `
-            <div class="quiz-loading">
-                Loading questions...
-            </div>
-        `;
-
-    }
-
-
-    /*
-     * Main Firestore structure:
-     *
-     * courses
-     *   courseId
-     *     chapters
-     *       chapterId
-     *         topics
-     *           topicId
-     *             quizzes
-     *               question documents
-     */
-
-
-    db.collection("courses")
-        .doc(courseId)
-        .collection("chapters")
-        .doc(chapterId)
-        .collection("topics")
-        .doc(topicId)
-        .collection("quizzes")
-        .get()
-
-        .then(function (snapshot) {
-
-            console.log(
-                "Quiz documents:",
-                snapshot.size
-            );
-
-
-            questions = [];
-
-
-            snapshot.forEach(function (doc) {
-
-                const data =
-                    doc.data();
-
-
-                questions.push({
-
-                    id: doc.id,
-
-                    question:
-                        data.question ||
-                        data.questionText ||
-                        "",
-
-                    option1:
-                        data.option1 ||
-                        "",
-
-                    option2:
-                        data.option2 ||
-                        "",
-
-                    option3:
-                        data.option3 ||
-                        "",
-
-                    option4:
-                        data.option4 ||
-                        "",
-
-                    answer:
-                        data.answer,
-
-                    solution:
-                        data.solution ||
-                        "",
-
-                    reference:
-                        data.reference ||
-                        data.ncertReference ||
-                        ""
-
-                });
-
-            });
-
-
-            /*
-             * যদি quizzes collection-এ question না থাকে,
-             * তাহলে singular "quiz" collection try করবে।
-             */
-
-            if (questions.length === 0) {
-
-                return loadSingularQuiz();
-
-            }
-
-
-            startQuiz();
-
-        })
-
-        .catch(function (error) {
-
-            console.error(
-                "Quiz collection error:",
-                error
-            );
-
-
-            /*
-             * প্রথম path fail করলে singular quiz try করবে।
-             */
-
-            loadSingularQuiz();
-
-        });
-
-}
-
-
-// ==========================================
-// FALLBACK: quiz COLLECTION
-// ==========================================
-
-function loadSingularQuiz() {
 
     console.log(
-        "Trying singular quiz collection..."
+        "Loading:",
+        "courses/" +
+        courseId +
+        "/chapters/" +
+        chapterId +
+        "/topics/" +
+        topicId +
+        "/quiz"
     );
 
 
@@ -261,7 +110,7 @@ function loadSingularQuiz() {
         .then(function (snapshot) {
 
             console.log(
-                "Singular quiz documents:",
+                "QUIZ DOCUMENT COUNT:",
                 snapshot.size
             );
 
@@ -271,8 +120,14 @@ function loadSingularQuiz() {
 
             snapshot.forEach(function (doc) {
 
-                const data =
-                    doc.data();
+                console.log(
+                    "QUESTION ID:",
+                    doc.id,
+                    doc.data()
+                );
+
+
+                const data = doc.data();
 
 
                 questions.push({
@@ -280,37 +135,25 @@ function loadSingularQuiz() {
                     id: doc.id,
 
                     question:
-                        data.question ||
-                        data.questionText ||
-                        "",
+                        data.question || "",
 
                     option1:
-                        data.option1 ||
-                        "",
+                        data.option1 || "",
 
                     option2:
-                        data.option2 ||
-                        "",
+                        data.option2 || "",
 
                     option3:
-                        data.option3 ||
-                        "",
+                        data.option3 || "",
 
                     option4:
-                        data.option4 ||
-                        "",
+                        data.option4 || "",
 
                     answer:
                         data.answer,
 
                     solution:
-                        data.solution ||
-                        "",
-
-                    reference:
-                        data.reference ||
-                        data.ncertReference ||
-                        ""
+                        data.solution || ""
 
                 });
 
@@ -319,8 +162,8 @@ function loadSingularQuiz() {
 
             if (questions.length === 0) {
 
-                showQuizError(
-                    "এই topic-এর মধ্যে কোনো question পাওয়া যায়নি।"
+                showError(
+                    "এই Topic-এর quiz collection-এ কোনো question পাওয়া যায়নি."
                 );
 
                 return;
@@ -334,13 +177,14 @@ function loadSingularQuiz() {
         .catch(function (error) {
 
             console.error(
-                "Quiz loading error:",
+                "FIRESTORE QUIZ ERROR:",
                 error
             );
 
 
-            showQuizError(
-                "Question load করা যাচ্ছে না। Firestore path/check করুন।"
+            showError(
+                "Quiz load হয়নি: " +
+                error.message
             );
 
         });
@@ -362,13 +206,9 @@ function startQuiz() {
 
     totalSeconds = 0;
 
-    quizStarted = true;
-
 
     const title =
-        document.getElementById(
-            "quizTitle"
-        );
+        document.getElementById("quizTitle");
 
 
     if (title) {
@@ -379,66 +219,9 @@ function startQuiz() {
     }
 
 
-    updateTotalTimer();
-
     startTotalTimer();
 
-    showQuestion();
-
-}
-
-
-// ==========================================
-// SHOW QUESTION
-// ==========================================
-
-function showQuestion() {
-
-    stopQuestionTimer();
-
-
-    if (
-        currentQuestion < 0
-    ) {
-
-        currentQuestion = 0;
-
-    }
-
-
-    if (
-        currentQuestion >=
-        questions.length
-    ) {
-
-        currentQuestion =
-            questions.length - 1;
-
-    }
-
-
-    const q =
-        questions[currentQuestion];
-
-
-    if (!q) {
-
-        showQuizError(
-            "Question পাওয়া যাচ্ছে না."
-        );
-
-        return;
-
-    }
-
-
-    updateQuestionInfo();
-
-    updateProgress();
-
-    renderQuestion(q);
-
-    startQuestionTimer();
+    renderQuestion();
 
 }
 
@@ -447,7 +230,24 @@ function showQuestion() {
 // RENDER QUESTION
 // ==========================================
 
-function renderQuestion(q) {
+function renderQuestion() {
+
+    stopQuestionTimer();
+
+
+    const q =
+        questions[currentQuestion];
+
+
+    if (!q) {
+
+        showError(
+            "Question পাওয়া যাচ্ছে না."
+        );
+
+        return;
+    }
+
 
     const container =
         document.getElementById(
@@ -455,29 +255,16 @@ function renderQuestion(q) {
         );
 
 
-    if (!container) {
-
-        return;
-
-    }
-
-
-    const savedAnswer =
-        selectedAnswers[
-            currentQuestion
-        ];
+    const selected =
+        selectedAnswers[currentQuestion];
 
 
     const submitted =
-        submittedAnswers[
-            currentQuestion
-        ] === true;
+        submittedAnswers[currentQuestion];
 
 
     const correctAnswer =
-        normalizeAnswer(
-            q.answer
-        );
+        normalizeAnswer(q.answer);
 
 
     let html = `
@@ -486,10 +273,7 @@ function renderQuestion(q) {
 
             <p class="question-text">
 
-                ${escapeHTML(
-                    q.question ||
-                    "Question not available"
-                )}
+                ${escapeHTML(q.question)}
 
             </p>
 
@@ -512,60 +296,48 @@ function renderQuestion(q) {
         index
     ) {
 
-        const optionNumber =
+        const number =
             index + 1;
 
 
-        const selected =
-            String(savedAnswer) ===
-            String(optionNumber);
+        const isSelected =
+            String(selected) ===
+            String(number);
 
 
         const isCorrect =
             submitted &&
             correctAnswer ===
-            String(optionNumber);
+            String(number);
 
 
         const isWrong =
             submitted &&
-            selected &&
+            isSelected &&
             !isCorrect;
 
 
-        let classes =
+        let className =
             "option";
 
 
-        if (selected) {
-
-            classes +=
-                " selected";
-
+        if (isSelected) {
+            className += " selected";
         }
 
 
         if (isCorrect) {
-
-            classes +=
-                " correct";
-
+            className += " correct";
         }
 
 
         if (isWrong) {
-
-            classes +=
-                " wrong";
-
+            className += " wrong";
         }
 
 
         if (submitted) {
-
-            classes +=
-                " disabled";
-
+            className += " disabled";
         }
 
 
@@ -573,18 +345,16 @@ function renderQuestion(q) {
 
             <button
                 type="button"
-                class="${classes}"
-                onclick="selectOption(${optionNumber})"
+                class="${className}"
+                onclick="selectAnswer(${number})"
             >
 
                 <span class="option-letter">
-                    ${optionNumber}
+                    ${number}
                 </span>
 
                 <span class="option-text">
-                    ${escapeHTML(
-                        option || ""
-                    )}
+                    ${escapeHTML(option)}
                 </span>
 
             </button>
@@ -595,13 +365,15 @@ function renderQuestion(q) {
 
 
     html += `
+
             </div>
+
     `;
 
 
-    /*
-     * Submit Answer
-     */
+    // ==============================
+    // SUBMIT ANSWER
+    // ==============================
 
     if (!submitted) {
 
@@ -611,7 +383,7 @@ function renderQuestion(q) {
                 type="button"
                 class="submit-answer-button"
                 onclick="submitAnswer()"
-                ${savedAnswer ? "" : "disabled"}
+                ${selected ? "" : "disabled"}
             >
 
                 Submit Answer
@@ -623,15 +395,15 @@ function renderQuestion(q) {
     }
 
 
-    /*
-     * Answer status
-     */
+    // ==============================
+    // RESULT
+    // ==============================
 
     if (submitted) {
 
         const correct =
             correctAnswer ===
-            String(savedAnswer);
+            String(selected);
 
 
         html += `
@@ -657,14 +429,7 @@ function renderQuestion(q) {
         `;
 
 
-        /*
-         * Solution
-         */
-
-        if (
-            q.solution ||
-            q.reference
-        ) {
+        if (q.solution) {
 
             html += `
 
@@ -678,24 +443,10 @@ function renderQuestion(q) {
                     </div>
 
                     <div class="solution-text">
-                        ${escapeHTML(
-                            q.solution ||
-                            "Solution not available."
-                        )}
-                    </div>
 
-                    ${
-                        q.reference
-                            ? `
-                                <div class="reference-text">
-                                    📖 NCERT Reference:
-                                    ${escapeHTML(
-                                        q.reference
-                                    )}
-                                </div>
-                              `
-                            : ""
-                    }
+                        ${escapeHTML(q.solution)}
+
+                    </div>
 
                 </div>
 
@@ -706,9 +457,9 @@ function renderQuestion(q) {
     }
 
 
-    /*
-     * Navigation
-     */
+    // ==============================
+    // NAVIGATION
+    // ==============================
 
     html += `
 
@@ -724,9 +475,7 @@ function renderQuestion(q) {
                         : ""
                 }
             >
-
                 ← Previous
-
             </button>
 
 
@@ -735,14 +484,12 @@ function renderQuestion(q) {
                 class="quiz-button next-button"
                 onclick="nextQuestion()"
             >
-
                 ${
                     currentQuestion ===
                     questions.length - 1
-                        ? "Last"
+                        ? "Finish"
                         : "Next →"
                 }
-
             </button>
 
         </div>
@@ -764,35 +511,38 @@ function renderQuestion(q) {
     container.innerHTML =
         html;
 
+
+    updateQuestionInfo();
+
+    updateProgress();
+
+    questionTimeLeft = 60;
+
+    updateQuestionTimer();
+
+    startQuestionTimer();
+
 }
 
 
 // ==========================================
-// SELECT OPTION
+// SELECT ANSWER
 // ==========================================
 
-function selectOption(
-    optionNumber
-) {
+function selectAnswer(number) {
 
     if (
-        submittedAnswers[
-            currentQuestion
-        ] === true
+        submittedAnswers[currentQuestion]
     ) {
-
         return;
-
     }
 
 
-    selectedAnswers[
-        currentQuestion
-    ] =
-        optionNumber;
+    selectedAnswers[currentQuestion] =
+        number;
 
 
-    showQuestion();
+    renderQuestion();
 
 }
 
@@ -804,30 +554,26 @@ function selectOption(
 function submitAnswer() {
 
     const selected =
-        selectedAnswers[
-            currentQuestion
-        ];
+        selectedAnswers[currentQuestion];
 
 
     if (!selected) {
 
         alert(
-            "Please select an answer first."
+            "আগে একটি option select করুন."
         );
 
         return;
-
     }
 
 
-    submittedAnswers[
-        currentQuestion
-    ] = true;
+    submittedAnswers[currentQuestion] =
+        true;
 
 
     stopQuestionTimer();
 
-    showQuestion();
+    renderQuestion();
 
 }
 
@@ -845,7 +591,7 @@ function nextQuestion() {
 
         currentQuestion++;
 
-        showQuestion();
+        renderQuestion();
 
     }
 
@@ -864,7 +610,7 @@ function previousQuestion() {
 
         currentQuestion--;
 
-        showQuestion();
+        renderQuestion();
 
     }
 
@@ -877,25 +623,14 @@ function previousQuestion() {
 
 function submitQuiz() {
 
-    if (
-        !questions.length
-    ) {
-
-        return;
-
-    }
-
-
-    const confirmed =
+    const ok =
         confirm(
-            "Submit this quiz and see your result?"
+            "Quiz submit করে result দেখতে চান?"
         );
 
 
-    if (!confirmed) {
-
+    if (!ok) {
         return;
-
     }
 
 
@@ -909,46 +644,43 @@ function submitQuiz() {
     let skipped = 0;
 
 
-    questions.forEach(
-        function (
-            q,
-            index
+    questions.forEach(function (
+        q,
+        index
+    ) {
+
+        const selected =
+            selectedAnswers[index];
+
+
+        if (!selected) {
+
+            skipped++;
+
+            return;
+        }
+
+
+        const correctAnswer =
+            normalizeAnswer(
+                q.answer
+            );
+
+
+        if (
+            String(selected) ===
+            correctAnswer
         ) {
 
-            const selected =
-                selectedAnswers[index];
+            correct++;
 
+        } else {
 
-            if (!selected) {
-
-                skipped++;
-
-                return;
-
-            }
-
-
-            const correctAnswer =
-                normalizeAnswer(
-                    q.answer
-                );
-
-
-            if (
-                String(selected) ===
-                correctAnswer
-            ) {
-
-                correct++;
-
-            } else {
-
-                incorrect++;
-
-            }
+            incorrect++;
 
         }
-    );
+
+    });
 
 
     const total =
@@ -956,14 +688,19 @@ function submitQuiz() {
 
 
     const score =
-        (correct * 4) -
+        (
+            correct * 4
+        ) -
         incorrect;
 
 
     const accuracy =
         total > 0
             ? Math.round(
-                (correct / total) * 100
+                (
+                    correct /
+                    total
+                ) * 100
             )
             : 0;
 
@@ -998,16 +735,13 @@ function submitQuiz() {
             accuracy,
 
         time:
-            totalSeconds,
-
-        submittedAt:
-            Date.now()
+            totalSeconds
 
     };
 
 
     console.log(
-        "FINAL RESULT:",
+        "RESULT:",
         result
     );
 
@@ -1018,19 +752,17 @@ function submitQuiz() {
     );
 
 
-    /*
-     * Keep navigation IDs
-     */
-
     localStorage.setItem(
         "activeCourse",
         courseId
     );
 
+
     localStorage.setItem(
         "activeChapter",
         chapterId
     );
+
 
     localStorage.setItem(
         "activeTopic",
@@ -1053,53 +785,40 @@ function startQuestionTimer() {
     stopQuestionTimer();
 
 
-    questionTimeLeft =
-        60;
-
+    questionTimeLeft = 60;
 
     updateQuestionTimer();
 
 
     questionTimer =
-        setInterval(
-            function () {
+        setInterval(function () {
 
-                questionTimeLeft--;
+            questionTimeLeft--;
+
+            updateQuestionTimer();
 
 
-                updateQuestionTimer();
+            if (
+                questionTimeLeft <= 0
+            ) {
+
+                stopQuestionTimer();
 
 
                 if (
-                    questionTimeLeft <= 0
+                    currentQuestion <
+                    questions.length - 1
                 ) {
 
-                    stopQuestionTimer();
+                    currentQuestion++;
 
-
-                    /*
-                     * Time শেষ হলে answer
-                     * automatically submit হবে না।
-                     *
-                     * User পরের question-এ যেতে পারবে।
-                     */
-
-                    if (
-                        currentQuestion <
-                        questions.length - 1
-                    ) {
-
-                        currentQuestion++;
-
-                        showQuestion();
-
-                    }
+                    renderQuestion();
 
                 }
 
-            },
-            1000
-        );
+            }
+
+        }, 1000);
 
 }
 
@@ -1129,20 +848,18 @@ function stopQuestionTimer() {
 
 function updateQuestionTimer() {
 
-    const element =
+    const el =
         document.getElementById(
             "questionTimer"
         );
 
 
-    if (!element) {
-
+    if (!el) {
         return;
-
     }
 
 
-    element.textContent =
+    el.textContent =
         questionTimeLeft;
 
 
@@ -1150,13 +867,13 @@ function updateQuestionTimer() {
         questionTimeLeft <= 10
     ) {
 
-        element.classList.add(
+        el.classList.add(
             "timer-danger"
         );
 
     } else {
 
-        element.classList.remove(
+        el.classList.remove(
             "timer-danger"
         );
 
@@ -1174,17 +891,17 @@ function startTotalTimer() {
     stopTotalTimer();
 
 
+    updateTotalTimer();
+
+
     totalTimer =
-        setInterval(
-            function () {
+        setInterval(function () {
 
-                totalSeconds++;
+            totalSeconds++;
 
-                updateTotalTimer();
+            updateTotalTimer();
 
-            },
-            1000
-        );
+        }, 1000);
 
 }
 
@@ -1214,49 +931,58 @@ function stopTotalTimer() {
 
 function updateTotalTimer() {
 
-    const element =
+    const el =
         document.getElementById(
             "totalTimer"
         );
 
 
-    if (!element) {
-
+    if (!el) {
         return;
-
     }
 
 
-    element.textContent =
-        formatTime(
-            totalSeconds
+    const minutes =
+        Math.floor(
+            totalSeconds / 60
         );
+
+
+    const seconds =
+        totalSeconds % 60;
+
+
+    el.textContent =
+        String(minutes).padStart(2, "0") +
+        ":" +
+        String(seconds).padStart(2, "0");
 
 }
 
 
 // ==========================================
-// QUESTION INFO
+// QUESTION COUNTER
 // ==========================================
 
 function updateQuestionInfo() {
 
-    const counter =
+    const el =
         document.getElementById(
             "questionCounter"
         );
 
 
-    if (counter) {
-
-        counter.textContent =
-            (
-                currentQuestion + 1
-            ) +
-            " / " +
-            questions.length;
-
+    if (!el) {
+        return;
     }
+
+
+    el.textContent =
+        (
+            currentQuestion + 1
+        ) +
+        " / " +
+        questions.length;
 
 }
 
@@ -1267,81 +993,37 @@ function updateQuestionInfo() {
 
 function updateProgress() {
 
-    const fill =
+    const el =
         document.getElementById(
             "progressFill"
         );
 
 
-    if (!fill) {
-
+    if (!el) {
         return;
-
     }
 
 
     const percent =
-        questions.length > 0
-            ? (
-                (
-                    currentQuestion + 1
-                ) /
-                questions.length
-            ) * 100
-            : 0;
+        (
+            (
+                currentQuestion + 1
+            ) /
+            questions.length
+        ) * 100;
 
 
-    fill.style.width =
+    el.style.width =
         percent + "%";
 
 }
 
 
 // ==========================================
-// ERROR
+// ANSWER NORMALIZE
 // ==========================================
 
-function showQuizError(
-    message
-) {
-
-    const container =
-        document.getElementById(
-            "quizContainer"
-        );
-
-
-    if (!container) {
-
-        return;
-
-    }
-
-
-    container.innerHTML = `
-
-        <div class="quiz-error">
-
-            ⚠️
-
-            <br><br>
-
-            ${escapeHTML(message)}
-
-        </div>
-
-    `;
-
-}
-
-
-// ==========================================
-// NORMALIZE ANSWER
-// ==========================================
-
-function normalizeAnswer(
-    answer
-) {
+function normalizeAnswer(answer) {
 
     if (
         answer === undefined ||
@@ -1353,30 +1035,10 @@ function normalizeAnswer(
     }
 
 
-    let value =
+    const value =
         String(answer)
             .trim()
             .toLowerCase();
-
-
-    /*
-     * Supports:
-     *
-     * 1
-     * 2
-     * 3
-     * 4
-     *
-     * A
-     * B
-     * C
-     * D
-     *
-     * option1
-     * option2
-     * option3
-     * option4
-     */
 
 
     if (
@@ -1429,73 +1091,56 @@ function normalizeAnswer(
 
 
 // ==========================================
-// ESCAPE HTML
+// ERROR
 // ==========================================
 
-function escapeHTML(
-    value
-) {
+function showError(message) {
 
-    return String(value || "")
-
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-
-        .replace(
-            /</g,
-            "&lt;"
-        )
-
-        .replace(
-            />/g,
-            "&gt;"
-        )
-
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-
-        .replace(
-            /'/g,
-            "&#039;"
+    const container =
+        document.getElementById(
+            "quizContainer"
         );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    container.innerHTML = `
+
+        <div class="quiz-error">
+
+            ⚠️
+
+            <br><br>
+
+            ${escapeHTML(message)}
+
+        </div>
+
+    `;
 
 }
 
 
 // ==========================================
-// FORMAT TIME
+// ESCAPE HTML
 // ==========================================
 
-function formatTime(
-    seconds
-) {
+function escapeHTML(value) {
 
-    seconds =
-        Number(seconds || 0);
+    return String(value || "")
 
+        .replace(/&/g, "&amp;")
 
-    const minutes =
-        Math.floor(
-            seconds / 60
-        );
+        .replace(/</g, "&lt;")
 
+        .replace(/>/g, "&gt;")
 
-    const sec =
-        seconds % 60;
+        .replace(/"/g, "&quot;")
 
-
-    return (
-        String(minutes)
-            .padStart(2, "0")
-        +
-        ":" +
-        String(sec)
-            .padStart(2, "0")
-    );
+        .replace(/'/g, "&#039;");
 
 }
 
@@ -1513,28 +1158,19 @@ function goBackToTopic() {
 
     localStorage.setItem(
         "activeCourse",
-        courseId ||
-        localStorage.getItem(
-            "quizCourse"
-        )
+        courseId
     );
 
 
     localStorage.setItem(
         "activeChapter",
-        chapterId ||
-        localStorage.getItem(
-            "quizChapter"
-        )
+        chapterId
     );
 
 
     localStorage.setItem(
         "activeTopic",
-        topicId ||
-        localStorage.getItem(
-            "quizTopic"
-        )
+        topicId
     );
 
 
