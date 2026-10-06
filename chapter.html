@@ -17,20 +17,22 @@
     href="css/style.css"
 >
 
+
+<!-- Firebase -->
+
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 
 
 <style>
 
-/* =====================================================
-   BASE
-===================================================== */
-
 *{
     box-sizing:border-box;
 }
+
 
 body{
 
@@ -54,10 +56,6 @@ body{
 }
 
 
-/* =====================================================
-   PAGE
-===================================================== */
-
 .chapter-page{
 
     min-height:100vh;
@@ -66,9 +64,7 @@ body{
 }
 
 
-/* =====================================================
-   HEADER
-===================================================== */
+/* ================= HEADER ================= */
 
 .chapter-header{
 
@@ -76,7 +72,9 @@ body{
 
     top:0;
 
-    z-index:50;
+    z-index:100;
+
+    height:65px;
 
     display:flex;
 
@@ -84,12 +82,12 @@ body{
 
     justify-content:space-between;
 
-    padding:13px 16px;
+    padding:0 15px;
 
     background:
         rgba(4,10,21,.97);
 
-    backdrop-filter:blur(16px);
+    backdrop-filter:blur(15px);
 
     border-bottom:
         1px solid
@@ -103,9 +101,7 @@ body{
 
     align-items:center;
 
-    gap:12px;
-
-    min-width:0;
+    gap:10px;
 }
 
 
@@ -115,12 +111,12 @@ body{
 
     height:38px;
 
-    border:none;
+    border:0;
 
     border-radius:10px;
 
     background:
-        rgba(255,255,255,.06);
+        rgba(255,255,255,.07);
 
     color:white;
 
@@ -158,35 +154,29 @@ body{
 
     border-radius:8px;
 
-    padding:8px 11px;
+    padding:7px 10px;
 
-    font-size:11px;
+    font-size:10px;
 
     font-weight:800;
-
-    cursor:pointer;
 }
 
 
-/* =====================================================
-   MAIN
-===================================================== */
+/* ================= MAIN ================= */
 
 .chapter-main{
 
     width:100%;
 
-    max-width:900px;
+    max-width:850px;
 
     margin:auto;
 
-    padding:20px 15px;
+    padding:16px 13px 35px;
 }
 
 
-/* =====================================================
-   HERO
-===================================================== */
+/* ================= HERO ================= */
 
 .chapter-hero{
 
@@ -196,11 +186,11 @@ body{
 
     justify-content:space-between;
 
-    gap:18px;
+    gap:15px;
 
-    padding:21px;
+    padding:18px;
 
-    border-radius:19px;
+    border-radius:17px;
 
     background:
         linear-gradient(
@@ -219,7 +209,7 @@ body{
 
     color:#ffc107;
 
-    font-size:9px;
+    font-size:8px;
 
     font-weight:900;
 
@@ -235,7 +225,7 @@ body{
 
     color:white;
 
-    font-size:24px;
+    font-size:22px;
 
     line-height:1.25;
 }
@@ -249,9 +239,9 @@ body{
 
 .hero-icon{
 
-    width:58px;
+    width:48px;
 
-    height:58px;
+    height:48px;
 
     flex-shrink:0;
 
@@ -261,18 +251,16 @@ body{
 
     justify-content:center;
 
-    border-radius:16px;
+    border-radius:13px;
 
     background:
         rgba(255,193,7,.08);
 
-    font-size:29px;
+    font-size:24px;
 }
 
 
-/* =====================================================
-   SECTION HEADING
-===================================================== */
+/* ================= SECTION ================= */
 
 .section-heading{
 
@@ -282,7 +270,7 @@ body{
 
     justify-content:space-between;
 
-    margin:22px 2px 11px;
+    margin:20px 2px 9px;
 }
 
 
@@ -292,7 +280,7 @@ body{
 
     color:white;
 
-    font-size:17px;
+    font-size:16px;
 
     font-weight:900;
 }
@@ -300,42 +288,44 @@ body{
 
 .section-heading span{
 
-    color:#8492a7;
+    color:#7f8da2;
 
-    font-size:10px;
+    font-size:9px;
+
+    font-weight:700;
 }
 
 
-/* =====================================================
-   TOPIC LIST
-   ONE CARD PER ROW
-===================================================== */
+/* ================= LIST ================= */
 
-.topic-grid{
+.topic-grid,
+.type-practice-list{
 
     display:flex;
 
     flex-direction:column;
 
-    gap:9px;
+    gap:8px;
 }
 
+
+/* ================= TOPIC CARD ================= */
 
 .topic-card{
 
     width:100%;
 
-    min-height:62px;
+    min-height:58px;
 
     display:flex;
 
     align-items:center;
 
-    gap:11px;
+    gap:10px;
 
-    padding:10px 12px;
+    padding:9px 11px;
 
-    border-radius:13px;
+    border-radius:12px;
 
     background:
         linear-gradient(
@@ -356,18 +346,19 @@ body{
 
 .topic-card:hover{
 
-    transform:translateY(-1px);
-
     border-color:
         rgba(255,193,7,.28);
+
+    transform:
+        translateY(-1px);
 }
 
 
 .topic-number{
 
-    width:38px;
+    width:35px;
 
-    height:38px;
+    height:35px;
 
     flex-shrink:0;
 
@@ -377,7 +368,7 @@ body{
 
     justify-content:center;
 
-    border-radius:10px;
+    border-radius:9px;
 
     background:
         rgba(255,193,7,.09);
@@ -388,7 +379,7 @@ body{
 
     color:#ffc107;
 
-    font-size:13px;
+    font-size:12px;
 
     font-weight:900;
 }
@@ -396,15 +387,9 @@ body{
 
 .topic-card-content{
 
-    min-width:0;
-
     flex:1;
-}
 
-
-.topic-badge{
-
-    display:none;
+    min-width:0;
 }
 
 
@@ -414,7 +399,7 @@ body{
 
     color:white;
 
-    font-size:13px;
+    font-size:12px;
 
     font-weight:900;
 
@@ -422,9 +407,10 @@ body{
 }
 
 
-.topic-card-description{
+.topic-card-description,
+.topic-badge{
 
-    display:none;
+    display:none !important;
 }
 
 
@@ -434,42 +420,29 @@ body{
 
     color:#ffc107;
 
-    font-size:9px;
+    font-size:8px;
 
     font-weight:900;
 }
 
 
-/* =====================================================
-   QUESTION TYPE PRACTICE
-   ONE CARD PER ROW
-===================================================== */
-
-.type-practice-list{
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:9px;
-}
-
+/* ================= TYPE CARD ================= */
 
 .type-card{
 
     width:100%;
 
-    min-height:62px;
+    min-height:58px;
 
     display:flex;
 
     align-items:center;
 
-    gap:11px;
+    gap:10px;
 
-    padding:10px 12px;
+    padding:9px 11px;
 
-    border-radius:13px;
+    border-radius:12px;
 
     background:
         linear-gradient(
@@ -490,18 +463,19 @@ body{
 
 .type-card:hover{
 
-    transform:translateY(-1px);
-
     border-color:
         rgba(255,193,7,.28);
+
+    transform:
+        translateY(-1px);
 }
 
 
 .type-icon{
 
-    width:38px;
+    width:35px;
 
-    height:38px;
+    height:35px;
 
     flex-shrink:0;
 
@@ -511,7 +485,7 @@ body{
 
     justify-content:center;
 
-    border-radius:10px;
+    border-radius:9px;
 
     background:
         rgba(255,193,7,.09);
@@ -520,7 +494,7 @@ body{
         1px solid
         rgba(255,193,7,.17);
 
-    font-size:18px;
+    font-size:17px;
 }
 
 
@@ -538,17 +512,15 @@ body{
 
     color:white;
 
-    font-size:13px;
+    font-size:12px;
 
     font-weight:900;
-
-    line-height:1.3;
 }
 
 
 .type-description{
 
-    display:none;
+    display:none !important;
 }
 
 
@@ -556,19 +528,19 @@ body{
 
     flex-shrink:0;
 
-    min-width:65px;
+    min-width:58px;
 
-    min-height:34px;
+    height:31px;
 
-    border:none;
+    border:0;
 
-    border-radius:9px;
+    border-radius:8px;
 
     background:#ffc107;
 
     color:#111827;
 
-    font-size:10px;
+    font-size:9px;
 
     font-weight:900;
 
@@ -576,31 +548,29 @@ body{
 }
 
 
-/* =====================================================
-   LOADING / EMPTY
-===================================================== */
+/* ================= LOADING ================= */
 
 .chapter-loading{
 
-    width:100%;
-
-    padding:35px 15px;
+    padding:30px 10px;
 
     text-align:center;
 
     color:#8997aa;
 
-    font-size:12px;
+    font-size:11px;
 }
 
 
+/* ================= EMPTY ================= */
+
 .empty-state{
 
-    padding:30px 15px;
+    padding:25px 15px;
 
     text-align:center;
 
-    border-radius:14px;
+    border-radius:13px;
 
     background:#0d192c;
 
@@ -612,15 +582,15 @@ body{
 
 .empty-icon{
 
-    font-size:28px;
+    font-size:25px;
 
-    margin-bottom:7px;
+    margin-bottom:6px;
 }
 
 
 .empty-state h3{
 
-    margin:0 0 5px;
+    margin:0 0 4px;
 
     color:white;
 
@@ -638,17 +608,15 @@ body{
 }
 
 
-/* =====================================================
-   INFO
-===================================================== */
+/* ================= INFO ================= */
 
 .chapter-info{
 
-    margin-top:20px;
+    margin-top:19px;
 
-    padding:15px 16px;
+    padding:13px 15px;
 
-    border-radius:14px;
+    border-radius:13px;
 
     background:
         rgba(255,193,7,.045);
@@ -659,7 +627,7 @@ body{
 
     color:#909eb1;
 
-    font-size:11px;
+    font-size:10px;
 
     line-height:1.5;
 }
@@ -671,9 +639,7 @@ body{
 }
 
 
-/* =====================================================
-   BOTTOM NAV
-===================================================== */
+/* ================= BOTTOM NAV ================= */
 
 .chapter-bottom-nav{
 
@@ -685,16 +651,16 @@ body{
 
     bottom:0;
 
-    z-index:60;
+    z-index:200;
 
     display:flex;
 
     justify-content:space-around;
 
-    padding:8px 6px;
+    padding:7px 5px;
 
     background:
-        rgba(4,10,21,.97);
+        rgba(4,10,21,.98);
 
     border-top:
         1px solid
@@ -708,13 +674,13 @@ body{
 
     flex:1;
 
-    border:none;
+    border:0;
 
     background:transparent;
 
     color:#748197;
 
-    padding:5px;
+    padding:4px;
 
     cursor:pointer;
 }
@@ -724,7 +690,7 @@ body{
 
     display:block;
 
-    font-size:17px;
+    font-size:16px;
 
     margin-bottom:2px;
 }
@@ -744,134 +710,32 @@ body{
 }
 
 
-/* =====================================================
-   MOBILE
-===================================================== */
+/* ================= DESKTOP ================= */
 
-@media(max-width:600px){
+@media(min-width:700px){
 
     .chapter-main{
 
-        padding:
-            16px 12px 35px;
-    }
-
-
-    .chapter-hero{
-
-        padding:17px;
-
-        border-radius:16px;
-    }
-
-
-    .chapter-hero h1{
-
-        font-size:20px;
-    }
-
-
-    .hero-icon{
-
-        width:48px;
-
-        height:48px;
-
-        border-radius:13px;
-
-        font-size:24px;
-    }
-
-
-    .section-heading{
-
-        margin-top:19px;
-
-        margin-bottom:9px;
-    }
-
-
-    .section-heading h2{
-
-        font-size:15px;
+        padding-top:25px;
     }
 
 
     .topic-card,
     .type-card{
 
-        min-height:58px;
+        min-height:62px;
 
-        padding:9px 10px;
-
-        border-radius:12px;
-    }
-
-
-    .topic-number,
-    .type-icon{
-
-        width:35px;
-
-        height:35px;
-
-        border-radius:9px;
+        padding:
+            10px 13px;
     }
 
 
     .topic-card-title,
     .type-title{
 
-        font-size:12px;
+        font-size:13px;
     }
 
-
-    .topic-open-label{
-
-        font-size:8px;
-    }
-
-
-    .type-button{
-
-        min-width:58px;
-
-        min-height:32px;
-
-        font-size:9px;
-    }
-
-}
-
-
-/* =====================================================
-   DESKTOP
-===================================================== */
-
-@media(min-width:700px){
-
-    .topic-card,
-    .type-card{
-
-        min-height:66px;
-
-        padding:
-            11px 14px;
-    }
-
-}
-
-
-/* =====================================================
-   IMPORTANT
-   Hide old description elements if chapter.js
-   creates them
-===================================================== */
-
-.topic-card-description,
-.type-description{
-
-    display:none !important;
 }
 
 </style>
@@ -885,9 +749,7 @@ body{
 <div class="chapter-page">
 
 
-<!-- =====================================================
-     HEADER
-===================================================== -->
+<!-- ================= HEADER ================= -->
 
 <header class="chapter-header">
 
@@ -923,16 +785,12 @@ body{
 
 
 
-<!-- =====================================================
-     MAIN
-===================================================== -->
+<!-- ================= MAIN ================= -->
 
 <main class="chapter-main">
 
 
-<!-- =====================================================
-     HERO
-===================================================== -->
+<!-- HERO -->
 
 <section class="chapter-hero">
 
@@ -940,7 +798,7 @@ body{
 
         <div class="hero-small">
 
-            NEET BIOLOGY CHAPTER
+            NEET BIOLOGY • CHAPTER
 
         </div>
 
@@ -971,23 +829,19 @@ body{
 
 
 
-<!-- =====================================================
+<!-- =================================================
      TOPIC WISE — FIRST
-===================================================== -->
+================================================= -->
 
 <div class="section-heading">
 
     <h2>
-
         Topic Wise Practice
-
     </h2>
 
 
     <span id="topicCount">
-
         0 Topics
-
     </span>
 
 </div>
@@ -1008,23 +862,19 @@ body{
 
 
 
-<!-- =====================================================
+<!-- =================================================
      CHAPTER WISE — SECOND
-===================================================== -->
+================================================= -->
 
 <div class="section-heading">
 
     <h2>
-
         Chapter Wise Practice
-
     </h2>
 
 
     <span>
-
-        Question Types
-
+        6 Types
     </span>
 
 </div>
@@ -1045,21 +895,14 @@ body{
 
 
 
-<!-- =====================================================
-     INFO
-===================================================== -->
+<!-- INFO -->
 
 <div class="chapter-info">
 
     💡
-
-    <strong>
-        mNEET Practice:
-    </strong>
-
-    First practice topic-wise questions,
-    then use different question types for
-    exam-level preparation.
+    <strong>Practice:</strong>
+    Complete Topic Wise Practice first,
+    then practice different NEET question types.
 
 </div>
 
@@ -1068,9 +911,7 @@ body{
 
 
 
-<!-- =====================================================
-     BOTTOM NAV
-===================================================== -->
+<!-- ================= BOTTOM NAV ================= -->
 
 <nav class="chapter-bottom-nav">
 
@@ -1129,14 +970,10 @@ body{
 
 </nav>
 
-
 </div>
 
 
-
-<!-- =====================================================
-     JAVASCRIPT
-===================================================== -->
+<!-- ================= JS ================= -->
 
 <script src="js/firebase.js"></script>
 
