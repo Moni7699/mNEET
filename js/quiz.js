@@ -1,12 +1,12 @@
 // ==========================================
-// mNEET - QUIZ.JS
-// Firestore path:
-// courses/{courseId}/chapters/{chapterId}/topics/{topicId}/quiz
+// mNEET QUIZ - FINAL
+// Firestore:
+// courses/{course}/chapters/{chapter}/topics/{topic}/quiz/{question}
 // ==========================================
 
-let courseId = null;
-let chapterId = null;
-let topicId = null;
+let courseId = "";
+let chapterId = "";
+let topicId = "";
 
 let questions = [];
 let currentQuestion = 0;
@@ -36,33 +36,36 @@ document.addEventListener("DOMContentLoaded", function () {
 
         courseId =
             localStorage.getItem("quizCourse") ||
-            localStorage.getItem("activeCourse");
+            localStorage.getItem("activeCourse") ||
+            "";
 
         chapterId =
             localStorage.getItem("quizChapter") ||
-            localStorage.getItem("activeChapter");
+            localStorage.getItem("activeChapter") ||
+            "";
 
         topicId =
             localStorage.getItem("quizTopic") ||
-            localStorage.getItem("activeTopic");
+            localStorage.getItem("activeTopic") ||
+            "";
 
 
-        console.log("COURSE:", courseId);
-        console.log("CHAPTER:", chapterId);
-        console.log("TOPIC:", topicId);
+        console.log("QUIZ COURSE =", courseId);
+        console.log("QUIZ CHAPTER =", chapterId);
+        console.log("QUIZ TOPIC =", topicId);
 
 
         if (!courseId || !chapterId || !topicId) {
 
             showError(
-                "Quiz information missing. Topic থেকে আবার Quiz খুলুন."
+                "Quiz ID missing. Topic থেকে আবার Start Quiz চাপুন."
             );
 
             return;
         }
 
 
-        loadQuiz();
+        loadQuizQuestions();
 
     });
 
@@ -70,16 +73,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 // ==========================================
-// LOAD QUIZ
+// LOAD QUESTIONS
 // ==========================================
 
-function loadQuiz() {
+function loadQuizQuestions() {
 
-    const container =
+    const box =
         document.getElementById("quizContainer");
 
 
-    container.innerHTML = `
+    box.innerHTML = `
         <div class="quiz-loading">
             Loading questions...
         </div>
@@ -87,14 +90,10 @@ function loadQuiz() {
 
 
     console.log(
-        "Loading:",
-        "courses/" +
-        courseId +
-        "/chapters/" +
-        chapterId +
-        "/topics/" +
-        topicId +
-        "/quiz"
+        "Loading Firestore quiz:",
+        courseId,
+        chapterId,
+        topicId
     );
 
 
@@ -110,7 +109,7 @@ function loadQuiz() {
         .then(function (snapshot) {
 
             console.log(
-                "QUIZ DOCUMENT COUNT:",
+                "QUIZ SNAPSHOT SIZE =",
                 snapshot.size
             );
 
@@ -120,14 +119,14 @@ function loadQuiz() {
 
             snapshot.forEach(function (doc) {
 
-                console.log(
-                    "QUESTION ID:",
-                    doc.id,
-                    doc.data()
-                );
-
-
                 const data = doc.data();
+
+
+                console.log(
+                    "QUESTION:",
+                    doc.id,
+                    data
+                );
 
 
                 questions.push({
@@ -150,7 +149,7 @@ function loadQuiz() {
                         data.option4 || "",
 
                     answer:
-                        data.answer,
+                        data.answer || "",
 
                     solution:
                         data.solution || ""
@@ -163,7 +162,7 @@ function loadQuiz() {
             if (questions.length === 0) {
 
                 showError(
-                    "এই Topic-এর quiz collection-এ কোনো question পাওয়া যায়নি."
+                    "Quiz collection পাওয়া গেছে, কিন্তু এর ভিতরে কোনো question document নেই."
                 );
 
                 return;
@@ -177,14 +176,15 @@ function loadQuiz() {
         .catch(function (error) {
 
             console.error(
-                "FIRESTORE QUIZ ERROR:",
+                "QUIZ FIRESTORE ERROR:",
                 error
             );
 
 
             showError(
-                "Quiz load হয়নি: " +
-                error.message
+                "Question load হয়নি.<br><br>" +
+                "Firestore Error: " +
+                escapeHTML(error.message)
             );
 
         });
@@ -193,7 +193,7 @@ function loadQuiz() {
 
 
 // ==========================================
-// START QUIZ
+// START
 // ==========================================
 
 function startQuiz() {
@@ -212,10 +212,7 @@ function startQuiz() {
 
 
     if (title) {
-
-        title.textContent =
-            "NEET Biology Quiz";
-
+        title.textContent = "NEET Biology Quiz";
     }
 
 
@@ -227,7 +224,7 @@ function startQuiz() {
 
 
 // ==========================================
-// RENDER QUESTION
+// RENDER
 // ==========================================
 
 function renderQuestion() {
@@ -249,7 +246,7 @@ function renderQuestion() {
     }
 
 
-    const container =
+    const box =
         document.getElementById(
             "quizContainer"
         );
@@ -260,7 +257,7 @@ function renderQuestion() {
 
 
     const submitted =
-        submittedAnswers[currentQuestion];
+        submittedAnswers[currentQuestion] === true;
 
 
     const correctAnswer =
@@ -272,18 +269,15 @@ function renderQuestion() {
         <div class="question-card">
 
             <p class="question-text">
-
                 ${escapeHTML(q.question)}
-
             </p>
-
 
             <div class="options">
 
     `;
 
 
-    const options = [
+    const optionList = [
         q.option1,
         q.option2,
         q.option3,
@@ -291,7 +285,7 @@ function renderQuestion() {
     ];
 
 
-    options.forEach(function (
+    optionList.forEach(function (
         option,
         index
     ) {
@@ -317,27 +311,26 @@ function renderQuestion() {
             !isCorrect;
 
 
-        let className =
-            "option";
+        let cls = "option";
 
 
         if (isSelected) {
-            className += " selected";
+            cls += " selected";
         }
 
 
         if (isCorrect) {
-            className += " correct";
+            cls += " correct";
         }
 
 
         if (isWrong) {
-            className += " wrong";
+            cls += " wrong";
         }
 
 
         if (submitted) {
-            className += " disabled";
+            cls += " disabled";
         }
 
 
@@ -345,7 +338,7 @@ function renderQuestion() {
 
             <button
                 type="button"
-                class="${className}"
+                class="${cls}"
                 onclick="selectAnswer(${number})"
             >
 
@@ -364,16 +357,10 @@ function renderQuestion() {
     });
 
 
-    html += `
-
-            </div>
-
-    `;
+    html += `</div>`;
 
 
-    // ==============================
-    // SUBMIT ANSWER
-    // ==============================
+    // Submit Answer
 
     if (!submitted) {
 
@@ -385,9 +372,7 @@ function renderQuestion() {
                 onclick="submitAnswer()"
                 ${selected ? "" : "disabled"}
             >
-
                 Submit Answer
-
             </button>
 
         `;
@@ -395,9 +380,7 @@ function renderQuestion() {
     }
 
 
-    // ==============================
-    // RESULT
-    // ==============================
+    // Answer result
 
     if (submitted) {
 
@@ -433,19 +416,14 @@ function renderQuestion() {
 
             html += `
 
-                <div class="
-                    solution-box
-                    show
-                ">
+                <div class="solution-box show">
 
                     <div class="solution-title">
                         💡 Solution
                     </div>
 
                     <div class="solution-text">
-
                         ${escapeHTML(q.solution)}
-
                     </div>
 
                 </div>
@@ -457,9 +435,7 @@ function renderQuestion() {
     }
 
 
-    // ==============================
-    // NAVIGATION
-    // ==============================
+    // Navigation
 
     html += `
 
@@ -477,7 +453,6 @@ function renderQuestion() {
             >
                 ← Previous
             </button>
-
 
             <button
                 type="button"
@@ -500,19 +475,16 @@ function renderQuestion() {
             class="submit-quiz-button"
             onclick="submitQuiz()"
         >
-
             Submit Quiz
-
         </button>
 
     `;
 
 
-    container.innerHTML =
-        html;
+    box.innerHTML = html;
 
 
-    updateQuestionInfo();
+    updateCounter();
 
     updateProgress();
 
@@ -526,7 +498,7 @@ function renderQuestion() {
 
 
 // ==========================================
-// SELECT ANSWER
+// SELECT
 // ==========================================
 
 function selectAnswer(number) {
@@ -553,14 +525,12 @@ function selectAnswer(number) {
 
 function submitAnswer() {
 
-    const selected =
-        selectedAnswers[currentQuestion];
-
-
-    if (!selected) {
+    if (
+        !selectedAnswers[currentQuestion]
+    ) {
 
         alert(
-            "আগে একটি option select করুন."
+            "Please select an option first."
         );
 
         return;
@@ -604,9 +574,7 @@ function nextQuestion() {
 
 function previousQuestion() {
 
-    if (
-        currentQuestion > 0
-    ) {
+    if (currentQuestion > 0) {
 
         currentQuestion--;
 
@@ -623,19 +591,22 @@ function previousQuestion() {
 
 function submitQuiz() {
 
-    const ok =
-        confirm(
-            "Quiz submit করে result দেখতে চান?"
-        );
+    if (!questions.length) {
+        return;
+    }
 
 
-    if (!ok) {
+    if (
+        !confirm(
+            "Are you sure you want to submit the quiz?"
+        )
+    ) {
+
         return;
     }
 
 
     stopQuestionTimer();
-
     stopTotalTimer();
 
 
@@ -661,15 +632,9 @@ function submitQuiz() {
         }
 
 
-        const correctAnswer =
-            normalizeAnswer(
-                q.answer
-            );
-
-
         if (
             String(selected) ===
-            correctAnswer
+            normalizeAnswer(q.answer)
         ) {
 
             correct++;
@@ -688,62 +653,41 @@ function submitQuiz() {
 
 
     const score =
-        (
-            correct * 4
-        ) -
+        (correct * 4) -
         incorrect;
 
 
     const accuracy =
-        total > 0
+        total
             ? Math.round(
-                (
-                    correct /
-                    total
-                ) * 100
+                (correct / total) * 100
             )
             : 0;
 
 
     const result = {
 
-        courseId:
-            courseId,
+        courseId: courseId,
 
-        chapterId:
-            chapterId,
+        chapterId: chapterId,
 
-        topicId:
-            topicId,
+        topicId: topicId,
 
-        total:
-            total,
+        total: total,
 
-        correct:
-            correct,
+        correct: correct,
 
-        incorrect:
-            incorrect,
+        incorrect: incorrect,
 
-        skipped:
-            skipped,
+        skipped: skipped,
 
-        score:
-            score,
+        score: score,
 
-        accuracy:
-            accuracy,
+        accuracy: accuracy,
 
-        time:
-            totalSeconds
+        time: totalSeconds
 
     };
-
-
-    console.log(
-        "RESULT:",
-        result
-    );
 
 
     localStorage.setItem(
@@ -823,10 +767,6 @@ function startQuestionTimer() {
 }
 
 
-// ==========================================
-// STOP QUESTION TIMER
-// ==========================================
-
 function stopQuestionTimer() {
 
     if (questionTimer) {
@@ -843,7 +783,48 @@ function stopQuestionTimer() {
 
 
 // ==========================================
-// QUESTION TIMER UI
+// TOTAL TIMER
+// ==========================================
+
+function startTotalTimer() {
+
+    stopTotalTimer();
+
+
+    totalSeconds = 0;
+
+    updateTotalTimer();
+
+
+    totalTimer =
+        setInterval(function () {
+
+            totalSeconds++;
+
+            updateTotalTimer();
+
+        }, 1000);
+
+}
+
+
+function stopTotalTimer() {
+
+    if (totalTimer) {
+
+        clearInterval(
+            totalTimer
+        );
+
+        totalTimer = null;
+
+    }
+
+}
+
+
+// ==========================================
+// TIMER UI
 // ==========================================
 
 function updateQuestionTimer() {
@@ -854,9 +835,7 @@ function updateQuestionTimer() {
         );
 
 
-    if (!el) {
-        return;
-    }
+    if (!el) return;
 
 
     el.textContent =
@@ -882,53 +861,6 @@ function updateQuestionTimer() {
 }
 
 
-// ==========================================
-// TOTAL TIMER
-// ==========================================
-
-function startTotalTimer() {
-
-    stopTotalTimer();
-
-
-    updateTotalTimer();
-
-
-    totalTimer =
-        setInterval(function () {
-
-            totalSeconds++;
-
-            updateTotalTimer();
-
-        }, 1000);
-
-}
-
-
-// ==========================================
-// STOP TOTAL TIMER
-// ==========================================
-
-function stopTotalTimer() {
-
-    if (totalTimer) {
-
-        clearInterval(
-            totalTimer
-        );
-
-        totalTimer = null;
-
-    }
-
-}
-
-
-// ==========================================
-// TOTAL TIMER UI
-// ==========================================
-
 function updateTotalTimer() {
 
     const el =
@@ -937,34 +869,32 @@ function updateTotalTimer() {
         );
 
 
-    if (!el) {
-        return;
-    }
+    if (!el) return;
 
 
-    const minutes =
+    const min =
         Math.floor(
             totalSeconds / 60
         );
 
 
-    const seconds =
+    const sec =
         totalSeconds % 60;
 
 
     el.textContent =
-        String(minutes).padStart(2, "0") +
+        String(min).padStart(2, "0") +
         ":" +
-        String(seconds).padStart(2, "0");
+        String(sec).padStart(2, "0");
 
 }
 
 
 // ==========================================
-// QUESTION COUNTER
+// COUNTER
 // ==========================================
 
-function updateQuestionInfo() {
+function updateCounter() {
 
     const el =
         document.getElementById(
@@ -972,15 +902,11 @@ function updateQuestionInfo() {
         );
 
 
-    if (!el) {
-        return;
-    }
+    if (!el) return;
 
 
     el.textContent =
-        (
-            currentQuestion + 1
-        ) +
+        (currentQuestion + 1) +
         " / " +
         questions.length;
 
@@ -999,16 +925,12 @@ function updateProgress() {
         );
 
 
-    if (!el) {
-        return;
-    }
+    if (!el) return;
 
 
     const percent =
         (
-            (
-                currentQuestion + 1
-            ) /
+            (currentQuestion + 1) /
             questions.length
         ) * 100;
 
@@ -1029,9 +951,7 @@ function normalizeAnswer(answer) {
         answer === undefined ||
         answer === null
     ) {
-
         return "";
-
     }
 
 
@@ -1044,44 +964,40 @@ function normalizeAnswer(answer) {
     if (
         value === "a" ||
         value === "option1" ||
-        value === "option 1"
+        value === "option 1" ||
+        value === "1"
     ) {
-
         return "1";
-
     }
 
 
     if (
         value === "b" ||
         value === "option2" ||
-        value === "option 2"
+        value === "option 2" ||
+        value === "2"
     ) {
-
         return "2";
-
     }
 
 
     if (
         value === "c" ||
         value === "option3" ||
-        value === "option 3"
+        value === "option 3" ||
+        value === "3"
     ) {
-
         return "3";
-
     }
 
 
     if (
         value === "d" ||
         value === "option4" ||
-        value === "option 4"
+        value === "option 4" ||
+        value === "4"
     ) {
-
         return "4";
-
     }
 
 
@@ -1096,18 +1012,16 @@ function normalizeAnswer(answer) {
 
 function showError(message) {
 
-    const container =
+    const box =
         document.getElementById(
             "quizContainer"
         );
 
 
-    if (!container) {
-        return;
-    }
+    if (!box) return;
 
 
-    container.innerHTML = `
+    box.innerHTML = `
 
         <div class="quiz-error">
 
@@ -1115,7 +1029,7 @@ function showError(message) {
 
             <br><br>
 
-            ${escapeHTML(message)}
+            ${message}
 
         </div>
 
@@ -1125,7 +1039,7 @@ function showError(message) {
 
 
 // ==========================================
-// ESCAPE HTML
+// ESCAPE
 // ==========================================
 
 function escapeHTML(value) {
@@ -1146,13 +1060,12 @@ function escapeHTML(value) {
 
 
 // ==========================================
-// BACK TO TOPIC
+// BACK
 // ==========================================
 
 function goBackToTopic() {
 
     stopQuestionTimer();
-
     stopTotalTimer();
 
 
