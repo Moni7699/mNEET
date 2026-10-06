@@ -1,176 +1,594 @@
-// ==========================================
-// mNEET - QUIZ.JS
-// ==========================================
+/* =========================================================
+   mNEET QUIZ ENGINE
+   Firebase Firestore Compatible
+   ========================================================= */
 
-let courseId = null;
-let chapterId = null;
-let topicId = null;
+(function () {
 
-let questions = [];
-let currentIndex = 0;
+    "use strict";
 
-let selectedAnswers = {};
-let submittedAnswers = {};
+    /* =====================================================
+       GLOBAL STATE
+    ===================================================== */
 
-let questionTimer = null;
-let totalTimer = null;
+    let db = null;
 
-let questionTimeLeft = 60;
-let totalSeconds = 0;
+    let questions = [];
+    let quizData = {};
+
+    let currentIndex = 0;
+
+    let selectedAnswers = {};
+    let submittedAnswers = {};
+
+    let questionTimer = null;
+    let totalTimer = null;
+
+    let questionTimeLeft = 60;
+    let totalSeconds = 0;
+
+    let quizFinished = false;
+
+    let positiveMark = 4;
+    let negativeMark = 1;
+
+    let perQuestionTime = 60;
+
+    let quizPath = "";
+
+    /* =====================================================
+       FIREBASE
+    ===================================================== */
+
+    function getFirestore() {
+
+        try {
+
+            if (typeof firebase === "undefined") {
+                return null;
+            }
+
+            if (firebase.apps.length === 0) {
+                return null;
+            }
+
+            return firebase.firestore();
+
+        } catch (error) {
+
+            console.error("Firestore error:", error);
+
+            return null;
+        }
+    }
 
 
-// ==========================================
-// PAGE LOAD
-// ==========================================
+    /* =====================================================
+       HELPERS
+    ===================================================== */
 
-document.addEventListener("DOMContentLoaded", function () {
+    function getParam(name) {
 
-    auth.onAuthStateChanged(function (user) {
+        const params = new URLSearchParams(window.location.search);
 
-        if (!user) {
+        return params.get(name);
+    }
 
-            window.location.href = "index.html";
-            return;
+
+    function getStorage(...keys) {
+
+        for (const key of keys) {
+
+            const value =
+                localStorage.getItem(key) ||
+                sessionStorage.getItem(key);
+
+            if (value) {
+                return value;
+            }
+        }
+
+        return "";
+    }
+
+
+    function cleanValue(value) {
+
+        if (!value) return "";
+
+        return String(value).trim();
+    }
+
+
+    function getIds() {
+
+        const courseId =
+            getParam("courseId") ||
+            getParam("course") ||
+            getStorage(
+                "activeCourse",
+                "courseId"
+            ) ||
+            "course-01";
+
+
+        const chapterId =
+            getParam("chapterId") ||
+            getParam("chapter") ||
+            getStorage(
+                "activeChapter",
+                "chapterId"
+            ) ||
+            "chapter-01";
+
+
+        const topicId =
+            getParam("topicId") ||
+            getParam("topic") ||
+            getStorage(
+                "activeTopic",
+                "topicId"
+            ) ||
+            "topic-01";
+
+
+        const quizId =
+            getParam("quizId") ||
+            getParam("quiz") ||
+            getStorage(
+                "activeQuiz",
+                "quizId"
+            ) ||
+            "quiz-01";
+
+
+        const typeId =
+            getParam("typeId") ||
+            getParam("type") ||
+            getStorage(
+                "activeType",
+                "activeTypePractice",
+                "typePractice"
+            );
+
+
+        return {
+            courseId: cleanValue(courseId),
+            chapterId: cleanValue(chapterId),
+            topicId: cleanValue(topicId),
+            quizId: cleanValue(quizId),
+            typeId: cleanValue(typeId)
+        };
+    }
+
+
+    /* =====================================================
+       SAVE ACTIVE IDS
+    ===================================================== */
+
+    function saveIds(ids) {
+
+        localStorage.setItem(
+            "activeCourse",
+            ids.courseId
+        );
+
+        localStorage.setItem(
+            "activeChapter",
+            ids.chapterId
+        );
+
+        localStorage.setItem(
+            "activeTopic",
+            ids.topicId
+        );
+
+        localStorage.setItem(
+            "activeQuiz",
+            ids.quizId
+        );
+
+        if (ids.typeId) {
+
+            localStorage.setItem(
+                "activeType",
+                ids.typeId
+            );
+
+        }
+    }
+
+
+    /* =====================================================
+       FIND QUIZ PATH
+    ===================================================== */
+
+    async function loadQuizDocument(ids) {
+
+        /*
+          NORMAL TOPIC:
+
+          courses
+            /courseId
+              /chapters
+                /chapterId
+                  /topics
+                    /topicId
+                      /quiz
+                        /quizId
+        */
+
+        const normalRef =
+            db.collection("courses")
+              .doc(ids.courseId)
+              .collection("chapters")
+              .doc(ids.chapterId)
+              .collection("topics")
+              .doc(ids.topicId)
+              .collection("quiz")
+              .doc(ids.quizId);
+
+
+        let snap = await normalRef.get();
+
+
+        if (snap.exists) {
+
+            quizPath =
+                "courses/" +
+                ids.courseId +
+                "/chapters/" +
+                ids.chapterId +
+                "/topics/" +
+                ids.topicId +
+                "/quiz/" +
+                ids.quizId;
+
+            return {
+                ref: normalRef,
+                data: snap.data(),
+                mode: "topic"
+            };
+        }
+
+
+        /*
+          TYPE PRACTICE:
+
+          courses
+            /courseId
+              /chapters
+                /chapterId
+                  /typePractice
+                    /typeId
+                      /questions
+        */
+
+        if (ids.typeId) {
+
+            const typeRef =
+                db.collection("courses")
+                  .doc(ids.courseId)
+                  .collection("chapters")
+                  .doc(ids.chapterId)
+                  .collection("typePractice")
+                  .doc(ids.typeId);
+
+
+            const typeSnap =
+                await typeRef.get();
+
+
+            if (typeSnap.exists) {
+
+                quizPath =
+                    "courses/" +
+                    ids.courseId +
+                    "/chapters/" +
+                    ids.chapterId +
+                    "/typePractice/" +
+                    ids.typeId;
+
+                return {
+                    ref: typeRef,
+                    data: typeSnap.data(),
+                    mode: "type",
+                    typeRef: typeRef
+                };
+            }
+        }
+
+
+        /*
+          BACKUP:
+          Some projects may have quiz document
+          directly with questions subcollection.
+        */
+
+        const backupRef =
+            db.collection("courses")
+              .doc(ids.courseId)
+              .collection("chapters")
+              .doc(ids.chapterId)
+              .collection("topics")
+              .doc(ids.topicId)
+              .collection("quiz")
+              .doc(ids.quizId);
+
+
+        return {
+            ref: backupRef,
+            data: {},
+            mode: "topic"
+        };
+    }
+
+
+    /* =====================================================
+       LOAD QUESTIONS
+    ===================================================== */
+
+    async function loadQuestions(quizInfo, ids) {
+
+        let questionRef = null;
+
+        if (quizInfo.mode === "topic") {
+
+            questionRef =
+                quizInfo.ref.collection("questions");
+
+        } else {
+
+            questionRef =
+                quizInfo.typeRef.collection("questions");
 
         }
 
 
-        courseId =
-            localStorage.getItem("quizCourse") ||
-            localStorage.getItem("activeCourse");
-
-        chapterId =
-            localStorage.getItem("quizChapter") ||
-            localStorage.getItem("activeChapter");
-
-        topicId =
-            localStorage.getItem("quizTopic") ||
-            localStorage.getItem("activeTopic");
+        let snap;
 
 
-        if (!courseId || !chapterId || !topicId) {
+        /*
+          FIRST TRY:
+          published == true + order
+        */
+
+        try {
+
+            snap =
+                await questionRef
+                    .where("published", "==", true)
+                    .orderBy("order", "asc")
+                    .get();
+
+        } catch (error) {
+
+            console.warn(
+                "Published/order query failed. Trying simple query.",
+                error
+            );
+
+            try {
+
+                snap =
+                    await questionRef
+                        .orderBy("order", "asc")
+                        .get();
+
+            } catch (error2) {
+
+                console.warn(
+                    "Order query failed. Loading all questions.",
+                    error2
+                );
+
+                snap =
+                    await questionRef.get();
+            }
+        }
+
+
+        let list = [];
+
+
+        snap.forEach(function (doc) {
+
+            const data = doc.data() || {};
+
+            /*
+              If published field exists and is false,
+              do not show it.
+            */
+
+            if (
+                data.published !== undefined &&
+                data.published === false
+            ) {
+                return;
+            }
+
+
+            list.push({
+                id: doc.id,
+                ...data
+            });
+
+        });
+
+
+        /*
+          Manual sorting fallback
+        */
+
+        list.sort(function (a, b) {
+
+            const aOrder =
+                Number(a.order || 0);
+
+            const bOrder =
+                Number(b.order || 0);
+
+            return aOrder - bOrder;
+        });
+
+
+        return list;
+    }
+
+
+    /* =====================================================
+       LOAD QUIZ
+    ===================================================== */
+
+    async function loadQuiz() {
+
+        showLoading(
+            "Loading questions..."
+        );
+
+
+        db = getFirestore();
+
+
+        if (!db) {
 
             showError(
-                "Quiz information missing. Please open the quiz again."
+                "Firebase load হয়নি।<br><br>" +
+                "Please check js/firebase.js"
             );
 
             return;
-
         }
 
 
-        loadQuiz();
+        const ids = getIds();
 
-    });
-
-});
+        saveIds(ids);
 
 
-// ==========================================
-// LOAD QUIZ
-// ==========================================
-
-function loadQuiz() {
-
-    const container =
-        document.getElementById("quizContainer");
+        console.log(
+            "Quiz IDs:",
+            ids
+        );
 
 
-    container.innerHTML = `
-        <div class="quiz-loading">
-            Loading questions...
-        </div>
-    `;
+        try {
+
+            const quizInfo =
+                await loadQuizDocument(ids);
 
 
-    db.collection("courses")
-        .doc(courseId)
-        .collection("chapters")
-        .doc(chapterId)
-        .collection("topics")
-        .doc(topicId)
-        .collection("quiz")
-        .get()
-
-        .then(function (snapshot) {
-
-            questions = [];
+            quizData =
+                quizInfo.data || {};
 
 
-            snapshot.forEach(function (doc) {
-
-                const data = doc.data();
-
-
-                questions.push({
-
-                    id: doc.id,
-
-                    question:
-                        data.question || "",
-
-                    option1:
-                        data.option1 || "",
-
-                    option2:
-                        data.option2 || "",
-
-                    option3:
-                        data.option3 || "",
-
-                    option4:
-                        data.option4 || "",
-
-                    answer:
-                        data.answer || "",
-
-                    solution:
-                        data.solution || ""
-
-                });
-
-            });
+            console.log(
+                "Quiz data:",
+                quizData
+            );
 
 
-            if (questions.length === 0) {
+            /*
+              MARKING
+            */
+
+            positiveMark =
+                Number(
+                    quizData.positiveMark ??
+                    quizData.positiveMarks ??
+                    4
+                );
+
+
+            negativeMark =
+                Number(
+                    quizData.negativeMark ??
+                    quizData.negativeMarks ??
+                    1
+                );
+
+
+            /*
+              QUESTION TIME
+
+              Firestore screenshot:
+              timePerQuestion
+            */
+
+            perQuestionTime =
+                Number(
+                    quizData.timePerQuestion ??
+                    quizData.timePerQuestionSeconds ??
+                    60
+                );
+
+
+            if (
+                !Number.isFinite(perQuestionTime) ||
+                perQuestionTime <= 0
+            ) {
+
+                perQuestionTime = 60;
+            }
+
+
+            questions =
+                await loadQuestions(
+                    quizInfo,
+                    ids
+                );
+
+
+            console.log(
+                "Questions loaded:",
+                questions.length,
+                questions
+            );
+
+
+            if (!questions.length) {
 
                 showError(
-                    "No questions found in this topic."
+                    "এই quiz-এ কোনো published question পাওয়া যায়নি।<br><br>" +
+                    "Firestore path:<br>" +
+                    "<b>" + quizPath + "/questions</b>"
                 );
 
                 return;
-
             }
 
 
-            currentIndex = 0;
+            /*
+              TOTAL TIME
+            */
 
-            selectedAnswers = {};
-
-            submittedAnswers = {};
-
-            totalSeconds = 0;
-
-
-            const title =
-                document.getElementById("quizTitle");
+            totalSeconds =
+                questions.length *
+                perQuestionTime;
 
 
-            if (title) {
+            /*
+              RESTORE ATTEMPT
+            */
 
-                title.textContent =
-                    "NEET Biology Quiz";
+            restoreAttempt();
 
-            }
+
+            quizFinished = false;
+
+
+            updateQuizHeader();
+
+
+            renderQuestion();
 
 
             startTotalTimer();
 
-            renderQuestion();
 
-        })
+            startQuestionTimer();
 
-        .catch(function (error) {
+        } catch (error) {
 
             console.error(
                 "Quiz loading error:",
@@ -179,971 +597,1601 @@ function loadQuiz() {
 
 
             showError(
-                "Unable to load questions.<br><br>" +
-                escapeHTML(error.message)
+                "Quiz load করতে সমস্যা হয়েছে।<br><br>" +
+                error.message
+            );
+        }
+    }
+
+
+    /* =====================================================
+       HEADER
+    ===================================================== */
+
+    function updateQuizHeader() {
+
+        const title =
+            quizData.title ||
+            "Practice Quiz";
+
+
+        const titleEl =
+            document.getElementById(
+                "quizTitle"
             );
 
-        });
 
-}
+        if (titleEl) {
 
-
-// ==========================================
-// RENDER QUESTION
-// ==========================================
-
-function renderQuestion() {
-
-    stopQuestionTimer();
-
-
-    const q =
-        questions[currentIndex];
-
-
-    if (!q) {
-
-        return;
-
-    }
-
-
-    const container =
-        document.getElementById("quizContainer");
-
-
-    const selected =
-        selectedAnswers[currentIndex];
-
-
-    const submitted =
-        submittedAnswers[currentIndex];
-
-
-    let html = `
-
-        <div class="question-card">
-
-            <p class="question-text">
-                ${escapeHTML(q.question)}
-            </p>
-
-
-            <div class="options">
-
-    `;
-
-
-    const options = [
-
-        q.option1,
-        q.option2,
-        q.option3,
-        q.option4
-
-    ];
-
-
-    options.forEach(function (option, index) {
-
-        const number =
-            index + 1;
-
-
-        let className =
-            "option";
-
-
-        if (
-            String(selected) ===
-            String(number)
-        ) {
-
-            className += " selected";
-
+            titleEl.textContent =
+                title;
         }
 
 
-        if (submitted) {
-
-            const correct =
-                normalizeAnswer(q.answer);
+        updateCounter();
+    }
 
 
-            if (
-                String(number) ===
-                String(correct)
-            ) {
+    function updateCounter() {
 
-                className += " correct";
-
-            }
+        const counter =
+            document.getElementById(
+                "questionCounter"
+            );
 
 
-            if (
-                String(selected) ===
-                String(number) &&
-                String(selected) !==
-                String(correct)
-            ) {
+        if (counter) {
 
-                className += " wrong";
-
-            }
-
-
-            className += " disabled";
-
+            counter.textContent =
+                questions.length
+                    ? `${currentIndex + 1} / ${questions.length}`
+                    : "0 / 0";
         }
 
 
-        html += `
-
-            <button
-                type="button"
-                class="${className}"
-                onclick="selectAnswer(${number})"
-            >
-
-                <span class="option-letter">
-                    ${number}
-                </span>
-
-                <span class="option-text">
-                    ${escapeHTML(option)}
-                </span>
-
-            </button>
-
-        `;
-
-    });
+        const fill =
+            document.getElementById(
+                "progressFill"
+            );
 
 
-    html += `
+        if (fill && questions.length) {
 
-            </div>
+            const percent =
+                ((currentIndex + 1) /
+                questions.length) *
+                100;
 
-    `;
 
-
-    // ======================================
-    // SUBMIT ANSWER
-    // ======================================
-
-    if (!submitted) {
-
-        html += `
-
-            <button
-                type="button"
-                class="submit-answer-button"
-                onclick="submitAnswer()"
-                ${
-                    selected
-                        ? ""
-                        : "disabled"
-                }
-            >
-                Submit Answer
-            </button>
-
-        `;
-
+            fill.style.width =
+                percent + "%";
+        }
     }
 
 
-    // ======================================
-    // ANSWER RESULT
-    // ======================================
+    /* =====================================================
+       RENDER QUESTION
+    ===================================================== */
 
-    if (submitted) {
+    function renderQuestion() {
 
-        const correct =
-            normalizeAnswer(q.answer);
-
-
-        const isCorrect =
-            String(selected) ===
-            String(correct);
-
-
-        html += `
-
-            <div class="
-                answer-status
-                show
-                ${
-                    isCorrect
-                        ? "correct-status"
-                        : "wrong-status"
-                }
-            ">
-
-                ${
-                    isCorrect
-                        ? "✅ Correct Answer"
-                        : "❌ Incorrect Answer"
-                }
-
-            </div>
-
-        `;
-
-
-        if (q.solution) {
-
-            html += `
-
-                <div class="solution-box show">
-
-                    <div class="solution-title">
-                        💡 Solution
-                    </div>
-
-                    <div class="solution-text">
-                        ${escapeHTML(q.solution)}
-                    </div>
-
-                </div>
-
-            `;
-
+        if (!questions.length) {
+            return;
         }
 
-    }
 
+        const q =
+            questions[currentIndex];
 
-    // ======================================
-    // NAVIGATION
-    // ======================================
 
-    html += `
+        const container =
+            document.getElementById(
+                "quizContainer"
+            );
 
-        <div class="quiz-actions">
 
-            <button
-                type="button"
-                class="quiz-button previous-button"
-                onclick="previousQuestion()"
-                ${
-                    currentIndex === 0
-                        ? "disabled"
-                        : ""
-                }
-            >
-                ← Previous
-            </button>
+        if (!container) {
+            return;
+        }
 
-
-            <button
-                type="button"
-                class="quiz-button next-button"
-                onclick="nextQuestion()"
-            >
-
-                ${
-                    currentIndex ===
-                    questions.length - 1
-                        ? "Finish"
-                        : "Next →"
-                }
-
-            </button>
-
-        </div>
-
-
-        <button
-            type="button"
-            class="submit-quiz-button"
-            onclick="submitQuiz()"
-        >
-            Submit Quiz
-        </button>
-
-    `;
-
-
-    container.innerHTML = html;
-
-
-    updateCounter();
-
-    updateProgress();
-
-
-    questionTimeLeft = 60;
-
-    updateQuestionTimer();
-
-    startQuestionTimer();
-
-}
-
-
-// ==========================================
-// SELECT ANSWER
-// ==========================================
-
-function selectAnswer(number) {
-
-    if (
-        submittedAnswers[currentIndex]
-    ) {
-
-        return;
-
-    }
-
-
-    selectedAnswers[currentIndex] =
-        number;
-
-
-    renderQuestion();
-
-}
-
-
-// ==========================================
-// SUBMIT CURRENT ANSWER
-// ==========================================
-
-function submitAnswer() {
-
-    if (
-        !selectedAnswers[currentIndex]
-    ) {
-
-        alert(
-            "Please select an option first."
-        );
-
-        return;
-
-    }
-
-
-    submittedAnswers[currentIndex] =
-        true;
-
-
-    stopQuestionTimer();
-
-
-    renderQuestion();
-
-}
-
-
-// ==========================================
-// NEXT QUESTION
-// ==========================================
-
-function nextQuestion() {
-
-    if (
-        currentIndex <
-        questions.length - 1
-    ) {
-
-        currentIndex++;
-
-        renderQuestion();
-
-    }
-
-}
-
-
-// ==========================================
-// PREVIOUS QUESTION
-// ==========================================
-
-function previousQuestion() {
-
-    if (currentIndex > 0) {
-
-        currentIndex--;
-
-        renderQuestion();
-
-    }
-
-}
-
-
-// ==========================================
-// SUBMIT QUIZ
-// ==========================================
-
-function submitQuiz() {
-
-    if (!questions.length) {
-
-        return;
-
-    }
-
-
-    const confirmed =
-        confirm(
-            "Are you sure you want to submit the quiz?"
-        );
-
-
-    if (!confirmed) {
-
-        return;
-
-    }
-
-
-    stopQuestionTimer();
-
-    stopTotalTimer();
-
-
-    let correct = 0;
-    let incorrect = 0;
-    let skipped = 0;
-
-
-    questions.forEach(function (q, index) {
 
         const selected =
-            selectedAnswers[index];
+            selectedAnswers[q.id];
 
 
-        if (!selected) {
+        const submitted =
+            submittedAnswers[q.id];
 
-            skipped++;
 
-            return;
+        const correctOption =
+            Number(
+                q.correctOption
+            );
 
+
+        let html = "";
+
+
+        html += `
+            <div class="question-card">
+
+                <p class="question-text">
+                    ${escapeHTML(
+                        q.questionText ||
+                        q.question ||
+                        "Question"
+                    )}
+                </p>
+        `;
+
+
+        /*
+          IMAGE
+        */
+
+        const imageUrl =
+            q.questionImageUrl ||
+            q.imageUrl ||
+            q.imageURL ||
+            "";
+
+
+        if (imageUrl) {
+
+            html += `
+                <img
+                    src="${escapeAttribute(imageUrl)}"
+                    class="question-image"
+                    alt="Question Image"
+                    onerror="this.style.display='none'"
+                >
+            `;
         }
 
 
-        const answer =
-            normalizeAnswer(q.answer);
+        /*
+          OPTIONS
+        */
+
+        html += `
+            <div class="options">
+        `;
 
 
-        if (
-            String(selected) ===
-            String(answer)
+        for (
+            let i = 1;
+            i <= 4;
+            i++
         ) {
 
-            correct++;
-
-        } else {
-
-            incorrect++;
-
-        }
-
-    });
-
-
-    const total =
-        questions.length;
-
-
-    // +4 correct / -1 wrong
-
-    const score =
-        (correct * 4) -
-        incorrect;
-
-
-    const accuracy =
-        total > 0
-            ? Math.round(
-                (correct / total) * 100
-            )
-            : 0;
-
-
-    const resultData = {
-
-        courseId:
-            courseId,
-
-        chapterId:
-            chapterId,
-
-        topicId:
-            topicId,
-
-        total:
-            total,
-
-        correct:
-            correct,
-
-        incorrect:
-            incorrect,
-
-        skipped:
-            skipped,
-
-        score:
-            score,
-
-        accuracy:
-            accuracy,
-
-        time:
-            totalSeconds
-
-    };
-
-
-    localStorage.setItem(
-        "quizResult",
-        JSON.stringify(resultData)
-    );
-
-
-    localStorage.setItem(
-        "activeCourse",
-        courseId
-    );
-
-
-    localStorage.setItem(
-        "activeChapter",
-        chapterId
-    );
-
-
-    localStorage.setItem(
-        "activeTopic",
-        topicId
-    );
-
-
-    window.location.href =
-        "result.html";
-
-}
-
-
-// ==========================================
-// QUESTION TIMER
-// ==========================================
-
-function startQuestionTimer() {
-
-    stopQuestionTimer();
-
-
-    questionTimer =
-        setInterval(function () {
-
-            questionTimeLeft--;
-
-
-            updateQuestionTimer();
+            const optionText =
+                q["option" + i] ?? "";
 
 
             if (
-                questionTimeLeft <= 0
+                optionText === "" &&
+                optionText !== 0
+            ) {
+                continue;
+            }
+
+
+            let classes =
+                "option";
+
+
+            if (
+                Number(selected) === i &&
+                !submitted
             ) {
 
-                stopQuestionTimer();
+                classes +=
+                    " selected";
+            }
+
+
+            if (submitted) {
+
+                if (i === correctOption) {
+
+                    classes +=
+                        " correct";
+                }
 
 
                 if (
-                    currentIndex <
-                    questions.length - 1
+                    Number(selected) === i &&
+                    Number(selected) !==
+                    correctOption
                 ) {
 
-                    currentIndex++;
-
-                    renderQuestion();
-
-                } else {
-
-                    submitQuiz();
-
+                    classes +=
+                        " wrong";
                 }
 
+
+                classes +=
+                    " disabled";
             }
 
-        }, 1000);
 
-}
+            html += `
+                <button
+                    type="button"
+                    class="${classes}"
+                    data-option="${i}"
+                    onclick="selectOption(${i})"
+                    ${submitted ? "disabled" : ""}
+                >
+
+                    <span class="option-letter">
+                        ${i}
+                    </span>
+
+                    <span class="option-text">
+                        ${escapeHTML(
+                            String(optionText)
+                        )}
+                    </span>
+
+                </button>
+            `;
+        }
 
 
-function stopQuestionTimer() {
+        html += `
+            </div>
+        `;
 
-    if (questionTimer) {
 
-        clearInterval(questionTimer);
+        /*
+          ANSWER STATUS
+        */
 
-        questionTimer = null;
+        if (submitted) {
 
+            const isCorrect =
+                Number(selected) ===
+                correctOption;
+
+
+            if (isCorrect) {
+
+                html += `
+                    <div class="answer-status show correct-status">
+
+                        ✅ Correct Answer
+
+                    </div>
+                `;
+
+            } else if (selected) {
+
+                html += `
+                    <div class="answer-status show wrong-status">
+
+                        ❌ Wrong Answer
+
+                        <br>
+
+                        Correct option:
+                        <b>${correctOption}</b>
+
+                    </div>
+                `;
+
+            } else {
+
+                html += `
+                    <div class="answer-status show wrong-status">
+
+                        ⏭️ Skipped
+
+                        <br>
+
+                        Correct option:
+                        <b>${correctOption}</b>
+
+                    </div>
+                `;
+            }
+
+
+            /*
+              SOLUTION
+            */
+
+            const solution =
+                q.solution || "";
+
+
+            const reference =
+                q.reference ||
+                q.ncertReference ||
+                "";
+
+
+            if (
+                solution ||
+                reference
+            ) {
+
+                html += `
+                    <div class="solution-box show">
+
+                        <div class="solution-title">
+                            📖 Solution
+                        </div>
+
+                        <div class="solution-text">
+                            ${escapeHTML(
+                                solution ||
+                                "Solution not available."
+                            )}
+                        </div>
+
+                        ${
+                            reference
+                                ? `
+                                    <div class="reference-text">
+                                        📚 NCERT Reference:
+                                        ${escapeHTML(
+                                            reference
+                                        )}
+                                    </div>
+                                  `
+                                : ""
+                        }
+
+                    </div>
+                `;
+            }
+        }
+
+
+        /*
+          ANSWER SUBMIT
+        */
+
+        if (!submitted) {
+
+            html += `
+                <button
+                    type="button"
+                    id="submitAnswerButton"
+                    class="submit-answer-button"
+                    onclick="submitAnswer()"
+                    ${selected ? "" : "disabled"}
+                >
+                    ✓ Submit Answer
+                </button>
+            `;
+        }
+
+
+        /*
+          NAVIGATION
+        */
+
+        html += `
+            <div class="quiz-actions">
+
+                <button
+                    type="button"
+                    class="quiz-button previous-button"
+                    onclick="previousQuestion()"
+                    ${currentIndex === 0 ? "disabled" : ""}
+                >
+                    ← Previous
+                </button>
+
+                <button
+                    type="button"
+                    class="quiz-button next-button"
+                    onclick="nextQuestion()"
+                >
+                    ${
+                        currentIndex ===
+                        questions.length - 1
+                            ? "Finish"
+                            : "Next →"
+                    }
+                </button>
+
+            </div>
+        `;
+
+
+        /*
+          SUBMIT QUIZ
+        */
+
+        if (submitted) {
+
+            html += `
+                <button
+                    type="button"
+                    class="submit-quiz-button"
+                    onclick="finishQuiz()"
+                >
+                    Submit Quiz
+                </button>
+            `;
+        }
+
+
+        html += `
+            </div>
+        `;
+
+
+        container.innerHTML =
+            html;
+
+
+        updateCounter();
+
+
+        /*
+          Restore timer
+        */
+
+        if (submitted) {
+
+            stopQuestionTimer();
+
+        } else {
+
+            startQuestionTimer();
+        }
+
+
+        saveAttempt();
     }
 
-}
+
+    /* =====================================================
+       SELECT OPTION
+    ===================================================== */
+
+    window.selectOption =
+        function (option) {
+
+            if (quizFinished) {
+                return;
+            }
 
 
-// ==========================================
-// TOTAL TIMER
-// ==========================================
-
-function startTotalTimer() {
-
-    stopTotalTimer();
+            const q =
+                questions[currentIndex];
 
 
-    totalSeconds = 0;
+            if (!q) {
+                return;
+            }
 
 
-    updateTotalTimer();
+            if (
+                submittedAnswers[q.id]
+            ) {
+                return;
+            }
 
 
-    totalTimer =
-        setInterval(function () {
-
-            totalSeconds++;
-
-            updateTotalTimer();
-
-        }, 1000);
-
-}
+            selectedAnswers[q.id] =
+                Number(option);
 
 
-function stopTotalTimer() {
+            renderQuestion();
 
-    if (totalTimer) {
-
-        clearInterval(totalTimer);
-
-        totalTimer = null;
-
-    }
-
-}
+            saveAttempt();
+        };
 
 
-// ==========================================
-// QUESTION TIMER UI
-// ==========================================
+    /* =====================================================
+       SUBMIT ANSWER
+    ===================================================== */
 
-function updateQuestionTimer() {
+    window.submitAnswer =
+        function () {
 
-    const element =
-        document.getElementById(
-            "questionTimer"
+            if (quizFinished) {
+                return;
+            }
+
+
+            const q =
+                questions[currentIndex];
+
+
+            if (!q) {
+                return;
+            }
+
+
+            const selected =
+                selectedAnswers[q.id];
+
+
+            if (!selected) {
+
+                alert(
+                    "Please select an answer first."
+                );
+
+                return;
+            }
+
+
+            submittedAnswers[q.id] =
+                true;
+
+
+            stopQuestionTimer();
+
+
+            renderQuestion();
+
+
+            saveAttempt();
+        };
+
+
+    /* =====================================================
+       PREVIOUS
+    ===================================================== */
+
+    window.previousQuestion =
+        function () {
+
+            if (currentIndex <= 0) {
+                return;
+            }
+
+
+            stopQuestionTimer();
+
+
+            currentIndex--;
+
+
+            const q =
+                questions[currentIndex];
+
+
+            if (
+                submittedAnswers[q.id]
+            ) {
+
+                questionTimeLeft =
+                    0;
+
+            } else {
+
+                questionTimeLeft =
+                    perQuestionTime;
+            }
+
+
+            renderQuestion();
+
+
+            saveAttempt();
+        };
+
+
+    /* =====================================================
+       NEXT
+    ===================================================== */
+
+    window.nextQuestion =
+        function () {
+
+            if (
+                currentIndex >=
+                questions.length - 1
+            ) {
+
+                finishQuiz();
+
+                return;
+            }
+
+
+            stopQuestionTimer();
+
+
+            currentIndex++;
+
+
+            const q =
+                questions[currentIndex];
+
+
+            if (
+                submittedAnswers[q.id]
+            ) {
+
+                questionTimeLeft =
+                    0;
+
+            } else {
+
+                questionTimeLeft =
+                    perQuestionTime;
+            }
+
+
+            renderQuestion();
+
+
+            saveAttempt();
+        };
+
+
+    /* =====================================================
+       QUESTION TIMER
+    ===================================================== */
+
+    function startQuestionTimer() {
+
+        stopQuestionTimer();
+
+
+        const q =
+            questions[currentIndex];
+
+
+        if (!q) {
+            return;
+        }
+
+
+        if (
+            submittedAnswers[q.id]
+        ) {
+
+            updateQuestionTimer(
+                0
+            );
+
+            return;
+        }
+
+
+        /*
+          Fresh question
+        */
+
+        if (
+            !questionTimeLeft ||
+            questionTimeLeft <= 0
+        ) {
+
+            questionTimeLeft =
+                perQuestionTime;
+        }
+
+
+        updateQuestionTimer(
+            questionTimeLeft
         );
 
 
-    if (!element) {
+        questionTimer =
+            setInterval(
+                function () {
 
-        return;
+                    if (quizFinished) {
 
+                        stopQuestionTimer();
+
+                        return;
+                    }
+
+
+                    /*
+                      If answer already submitted
+                    */
+
+                    if (
+                        submittedAnswers[q.id]
+                    ) {
+
+                        stopQuestionTimer();
+
+                        return;
+                    }
+
+
+                    questionTimeLeft--;
+
+
+                    if (
+                        questionTimeLeft <= 0
+                    ) {
+
+                        questionTimeLeft = 0;
+
+
+                        updateQuestionTimer(
+                            0
+                        );
+
+
+                        stopQuestionTimer();
+
+
+                        autoSubmitOnTimeout();
+
+
+                        return;
+                    }
+
+
+                    updateQuestionTimer(
+                        questionTimeLeft
+                    );
+
+                },
+                1000
+            );
     }
 
 
-    element.textContent =
-        questionTimeLeft;
+    function stopQuestionTimer() {
 
+        if (questionTimer) {
+
+            clearInterval(
+                questionTimer
+            );
+
+            questionTimer = null;
+        }
+    }
+
+
+    function updateQuestionTimer(seconds) {
+
+        const el =
+            document.getElementById(
+                "questionTimer"
+            );
+
+
+        if (!el) {
+            return;
+        }
+
+
+        el.textContent =
+            Math.max(
+                0,
+                Number(seconds)
+            );
+
+
+        if (
+            Number(seconds) <= 10
+        ) {
+
+            el.classList.add(
+                "timer-danger"
+            );
+
+        } else {
+
+            el.classList.remove(
+                "timer-danger"
+            );
+        }
+    }
+
+
+    /* =====================================================
+       AUTO SUBMIT WHEN QUESTION TIME ENDS
+    ===================================================== */
+
+    function autoSubmitOnTimeout() {
+
+        const q =
+            questions[currentIndex];
+
+
+        if (!q) {
+            return;
+        }
+
+
+        if (
+            submittedAnswers[q.id]
+        ) {
+            return;
+        }
+
+
+        /*
+          If user selected answer,
+          automatically submit it.
+        */
+
+        if (
+            selectedAnswers[q.id]
+        ) {
+
+            submittedAnswers[q.id] =
+                true;
+
+        } else {
+
+            /*
+              Mark as submitted but skipped
+            */
+
+            submittedAnswers[q.id] =
+                true;
+        }
+
+
+        renderQuestion();
+
+
+        saveAttempt();
+    }
+
+
+    /* =====================================================
+       TOTAL TIMER
+    ===================================================== */
+
+    function startTotalTimer() {
+
+        if (totalTimer) {
+            clearInterval(totalTimer);
+        }
+
+
+        updateTotalTimer();
+
+
+        totalTimer =
+            setInterval(
+                function () {
+
+                    if (quizFinished) {
+
+                        clearInterval(
+                            totalTimer
+                        );
+
+                        return;
+                    }
+
+
+                    totalSeconds++;
+
+
+                    updateTotalTimer();
+
+
+                    saveAttempt();
+
+                },
+                1000
+            );
+    }
+
+
+    function updateTotalTimer() {
+
+        const el =
+            document.getElementById(
+                "totalTimer"
+            );
+
+
+        if (!el) {
+            return;
+        }
+
+
+        const minutes =
+            Math.floor(
+                totalSeconds / 60
+            );
+
+
+        const seconds =
+                totalSeconds % 60;
+
+
+        el.textContent =
+            String(minutes)
+                .padStart(2, "0")
+            +
+            ":" +
+            String(seconds)
+                .padStart(2, "0");
+    }
+
+
+    /* =====================================================
+       FINISH QUIZ
+    ===================================================== */
+
+    window.finishQuiz =
+        function () {
+
+            if (quizFinished) {
+                return;
+            }
+
+
+            const unanswered =
+                questions.filter(
+                    q =>
+                        !submittedAnswers[q.id]
+                ).length;
+
+
+            if (
+                unanswered > 0
+            ) {
+
+                const proceed =
+                    confirm(
+                        unanswered +
+                        " question(s) are not submitted.\n\n" +
+                        "Do you want to submit the quiz?"
+                    );
+
+
+                if (!proceed) {
+                    return;
+                }
+
+
+                /*
+                  Mark remaining as submitted
+                  so result can calculate skipped.
+                */
+
+                questions.forEach(
+                    function (q) {
+
+                        if (
+                            !submittedAnswers[q.id]
+                        ) {
+
+                            submittedAnswers[q.id] =
+                                true;
+                        }
+
+                    }
+                );
+            }
+
+
+            quizFinished = true;
+
+
+            stopQuestionTimer();
+
+
+            if (totalTimer) {
+
+                clearInterval(
+                    totalTimer
+                );
+
+                totalTimer = null;
+            }
+
+
+            calculateResult();
+
+
+            clearAttempt();
+        };
+
+
+    /* =====================================================
+       CALCULATE RESULT
+    ===================================================== */
+
+    function calculateResult() {
+
+        let correct = 0;
+
+        let incorrect = 0;
+
+        let skipped = 0;
+
+        let score = 0;
+
+
+        questions.forEach(
+            function (q) {
+
+                const selected =
+                    Number(
+                        selectedAnswers[q.id] ||
+                        0
+                    );
+
+
+                const correctAnswer =
+                    Number(
+                        q.correctOption ||
+                        0
+                    );
+
+
+                /*
+                  SKIPPED
+                */
+
+                if (!selected) {
+
+                    skipped++;
+
+                    return;
+                }
+
+
+                /*
+                  CORRECT
+                */
+
+                if (
+                    selected ===
+                    correctAnswer
+                ) {
+
+                    correct++;
+
+                    score +=
+                        positiveMark;
+
+                } else {
+
+                    incorrect++;
+
+                    score -=
+                        negativeMark;
+                }
+
+            }
+        );
+
+
+        const attempted =
+            correct +
+            incorrect;
+
+
+        const accuracy =
+            attempted > 0
+                ? Math.round(
+                    (
+                        correct /
+                        attempted
+                    ) * 100
+                )
+                : 0;
+
+
+        const result = {
+
+            score: score,
+
+            correct: correct,
+
+            incorrect: incorrect,
+
+            skipped: skipped,
+
+            accuracy: accuracy,
+
+            totalQuestions:
+                questions.length,
+
+            attempted: attempted,
+
+            totalTime:
+                totalSeconds,
+
+            positiveMark:
+                positiveMark,
+
+            negativeMark:
+                negativeMark,
+
+            quizTitle:
+                quizData.title ||
+                "Practice Quiz",
+
+            courseId:
+                getIds().courseId,
+
+            chapterId:
+                getIds().chapterId,
+
+            topicId:
+                getIds().topicId,
+
+            quizId:
+                getIds().quizId,
+
+            questionIds:
+                questions.map(
+                    q => q.id
+                ),
+
+            selectedAnswers:
+                selectedAnswers,
+
+            submittedAnswers:
+                submittedAnswers,
+
+            completedAt:
+                Date.now()
+        };
+
+
+        /*
+          MOST IMPORTANT:
+          Result page will read this.
+        */
+
+        localStorage.setItem(
+            "quizResult",
+            JSON.stringify(result)
+        );
+
+
+        sessionStorage.setItem(
+            "quizResult",
+            JSON.stringify(result)
+        );
+
+
+        /*
+          Keep separate result history
+        */
+
+        const historyKey =
+            "quizHistory";
+
+
+        let history = [];
+
+
+        try {
+
+            history =
+                JSON.parse(
+                    localStorage.getItem(
+                        historyKey
+                    )
+                ) || [];
+
+        } catch (e) {
+
+            history = [];
+        }
+
+
+        history.unshift(result);
+
+
+        /*
+          Keep latest 20 attempts
+        */
+
+        history =
+            history.slice(
+                0,
+                20
+            );
+
+
+        localStorage.setItem(
+            historyKey,
+            JSON.stringify(history)
+        );
+
+
+        /*
+          Redirect
+        */
+
+        setTimeout(
+            function () {
+
+                window.location.href =
+                    "result.html";
+
+            },
+            100
+        );
+    }
+
+
+    /* =====================================================
+       SAVE ATTEMPT
+    ===================================================== */
+
+    function getAttemptKey() {
+
+        const ids =
+            getIds();
+
+
+        return [
+            "mneet_attempt",
+            ids.courseId,
+            ids.chapterId,
+            ids.topicId,
+            ids.quizId
+        ].join("_");
+    }
+
+
+    function saveAttempt() {
+
+        if (
+            !questions.length ||
+            quizFinished
+        ) {
+            return;
+        }
+
+
+        const attempt = {
+
+            currentIndex:
+                currentIndex,
+
+            selectedAnswers:
+                selectedAnswers,
+
+            submittedAnswers:
+                submittedAnswers,
+
+            questionTimeLeft:
+                questionTimeLeft,
+
+            totalSeconds:
+                totalSeconds,
+
+            savedAt:
+                Date.now()
+        };
+
+
+        localStorage.setItem(
+            getAttemptKey(),
+            JSON.stringify(attempt)
+        );
+    }
+
+
+    /* =====================================================
+       RESTORE ATTEMPT
+    ===================================================== */
+
+    function restoreAttempt() {
+
+        try {
+
+            const raw =
+                localStorage.getItem(
+                    getAttemptKey()
+                );
+
+
+            if (!raw) {
+
+                currentIndex = 0;
+
+                selectedAnswers = {};
+
+                submittedAnswers = {};
+
+                questionTimeLeft =
+                    perQuestionTime;
+
+                totalSeconds = 0;
+
+                return;
+            }
+
+
+            const attempt =
+                JSON.parse(raw);
+
+
+            /*
+              Only restore recent attempt
+              within 6 hours.
+            */
+
+            if (
+                !attempt.savedAt ||
+                Date.now() -
+                attempt.savedAt >
+                6 * 60 * 60 * 1000
+            ) {
+
+                clearAttempt();
+
+                return;
+            }
+
+
+            currentIndex =
+                Number(
+                    attempt.currentIndex ||
+                    0
+                );
+
+
+            if (
+                currentIndex >=
+                questions.length
+            ) {
+
+                currentIndex = 0;
+            }
+
+
+            selectedAnswers =
+                attempt.selectedAnswers ||
+                {};
+
+
+            submittedAnswers =
+                attempt.submittedAnswers ||
+                {};
+
+
+            questionTimeLeft =
+                Number(
+                    attempt.questionTimeLeft ||
+                    perQuestionTime
+                );
+
+
+            totalSeconds =
+                Number(
+                    attempt.totalSeconds ||
+                    0
+                );
+
+        } catch (error) {
+
+            console.warn(
+                "Restore attempt failed:",
+                error
+            );
+
+
+            currentIndex = 0;
+
+            selectedAnswers = {};
+
+            submittedAnswers = {};
+
+            questionTimeLeft =
+                perQuestionTime;
+
+            totalSeconds = 0;
+        }
+    }
+
+
+    /* =====================================================
+       CLEAR ATTEMPT
+    ===================================================== */
+
+    function clearAttempt() {
+
+        localStorage.removeItem(
+            getAttemptKey()
+        );
+    }
+
+
+    /* =====================================================
+       BACK TO TOPIC
+    ===================================================== */
+
+    window.goBackToTopic =
+        function () {
+
+            const ids =
+                getIds();
+
+
+            /*
+              Try topic page first.
+            */
+
+            window.location.href =
+                "topic.html?courseId=" +
+                encodeURIComponent(
+                    ids.courseId
+                ) +
+                "&chapterId=" +
+                encodeURIComponent(
+                    ids.chapterId
+                ) +
+                "&topicId=" +
+                encodeURIComponent(
+                    ids.topicId
+                );
+        };
+
+
+    /* =====================================================
+       LOADING
+    ===================================================== */
+
+    function showLoading(message) {
+
+        const container =
+            document.getElementById(
+                "quizContainer"
+            );
+
+
+        if (!container) {
+            return;
+        }
+
+
+        container.innerHTML = `
+            <div class="quiz-loading">
+                ${escapeHTML(
+                    message ||
+                    "Loading questions..."
+                )}
+            </div>
+        `;
+    }
+
+
+    /* =====================================================
+       ERROR
+    ===================================================== */
+
+    function showError(message) {
+
+        const container =
+            document.getElementById(
+                "quizContainer"
+            );
+
+
+        if (!container) {
+            return;
+        }
+
+
+        container.innerHTML = `
+            <div class="quiz-error">
+
+                ⚠️
+
+                <br><br>
+
+                ${message}
+
+                <br><br>
+
+                <button
+                    onclick="goBackToTopic()"
+                    style="
+                        border:0;
+                        border-radius:10px;
+                        padding:12px 18px;
+                        background:#ffc107;
+                        color:#111;
+                        font-weight:900;
+                    "
+                >
+                    ← Back to Topic
+                </button>
+
+            </div>
+        `;
+    }
+
+
+    /* =====================================================
+       SECURITY / HTML ESCAPE
+    ===================================================== */
+
+    function escapeHTML(value) {
+
+        return String(value)
+            .replace(
+                /&/g,
+                "&amp;"
+            )
+            .replace(
+                /</g,
+                "&lt;"
+            )
+            .replace(
+                />/g,
+                "&gt;"
+            )
+            .replace(
+                /"/g,
+                "&quot;"
+            )
+            .replace(
+                /'/g,
+                "&#039;"
+            );
+    }
+
+
+    function escapeAttribute(value) {
+
+        return escapeHTML(value);
+    }
+
+
+    /* =====================================================
+       START
+    ===================================================== */
+
+    function start() {
+
+        /*
+          Wait for Firebase scripts.
+        */
+
+        if (
+            typeof firebase ===
+            "undefined"
+        ) {
+
+            setTimeout(
+                start,
+                300
+            );
+
+            return;
+        }
+
+
+        loadQuiz();
+    }
+
+
+    /*
+      DOM READY
+    */
 
     if (
-        questionTimeLeft <= 10
+        document.readyState ===
+        "loading"
     ) {
 
-        element.classList.add(
-            "timer-danger"
+        document.addEventListener(
+            "DOMContentLoaded",
+            start
         );
 
     } else {
 
-        element.classList.remove(
-            "timer-danger"
-        );
-
-    }
-
-}
-
-
-// ==========================================
-// TOTAL TIMER UI
-// ==========================================
-
-function updateTotalTimer() {
-
-    const element =
-        document.getElementById(
-            "totalTimer"
-        );
-
-
-    if (!element) {
-
-        return;
-
+        start();
     }
 
 
-    const minutes =
-        Math.floor(
-            totalSeconds / 60
-        );
-
-
-    const seconds =
-        totalSeconds % 60;
-
-
-    element.textContent =
-        String(minutes).padStart(2, "0") +
-        ":" +
-        String(seconds).padStart(2, "0");
-
-}
-
-
-// ==========================================
-// QUESTION COUNTER
-// ==========================================
-
-function updateCounter() {
-
-    const element =
-        document.getElementById(
-            "questionCounter"
-        );
-
-
-    if (!element) {
-
-        return;
-
-    }
-
-
-    element.textContent =
-        (currentIndex + 1) +
-        " / " +
-        questions.length;
-
-}
-
-
-// ==========================================
-// PROGRESS
-// ==========================================
-
-function updateProgress() {
-
-    const element =
-        document.getElementById(
-            "progressFill"
-        );
-
-
-    if (!element) {
-
-        return;
-
-    }
-
-
-    const percent =
-        (
-            (currentIndex + 1) /
-            questions.length
-        ) * 100;
-
-
-    element.style.width =
-        percent + "%";
-
-}
-
-
-// ==========================================
-// NORMALIZE ANSWER
-// ==========================================
-
-function normalizeAnswer(value) {
-
-    if (
-        value === undefined ||
-        value === null
-    ) {
-
-        return "";
-
-    }
-
-
-    const answer =
-        String(value)
-            .trim()
-            .toLowerCase();
-
-
-    if (
-        answer === "a" ||
-        answer === "1" ||
-        answer === "option1" ||
-        answer === "option 1"
-    ) {
-
-        return "1";
-
-    }
-
-
-    if (
-        answer === "b" ||
-        answer === "2" ||
-        answer === "option2" ||
-        answer === "option 2"
-    ) {
-
-        return "2";
-
-    }
-
-
-    if (
-        answer === "c" ||
-        answer === "3" ||
-        answer === "option3" ||
-        answer === "option 3"
-    ) {
-
-        return "3";
-
-    }
-
-
-    if (
-        answer === "d" ||
-        answer === "4" ||
-        answer === "option4" ||
-        answer === "option 4"
-    ) {
-
-        return "4";
-
-    }
-
-
-    return answer;
-
-}
-
-
-// ==========================================
-// ERROR
-// ==========================================
-
-function showError(message) {
-
-    const container =
-        document.getElementById(
-            "quizContainer"
-        );
-
-
-    if (!container) {
-
-        return;
-
-    }
-
-
-    container.innerHTML = `
-
-        <div class="quiz-error">
-
-            ⚠️
-
-            <br><br>
-
-            ${message}
-
-        </div>
-
-    `;
-
-}
-
-
-// ==========================================
-// HTML ESCAPE
-// ==========================================
-
-function escapeHTML(value) {
-
-    return String(value || "")
-
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-
-        .replace(
-            /</g,
-            "&lt;"
-        )
-
-        .replace(
-            />/g,
-            "&gt;"
-        )
-
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
-}
-
-
-// ==========================================
-// BACK TO TOPIC
-// ==========================================
-
-function goBackToTopic() {
-
-    stopQuestionTimer();
-
-    stopTotalTimer();
-
-
-    localStorage.setItem(
-        "activeCourse",
-        courseId
-    );
-
-
-    localStorage.setItem(
-        "activeChapter",
-        chapterId
-    );
-
-
-    localStorage.setItem(
-        "activeTopic",
-        topicId
-    );
-
-
-    window.location.href =
-        "topic.html";
-
-}
+})();
