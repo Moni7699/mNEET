@@ -3,542 +3,431 @@
 
 <head>
 
-    <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>mNEET - Result</title>
-
-    <link
-        rel="stylesheet"
-        href="css/style.css"
-    >
-
-    <style>
-
-        .result-page {
-            min-height: 100vh;
-            padding-bottom: 35px;
-        }
-
-        .result-header {
-            padding: 16px 18px;
-
-            display: flex;
-            align-items: center;
-            gap: 15px;
-
-            background: #050d1a;
-
-            border-bottom:
-                1px solid
-                rgba(255,255,255,0.07);
-        }
-
-        .result-back {
-            border: none;
-            background: transparent;
-
-            color: white;
-
-            font-size: 25px;
-
-            cursor: pointer;
-        }
-
-        .result-brand {
-            font-size: 21px;
-            font-weight: 900;
-            color: #ffc107;
-        }
-
-        .result-brand span {
-            color: white;
-        }
-
-        .result-main {
-            width: 100%;
-            max-width: 850px;
-
-            margin: auto;
-
-            padding: 25px 15px;
-        }
-
-        .result-hero {
-            padding: 28px 20px;
-
-            text-align: center;
-
-            border-radius: 22px;
-
-            background:
-                linear-gradient(
-                    145deg,
-                    #101f38,
-                    #07101f
-                );
-
-            border:
-                1px solid
-                rgba(255,193,7,0.18);
-
-            box-shadow:
-                0 20px 50px
-                rgba(0,0,0,0.25);
-        }
-
-        .result-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-        }
-
-        .result-small {
-            color: #8b99ad;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 1px;
-        }
-
-        .result-title {
-            color: white;
-            font-size: 25px;
-            margin: 8px 0;
-        }
-
-        .result-score {
-            color: #ffc107;
-            font-size: 50px;
-            font-weight: 950;
-            line-height: 1.1;
-            margin-top: 15px;
-        }
-
-        .result-score-label {
-            color: #8e9bae;
-            font-size: 12px;
-        }
-
-        .result-grid {
-            display: grid;
-
-            grid-template-columns:
-                repeat(4, 1fr);
-
-            gap: 12px;
-
-            margin-top: 18px;
-        }
-
-        .result-card {
-            padding: 18px 10px;
-
-            text-align: center;
-
-            border-radius: 15px;
-
-            background: #0d192c;
-
-            border:
-                1px solid
-                rgba(255,255,255,0.06);
-        }
-
-        .result-card-icon {
-            font-size: 22px;
-            margin-bottom: 8px;
-        }
-
-        .result-card-value {
-            color: white;
-
-            font-size: 22px;
-
-            font-weight: 900;
-        }
-
-        .result-card-label {
-            color: #8795a9;
-
-            font-size: 10px;
-
-            margin-top: 4px;
-        }
-
-        .result-actions {
-            display: grid;
-
-            grid-template-columns:
-                repeat(2, 1fr);
-
-            gap: 12px;
-
-            margin-top: 20px;
-        }
-
-        .result-button {
-            min-height: 48px;
-
-            border-radius: 12px;
-
-            border:
-                1px solid
-                #2b3c57;
-
-            background: #0b172a;
-
-            color: white;
-
-            font-weight: 800;
-
-            cursor: pointer;
-        }
-
-        .result-button.primary {
-            background: #ffc107;
-            color: #171717;
-            border-color: #ffc107;
-        }
-
-        .accuracy-card {
-            margin-top: 18px;
-
-            padding: 20px;
-
-            border-radius: 17px;
-
-            background: #0d192c;
-
-            border:
-                1px solid
-                rgba(255,255,255,0.06);
-        }
-
-        .accuracy-top {
-            display: flex;
-
-            justify-content: space-between;
-
-            color: #c5cfdd;
-
-            font-size: 13px;
-
-            margin-bottom: 10px;
-        }
-
-        .accuracy-top strong {
-            color: #ffc107;
-        }
-
-        .accuracy-bar {
-            height: 9px;
-
-            overflow: hidden;
-
-            border-radius: 20px;
-
-            background: #17253b;
-        }
-
-        .accuracy-fill {
-            height: 100%;
-
-            width: 0%;
-
-            border-radius: 20px;
-
-            background: #ffc107;
-
-            transition: width 0.5s;
-        }
-
-        .result-message {
-            margin-top: 18px;
-
-            padding: 16px;
-
-            border-radius: 14px;
-
-            text-align: center;
-
-            background:
-                rgba(255,193,7,0.06);
-
-            border:
-                1px solid
-                rgba(255,193,7,0.13);
-
-            color: #b8c3d2;
-
-            font-size: 13px;
-
-            line-height: 1.6;
-        }
-
-        @media (max-width: 600px) {
-
-            .result-grid {
-                grid-template-columns:
-                    repeat(2, 1fr);
-            }
-
-            .result-actions {
-                grid-template-columns:
-                    1fr;
-            }
-
-        }
-
-    </style>
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>mNEET - Result</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    background:#050b18;
+    color:white;
+    font-family:Arial,sans-serif;
+}
+
+.result-page{
+    min-height:100vh;
+    padding-bottom:35px;
+}
+
+.result-header{
+    padding:14px 16px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    background:#050d1a;
+    border-bottom:1px solid rgba(255,255,255,.07);
+}
+
+.result-back{
+    width:42px;
+    height:42px;
+    border:0;
+    border-radius:12px;
+    background:#111a2c;
+    color:white;
+    font-size:23px;
+    cursor:pointer;
+}
+
+.result-brand{
+    font-size:21px;
+    font-weight:900;
+    color:#ffc107;
+}
+
+.result-brand span{
+    color:white;
+}
+
+.result-main{
+    width:100%;
+    max-width:850px;
+    margin:auto;
+    padding:24px 15px;
+}
+
+.result-hero{
+    padding:28px 20px;
+    text-align:center;
+    border-radius:22px;
+    background:linear-gradient(145deg,#101f38,#07101f);
+    border:1px solid rgba(255,193,7,.18);
+}
+
+.result-icon{
+    font-size:45px;
+}
+
+.result-small{
+    margin-top:8px;
+    color:#8b99ad;
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:1px;
+}
+
+.result-title{
+    color:white;
+    font-size:24px;
+    margin:8px 0;
+}
+
+.result-score{
+    color:#ffc107;
+    font-size:52px;
+    font-weight:900;
+    margin-top:14px;
+}
+
+.result-score-label{
+    color:#8e9bae;
+    font-size:12px;
+}
+
+.result-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+    margin-top:18px;
+}
+
+.result-card{
+    padding:17px 8px;
+    text-align:center;
+    border-radius:15px;
+    background:#0d192c;
+    border:1px solid rgba(255,255,255,.06);
+}
+
+.result-card-icon{
+    font-size:21px;
+    margin-bottom:7px;
+}
+
+.result-card-value{
+    color:white;
+    font-size:22px;
+    font-weight:900;
+}
+
+.result-card-label{
+    color:#8795a9;
+    font-size:10px;
+    margin-top:4px;
+}
+
+.accuracy-card{
+    margin-top:18px;
+    padding:20px;
+    border-radius:17px;
+    background:#0d192c;
+    border:1px solid rgba(255,255,255,.06);
+}
+
+.accuracy-top{
+    display:flex;
+    justify-content:space-between;
+    color:#c5cfdd;
+    font-size:13px;
+    margin-bottom:10px;
+}
+
+.accuracy-top strong{
+    color:#ffc107;
+}
+
+.accuracy-bar{
+    height:9px;
+    overflow:hidden;
+    border-radius:20px;
+    background:#17253b;
+}
+
+.accuracy-fill{
+    width:0%;
+    height:100%;
+    border-radius:20px;
+    background:#ffc107;
+    transition:.5s;
+}
+
+.result-message{
+    margin-top:18px;
+    padding:16px;
+    border-radius:14px;
+    text-align:center;
+    background:rgba(255,193,7,.06);
+    border:1px solid rgba(255,193,7,.13);
+    color:#b8c3d2;
+    font-size:13px;
+    line-height:1.6;
+}
+
+.result-actions{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:12px;
+    margin-top:20px;
+}
+
+.result-button{
+    min-height:48px;
+    border-radius:12px;
+    border:1px solid #2b3c57;
+    background:#0b172a;
+    color:white;
+    font-weight:800;
+    cursor:pointer;
+}
+
+.result-button.primary{
+    background:#ffc107;
+    color:#171717;
+    border-color:#ffc107;
+}
+
+@media(max-width:600px){
+
+    .result-grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .result-actions{
+        grid-template-columns:1fr;
+    }
+
+}
+
+</style>
 
 </head>
 
-
 <body>
-
 
 <div class="result-page">
 
+<header class="result-header">
 
-    <!-- HEADER -->
+<button
+class="result-back"
+onclick="goToTopic()"
+>
+←
+</button>
 
-    <header class="result-header">
+<div class="result-brand">
+<span>m</span>NEET
+</div>
 
-        <button
-            class="result-back"
-            onclick="goToTopic()"
-        >
-            ←
-        </button>
+</header>
 
 
-        <div class="result-brand">
+<main class="result-main">
 
-            <span>m</span>NEET
 
-        </div>
+<section class="result-hero">
 
-    </header>
+<div class="result-icon">
+🏆
+</div>
 
+<div class="result-small">
+QUIZ COMPLETED
+</div>
 
+<h1
+id="resultTitle"
+class="result-title"
+>
+Your Result
+</h1>
 
-    <!-- MAIN -->
+<div
+id="score"
+class="result-score"
+>
+0
+</div>
 
-    <main class="result-main">
+<div class="result-score-label">
+Total Score
+</div>
 
+</section>
 
-        <!-- HERO -->
 
-        <section class="result-hero">
+<section class="result-grid">
 
-            <div class="result-icon">
-                🏆
-            </div>
 
-            <div class="result-small">
-                QUIZ COMPLETED
-            </div>
+<div class="result-card">
 
-            <h1
-                id="resultTitle"
-                class="result-title"
-            >
-                Your Result
-            </h1>
+<div class="result-card-icon">
+✅
+</div>
 
-            <div
-                id="score"
-                class="result-score"
-            >
-                0
-            </div>
+<div
+id="correct"
+class="result-card-value"
+>
+0
+</div>
 
-            <div class="result-score-label">
-                Total Score
-            </div>
+<div class="result-card-label">
+Correct
+</div>
 
-        </section>
+</div>
 
 
+<div class="result-card">
 
-        <!-- STATS -->
+<div class="result-card-icon">
+❌
+</div>
 
-        <section class="result-grid">
+<div
+id="incorrect"
+class="result-card-value"
+>
+0
+</div>
 
+<div class="result-card-label">
+Incorrect
+</div>
 
-            <div class="result-card">
+</div>
 
-                <div class="result-card-icon">
-                    ✅
-                </div>
 
-                <div
-                    id="correct"
-                    class="result-card-value"
-                >
-                    0
-                </div>
+<div class="result-card">
 
-                <div class="result-card-label">
-                    Correct
-                </div>
+<div class="result-card-icon">
+⏭️
+</div>
 
-            </div>
+<div
+id="skipped"
+class="result-card-value"
+>
+0
+</div>
 
+<div class="result-card-label">
+Skipped
+</div>
 
+</div>
 
-            <div class="result-card">
 
-                <div class="result-card-icon">
-                    ❌
-                </div>
+<div class="result-card">
 
-                <div
-                    id="incorrect"
-                    class="result-card-value"
-                >
-                    0
-                </div>
+<div class="result-card-icon">
+⏱️
+</div>
 
-                <div class="result-card-label">
-                    Incorrect
-                </div>
+<div
+id="time"
+class="result-card-value"
+>
+00:00
+</div>
 
-            </div>
+<div class="result-card-label">
+Time
+</div>
 
+</div>
 
+</section>
 
-            <div class="result-card">
 
-                <div class="result-card-icon">
-                    ⏭️
-                </div>
+<section class="accuracy-card">
 
-                <div
-                    id="skipped"
-                    class="result-card-value"
-                >
-                    0
-                </div>
+<div class="accuracy-top">
 
-                <div class="result-card-label">
-                    Skipped
-                </div>
+<span>
+Accuracy
+</span>
 
-            </div>
+<strong id="accuracy">
+0%
+</strong>
 
+</div>
 
+<div class="accuracy-bar">
 
-            <div class="result-card">
+<div
+id="accuracyFill"
+class="accuracy-fill"
+></div>
 
-                <div class="result-card-icon">
-                    ⏱️
-                </div>
+</div>
 
-                <div
-                    id="time"
-                    class="result-card-value"
-                >
-                    00:00
-                </div>
+</section>
 
-                <div class="result-card-label">
-                    Time
-                </div>
 
-            </div>
+<div
+id="resultMessage"
+class="result-message"
+>
+Keep practicing and improve your score.
+</div>
 
 
-        </section>
+<section class="result-actions">
 
+<button
+class="result-button primary"
+onclick="reattemptQuiz()"
+>
+🔄 Reattempt Quiz
+</button>
 
+<button
+class="result-button"
+onclick="goToTopic()"
+>
+📚 Back to Topic
+</button>
 
-        <!-- ACCURACY -->
+<button
+class="result-button"
+onclick="goToChapter()"
+>
+📖 Back to Chapter
+</button>
 
-        <section class="accuracy-card">
+<button
+class="result-button"
+onclick="goToStudent()"
+>
+🏠 Dashboard
+</button>
 
-            <div class="accuracy-top">
+</section>
 
-                <span>
-                    Accuracy
-                </span>
-
-                <strong id="accuracy">
-                    0%
-                </strong>
-
-            </div>
-
-
-            <div class="accuracy-bar">
-
-                <div
-                    id="accuracyFill"
-                    class="accuracy-fill"
-                ></div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- MESSAGE -->
-
-        <div
-            id="resultMessage"
-            class="result-message"
-        >
-            Keep practicing and improve your score.
-        </div>
-
-
-
-        <!-- ACTIONS -->
-
-        <section class="result-actions">
-
-
-            <button
-                class="result-button primary"
-                onclick="reattemptQuiz()"
-            >
-                🔄 Reattempt Quiz
-            </button>
-
-
-            <button
-                class="result-button"
-                onclick="goToTopic()"
-            >
-                📚 Back to Topic
-            </button>
-
-
-            <button
-                class="result-button"
-                onclick="goToChapter()"
-            >
-                📖 Back to Chapter
-            </button>
-
-
-            <button
-                class="result-button"
-                onclick="goToStudent()"
-            >
-                🏠 Dashboard
-            </button>
-
-
-        </section>
-
-
-    </main>
-
+</main>
 
 </div>
 
@@ -549,7 +438,6 @@
 
 <script src="js/result.js"></script>
 
-
 </body>
 
-                  </html>
+</html>
