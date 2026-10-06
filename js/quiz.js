@@ -1,15 +1,13 @@
 // ==========================================
-// mNEET QUIZ - FINAL
-// Firestore:
-// courses/{course}/chapters/{chapter}/topics/{topic}/quiz/{question}
+// mNEET - QUIZ.JS
 // ==========================================
 
-let courseId = "";
-let chapterId = "";
-let topicId = "";
+let courseId = null;
+let chapterId = null;
+let topicId = null;
 
 let questions = [];
-let currentQuestion = 0;
+let currentIndex = 0;
 
 let selectedAnswers = {};
 let submittedAnswers = {};
@@ -30,42 +28,38 @@ document.addEventListener("DOMContentLoaded", function () {
     auth.onAuthStateChanged(function (user) {
 
         if (!user) {
+
             window.location.href = "index.html";
             return;
+
         }
+
 
         courseId =
             localStorage.getItem("quizCourse") ||
-            localStorage.getItem("activeCourse") ||
-            "";
+            localStorage.getItem("activeCourse");
 
         chapterId =
             localStorage.getItem("quizChapter") ||
-            localStorage.getItem("activeChapter") ||
-            "";
+            localStorage.getItem("activeChapter");
 
         topicId =
             localStorage.getItem("quizTopic") ||
-            localStorage.getItem("activeTopic") ||
-            "";
-
-
-        console.log("QUIZ COURSE =", courseId);
-        console.log("QUIZ CHAPTER =", chapterId);
-        console.log("QUIZ TOPIC =", topicId);
+            localStorage.getItem("activeTopic");
 
 
         if (!courseId || !chapterId || !topicId) {
 
             showError(
-                "Quiz ID missing. Topic থেকে আবার Start Quiz চাপুন."
+                "Quiz information missing. Please open the quiz again."
             );
 
             return;
+
         }
 
 
-        loadQuizQuestions();
+        loadQuiz();
 
     });
 
@@ -73,28 +67,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 // ==========================================
-// LOAD QUESTIONS
+// LOAD QUIZ
 // ==========================================
 
-function loadQuizQuestions() {
+function loadQuiz() {
 
-    const box =
+    const container =
         document.getElementById("quizContainer");
 
 
-    box.innerHTML = `
+    container.innerHTML = `
         <div class="quiz-loading">
             Loading questions...
         </div>
     `;
-
-
-    console.log(
-        "Loading Firestore quiz:",
-        courseId,
-        chapterId,
-        topicId
-    );
 
 
     db.collection("courses")
@@ -108,25 +94,12 @@ function loadQuizQuestions() {
 
         .then(function (snapshot) {
 
-            console.log(
-                "QUIZ SNAPSHOT SIZE =",
-                snapshot.size
-            );
-
-
             questions = [];
 
 
             snapshot.forEach(function (doc) {
 
                 const data = doc.data();
-
-
-                console.log(
-                    "QUESTION:",
-                    doc.id,
-                    data
-                );
 
 
                 questions.push({
@@ -162,28 +135,51 @@ function loadQuizQuestions() {
             if (questions.length === 0) {
 
                 showError(
-                    "Quiz collection পাওয়া গেছে, কিন্তু এর ভিতরে কোনো question document নেই."
+                    "No questions found in this topic."
                 );
 
                 return;
+
             }
 
 
-            startQuiz();
+            currentIndex = 0;
+
+            selectedAnswers = {};
+
+            submittedAnswers = {};
+
+            totalSeconds = 0;
+
+
+            const title =
+                document.getElementById("quizTitle");
+
+
+            if (title) {
+
+                title.textContent =
+                    "NEET Biology Quiz";
+
+            }
+
+
+            startTotalTimer();
+
+            renderQuestion();
 
         })
 
         .catch(function (error) {
 
             console.error(
-                "QUIZ FIRESTORE ERROR:",
+                "Quiz loading error:",
                 error
             );
 
 
             showError(
-                "Question load হয়নি.<br><br>" +
-                "Firestore Error: " +
+                "Unable to load questions.<br><br>" +
                 escapeHTML(error.message)
             );
 
@@ -193,38 +189,7 @@ function loadQuizQuestions() {
 
 
 // ==========================================
-// START
-// ==========================================
-
-function startQuiz() {
-
-    currentQuestion = 0;
-
-    selectedAnswers = {};
-
-    submittedAnswers = {};
-
-    totalSeconds = 0;
-
-
-    const title =
-        document.getElementById("quizTitle");
-
-
-    if (title) {
-        title.textContent = "NEET Biology Quiz";
-    }
-
-
-    startTotalTimer();
-
-    renderQuestion();
-
-}
-
-
-// ==========================================
-// RENDER
+// RENDER QUESTION
 // ==========================================
 
 function renderQuestion() {
@@ -233,35 +198,26 @@ function renderQuestion() {
 
 
     const q =
-        questions[currentQuestion];
+        questions[currentIndex];
 
 
     if (!q) {
 
-        showError(
-            "Question পাওয়া যাচ্ছে না."
-        );
-
         return;
+
     }
 
 
-    const box =
-        document.getElementById(
-            "quizContainer"
-        );
+    const container =
+        document.getElementById("quizContainer");
 
 
     const selected =
-        selectedAnswers[currentQuestion];
+        selectedAnswers[currentIndex];
 
 
     const submitted =
-        submittedAnswers[currentQuestion] === true;
-
-
-    const correctAnswer =
-        normalizeAnswer(q.answer);
+        submittedAnswers[currentIndex];
 
 
     let html = `
@@ -272,65 +228,72 @@ function renderQuestion() {
                 ${escapeHTML(q.question)}
             </p>
 
+
             <div class="options">
 
     `;
 
 
-    const optionList = [
+    const options = [
+
         q.option1,
         q.option2,
         q.option3,
         q.option4
+
     ];
 
 
-    optionList.forEach(function (
-        option,
-        index
-    ) {
+    options.forEach(function (option, index) {
 
         const number =
             index + 1;
 
 
-        const isSelected =
+        let className =
+            "option";
+
+
+        if (
             String(selected) ===
-            String(number);
+            String(number)
+        ) {
 
+            className += " selected";
 
-        const isCorrect =
-            submitted &&
-            correctAnswer ===
-            String(number);
-
-
-        const isWrong =
-            submitted &&
-            isSelected &&
-            !isCorrect;
-
-
-        let cls = "option";
-
-
-        if (isSelected) {
-            cls += " selected";
-        }
-
-
-        if (isCorrect) {
-            cls += " correct";
-        }
-
-
-        if (isWrong) {
-            cls += " wrong";
         }
 
 
         if (submitted) {
-            cls += " disabled";
+
+            const correct =
+                normalizeAnswer(q.answer);
+
+
+            if (
+                String(number) ===
+                String(correct)
+            ) {
+
+                className += " correct";
+
+            }
+
+
+            if (
+                String(selected) ===
+                String(number) &&
+                String(selected) !==
+                String(correct)
+            ) {
+
+                className += " wrong";
+
+            }
+
+
+            className += " disabled";
+
         }
 
 
@@ -338,7 +301,7 @@ function renderQuestion() {
 
             <button
                 type="button"
-                class="${cls}"
+                class="${className}"
                 onclick="selectAnswer(${number})"
             >
 
@@ -357,10 +320,16 @@ function renderQuestion() {
     });
 
 
-    html += `</div>`;
+    html += `
+
+            </div>
+
+    `;
 
 
-    // Submit Answer
+    // ======================================
+    // SUBMIT ANSWER
+    // ======================================
 
     if (!submitted) {
 
@@ -370,7 +339,11 @@ function renderQuestion() {
                 type="button"
                 class="submit-answer-button"
                 onclick="submitAnswer()"
-                ${selected ? "" : "disabled"}
+                ${
+                    selected
+                        ? ""
+                        : "disabled"
+                }
             >
                 Submit Answer
             </button>
@@ -380,13 +353,19 @@ function renderQuestion() {
     }
 
 
-    // Answer result
+    // ======================================
+    // ANSWER RESULT
+    // ======================================
 
     if (submitted) {
 
         const correct =
-            correctAnswer ===
-            String(selected);
+            normalizeAnswer(q.answer);
+
+
+        const isCorrect =
+            String(selected) ===
+            String(correct);
 
 
         html += `
@@ -395,16 +374,16 @@ function renderQuestion() {
                 answer-status
                 show
                 ${
-                    correct
+                    isCorrect
                         ? "correct-status"
                         : "wrong-status"
                 }
             ">
 
                 ${
-                    correct
+                    isCorrect
                         ? "✅ Correct Answer"
-                        : "❌ Wrong Answer"
+                        : "❌ Incorrect Answer"
                 }
 
             </div>
@@ -435,7 +414,9 @@ function renderQuestion() {
     }
 
 
-    // Navigation
+    // ======================================
+    // NAVIGATION
+    // ======================================
 
     html += `
 
@@ -446,7 +427,7 @@ function renderQuestion() {
                 class="quiz-button previous-button"
                 onclick="previousQuestion()"
                 ${
-                    currentQuestion === 0
+                    currentIndex === 0
                         ? "disabled"
                         : ""
                 }
@@ -454,17 +435,20 @@ function renderQuestion() {
                 ← Previous
             </button>
 
+
             <button
                 type="button"
                 class="quiz-button next-button"
                 onclick="nextQuestion()"
             >
+
                 ${
-                    currentQuestion ===
+                    currentIndex ===
                     questions.length - 1
                         ? "Finish"
                         : "Next →"
                 }
+
             </button>
 
         </div>
@@ -481,12 +465,13 @@ function renderQuestion() {
     `;
 
 
-    box.innerHTML = html;
+    container.innerHTML = html;
 
 
     updateCounter();
 
     updateProgress();
+
 
     questionTimeLeft = 60;
 
@@ -498,19 +483,21 @@ function renderQuestion() {
 
 
 // ==========================================
-// SELECT
+// SELECT ANSWER
 // ==========================================
 
 function selectAnswer(number) {
 
     if (
-        submittedAnswers[currentQuestion]
+        submittedAnswers[currentIndex]
     ) {
+
         return;
+
     }
 
 
-    selectedAnswers[currentQuestion] =
+    selectedAnswers[currentIndex] =
         number;
 
 
@@ -520,13 +507,13 @@ function selectAnswer(number) {
 
 
 // ==========================================
-// SUBMIT ANSWER
+// SUBMIT CURRENT ANSWER
 // ==========================================
 
 function submitAnswer() {
 
     if (
-        !selectedAnswers[currentQuestion]
+        !selectedAnswers[currentIndex]
     ) {
 
         alert(
@@ -534,14 +521,16 @@ function submitAnswer() {
         );
 
         return;
+
     }
 
 
-    submittedAnswers[currentQuestion] =
+    submittedAnswers[currentIndex] =
         true;
 
 
     stopQuestionTimer();
+
 
     renderQuestion();
 
@@ -549,17 +538,17 @@ function submitAnswer() {
 
 
 // ==========================================
-// NEXT
+// NEXT QUESTION
 // ==========================================
 
 function nextQuestion() {
 
     if (
-        currentQuestion <
+        currentIndex <
         questions.length - 1
     ) {
 
-        currentQuestion++;
+        currentIndex++;
 
         renderQuestion();
 
@@ -569,14 +558,14 @@ function nextQuestion() {
 
 
 // ==========================================
-// PREVIOUS
+// PREVIOUS QUESTION
 // ==========================================
 
 function previousQuestion() {
 
-    if (currentQuestion > 0) {
+    if (currentIndex > 0) {
 
-        currentQuestion--;
+        currentIndex--;
 
         renderQuestion();
 
@@ -592,21 +581,27 @@ function previousQuestion() {
 function submitQuiz() {
 
     if (!questions.length) {
+
         return;
+
     }
 
 
-    if (
-        !confirm(
+    const confirmed =
+        confirm(
             "Are you sure you want to submit the quiz?"
-        )
-    ) {
+        );
+
+
+    if (!confirmed) {
 
         return;
+
     }
 
 
     stopQuestionTimer();
+
     stopTotalTimer();
 
 
@@ -615,10 +610,7 @@ function submitQuiz() {
     let skipped = 0;
 
 
-    questions.forEach(function (
-        q,
-        index
-    ) {
+    questions.forEach(function (q, index) {
 
         const selected =
             selectedAnswers[index];
@@ -629,12 +621,17 @@ function submitQuiz() {
             skipped++;
 
             return;
+
         }
+
+
+        const answer =
+            normalizeAnswer(q.answer);
 
 
         if (
             String(selected) ===
-            normalizeAnswer(q.answer)
+            String(answer)
         ) {
 
             correct++;
@@ -652,47 +649,59 @@ function submitQuiz() {
         questions.length;
 
 
+    // +4 correct / -1 wrong
+
     const score =
         (correct * 4) -
         incorrect;
 
 
     const accuracy =
-        total
+        total > 0
             ? Math.round(
                 (correct / total) * 100
             )
             : 0;
 
 
-    const result = {
+    const resultData = {
 
-        courseId: courseId,
+        courseId:
+            courseId,
 
-        chapterId: chapterId,
+        chapterId:
+            chapterId,
 
-        topicId: topicId,
+        topicId:
+            topicId,
 
-        total: total,
+        total:
+            total,
 
-        correct: correct,
+        correct:
+            correct,
 
-        incorrect: incorrect,
+        incorrect:
+            incorrect,
 
-        skipped: skipped,
+        skipped:
+            skipped,
 
-        score: score,
+        score:
+            score,
 
-        accuracy: accuracy,
+        accuracy:
+            accuracy,
 
-        time: totalSeconds
+        time:
+            totalSeconds
 
     };
 
 
     localStorage.setItem(
         "quizResult",
-        JSON.stringify(result)
+        JSON.stringify(resultData)
     );
 
 
@@ -729,15 +738,11 @@ function startQuestionTimer() {
     stopQuestionTimer();
 
 
-    questionTimeLeft = 60;
-
-    updateQuestionTimer();
-
-
     questionTimer =
         setInterval(function () {
 
             questionTimeLeft--;
+
 
             updateQuestionTimer();
 
@@ -750,13 +755,17 @@ function startQuestionTimer() {
 
 
                 if (
-                    currentQuestion <
+                    currentIndex <
                     questions.length - 1
                 ) {
 
-                    currentQuestion++;
+                    currentIndex++;
 
                     renderQuestion();
+
+                } else {
+
+                    submitQuiz();
 
                 }
 
@@ -771,9 +780,7 @@ function stopQuestionTimer() {
 
     if (questionTimer) {
 
-        clearInterval(
-            questionTimer
-        );
+        clearInterval(questionTimer);
 
         questionTimer = null;
 
@@ -792,6 +799,7 @@ function startTotalTimer() {
 
 
     totalSeconds = 0;
+
 
     updateTotalTimer();
 
@@ -812,9 +820,7 @@ function stopTotalTimer() {
 
     if (totalTimer) {
 
-        clearInterval(
-            totalTimer
-        );
+        clearInterval(totalTimer);
 
         totalTimer = null;
 
@@ -824,21 +830,25 @@ function stopTotalTimer() {
 
 
 // ==========================================
-// TIMER UI
+// QUESTION TIMER UI
 // ==========================================
 
 function updateQuestionTimer() {
 
-    const el =
+    const element =
         document.getElementById(
             "questionTimer"
         );
 
 
-    if (!el) return;
+    if (!element) {
+
+        return;
+
+    }
 
 
-    el.textContent =
+    element.textContent =
         questionTimeLeft;
 
 
@@ -846,13 +856,13 @@ function updateQuestionTimer() {
         questionTimeLeft <= 10
     ) {
 
-        el.classList.add(
+        element.classList.add(
             "timer-danger"
         );
 
     } else {
 
-        el.classList.remove(
+        element.classList.remove(
             "timer-danger"
         );
 
@@ -861,52 +871,64 @@ function updateQuestionTimer() {
 }
 
 
+// ==========================================
+// TOTAL TIMER UI
+// ==========================================
+
 function updateTotalTimer() {
 
-    const el =
+    const element =
         document.getElementById(
             "totalTimer"
         );
 
 
-    if (!el) return;
+    if (!element) {
+
+        return;
+
+    }
 
 
-    const min =
+    const minutes =
         Math.floor(
             totalSeconds / 60
         );
 
 
-    const sec =
+    const seconds =
         totalSeconds % 60;
 
 
-    el.textContent =
-        String(min).padStart(2, "0") +
+    element.textContent =
+        String(minutes).padStart(2, "0") +
         ":" +
-        String(sec).padStart(2, "0");
+        String(seconds).padStart(2, "0");
 
 }
 
 
 // ==========================================
-// COUNTER
+// QUESTION COUNTER
 // ==========================================
 
 function updateCounter() {
 
-    const el =
+    const element =
         document.getElementById(
             "questionCounter"
         );
 
 
-    if (!el) return;
+    if (!element) {
+
+        return;
+
+    }
 
 
-    el.textContent =
-        (currentQuestion + 1) +
+    element.textContent =
+        (currentIndex + 1) +
         " / " +
         questions.length;
 
@@ -919,89 +941,103 @@ function updateCounter() {
 
 function updateProgress() {
 
-    const el =
+    const element =
         document.getElementById(
             "progressFill"
         );
 
 
-    if (!el) return;
+    if (!element) {
+
+        return;
+
+    }
 
 
     const percent =
         (
-            (currentQuestion + 1) /
+            (currentIndex + 1) /
             questions.length
         ) * 100;
 
 
-    el.style.width =
+    element.style.width =
         percent + "%";
 
 }
 
 
 // ==========================================
-// ANSWER NORMALIZE
+// NORMALIZE ANSWER
 // ==========================================
 
-function normalizeAnswer(answer) {
+function normalizeAnswer(value) {
 
     if (
-        answer === undefined ||
-        answer === null
+        value === undefined ||
+        value === null
     ) {
+
         return "";
+
     }
 
 
-    const value =
-        String(answer)
+    const answer =
+        String(value)
             .trim()
             .toLowerCase();
 
 
     if (
-        value === "a" ||
-        value === "option1" ||
-        value === "option 1" ||
-        value === "1"
+        answer === "a" ||
+        answer === "1" ||
+        answer === "option1" ||
+        answer === "option 1"
     ) {
+
         return "1";
+
     }
 
 
     if (
-        value === "b" ||
-        value === "option2" ||
-        value === "option 2" ||
-        value === "2"
+        answer === "b" ||
+        answer === "2" ||
+        answer === "option2" ||
+        answer === "option 2"
     ) {
+
         return "2";
+
     }
 
 
     if (
-        value === "c" ||
-        value === "option3" ||
-        value === "option 3" ||
-        value === "3"
+        answer === "c" ||
+        answer === "3" ||
+        answer === "option3" ||
+        answer === "option 3"
     ) {
+
         return "3";
+
     }
 
 
     if (
-        value === "d" ||
-        value === "option4" ||
-        value === "option 4" ||
-        value === "4"
+        answer === "d" ||
+        answer === "4" ||
+        answer === "option4" ||
+        answer === "option 4"
     ) {
+
         return "4";
+
     }
 
 
-    return value;
+    return answer;
 
 }
 
@@ -1012,16 +1048,20 @@ function normalizeAnswer(answer) {
 
 function showError(message) {
 
-    const box =
+    const container =
         document.getElementById(
             "quizContainer"
         );
 
 
-    if (!box) return;
+    if (!container) {
+
+        return;
+
+    }
 
 
-    box.innerHTML = `
+    container.innerHTML = `
 
         <div class="quiz-error">
 
@@ -1039,33 +1079,49 @@ function showError(message) {
 
 
 // ==========================================
-// ESCAPE
+// HTML ESCAPE
 // ==========================================
 
 function escapeHTML(value) {
 
     return String(value || "")
 
-        .replace(/&/g, "&amp;")
+        .replace(
+            /&/g,
+            "&amp;"
+        )
 
-        .replace(/</g, "&lt;")
+        .replace(
+            /</g,
+            "&lt;"
+        )
 
-        .replace(/>/g, "&gt;")
+        .replace(
+            />/g,
+            "&gt;"
+        )
 
-        .replace(/"/g, "&quot;")
+        .replace(
+            /"/g,
+            "&quot;"
+        )
 
-        .replace(/'/g, "&#039;");
+        .replace(
+            /'/g,
+            "&#039;"
+        );
 
 }
 
 
 // ==========================================
-// BACK
+// BACK TO TOPIC
 // ==========================================
 
 function goBackToTopic() {
 
     stopQuestionTimer();
+
     stopTotalTimer();
 
 
