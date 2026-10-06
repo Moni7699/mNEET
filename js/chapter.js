@@ -1,545 +1,295 @@
-// ==========================================
+// =====================================================
 // mNEET - CHAPTER PAGE
-// Firebase Firestore Version
-// ==========================================
+// Firebase Firestore
+// Topic Wise + Chapter Wise Question Types
+// =====================================================
 
 "use strict";
+
+
+/* =====================================================
+   GLOBAL
+===================================================== */
 
 let courseId = "";
 let chapterId = "";
 
+let chapterData = {};
 
-// ==========================================
-// PAGE START
-// ==========================================
+let topics = [];
 
-document.addEventListener("DOMContentLoaded", function () {
+let questionTypes = [];
+
+
+/* =====================================================
+   DEFAULT QUESTION TYPES
+===================================================== */
+
+const DEFAULT_TYPES = [
+
+    {
+        id: "assertion-reason",
+        title: "Assertion & Reason",
+        icon: "🧠"
+    },
+
+    {
+        id: "statement-based",
+        title: "Statement Based",
+        icon: "📋"
+    },
+
+    {
+        id: "match-the-following",
+        title: "Match the Following",
+        icon: "🔗"
+    },
+
+    {
+        id: "diagram-based",
+        title: "Diagram Based",
+        icon: "🧬"
+    },
+
+    {
+        id: "pyq",
+        title: "PYQ",
+        icon: "🎯"
+    },
+
+    {
+        id: "rapid-revision",
+        title: "Rapid Revision",
+        icon: "⚡"
+    }
+
+];
+
+
+/* =====================================================
+   START
+===================================================== */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        waitForFirebase();
+
+    }
+);
+
+
+/* =====================================================
+   WAIT FIREBASE
+===================================================== */
+
+function waitForFirebase() {
 
     if (
         typeof firebase === "undefined" ||
         typeof db === "undefined" ||
         typeof auth === "undefined"
     ) {
-        showChapterError(
-            "Firebase library load হয়নি।"
+
+        setTimeout(
+            waitForFirebase,
+            300
         );
+
         return;
     }
 
 
-    auth.onAuthStateChanged(function (user) {
+    auth.onAuthStateChanged(
+        function (user) {
 
-        if (!user) {
+            if (!user) {
 
-            window.location.href =
-                "index.html";
+                window.location.href =
+                    "index.html";
 
-            return;
+                return;
+            }
+
+
+            getIds();
+
+            loadChapter();
+
         }
+    );
+
+}
 
 
-        loadIds();
+/* =====================================================
+   GET IDS
+===================================================== */
 
-    });
-
-});
-
-
-// ==========================================
-// LOAD IDS
-// ==========================================
-
-function loadIds() {
+function getIds() {
 
     courseId =
-        localStorage.getItem("activeCourse") ||
-        localStorage.getItem("courseId") ||
+        localStorage.getItem(
+            "activeCourse"
+        ) ||
+        localStorage.getItem(
+            "courseId"
+        ) ||
         "";
+
 
     chapterId =
-        localStorage.getItem("activeChapter") ||
-        localStorage.getItem("chapterId") ||
+        localStorage.getItem(
+            "activeChapter"
+        ) ||
+        localStorage.getItem(
+            "chapterId"
+        ) ||
         "";
 
 
-    if (!courseId || !chapterId) {
+    return {
+        courseId,
+        chapterId
+    };
+}
 
-        showChapterError(
-            "Course বা Chapter information পাওয়া যায়নি।"
+
+/* =====================================================
+   LOAD CHAPTER
+===================================================== */
+
+async function loadChapter() {
+
+    if (
+        !courseId ||
+        !chapterId
+    ) {
+
+        showPageError(
+            "Chapter information পাওয়া যায়নি।"
         );
 
         return;
     }
 
 
-    loadChapter();
+    showChapterLoading();
 
-}
 
+    try {
 
-// ==========================================
-// LOAD CHAPTER
-// ==========================================
+        const chapterRef =
+            db
+                .collection("courses")
+                .doc(courseId)
+                .collection("chapters")
+                .doc(chapterId);
 
-function loadChapter() {
 
-    setChapterLoading();
+        const chapterSnap =
+            await chapterRef.get();
 
 
-    db.collection("courses")
-        .doc(courseId)
-        .collection("chapters")
-        .doc(chapterId)
-        .get()
+        if (!chapterSnap.exists) {
 
-        .then(function (doc) {
-
-            if (!doc.exists) {
-
-                showChapterError(
-                    "Chapter পাওয়া যায়নি।"
-                );
-
-                return;
-            }
-
-
-            const chapter =
-                doc.data() || {};
-
-
-            const title =
-                chapter.name ||
-                chapter.title ||
-                "Biology Chapter";
-
-
-            const description =
-                chapter.description ||
-                "Select a topic to start your Biology practice.";
-
-
-            const titleElement =
-                document.getElementById(
-                    "chapterTitle"
-                );
-
-
-            const descriptionElement =
-                document.getElementById(
-                    "chapterDescription"
-                );
-
-
-            if (titleElement) {
-
-                titleElement.textContent =
-                    title;
-
-            }
-
-
-            if (descriptionElement) {
-
-                descriptionElement.textContent =
-                    description;
-
-            }
-
-
-            loadTopics();
-
-        })
-
-        .catch(function (error) {
-
-            console.error(
-                "Chapter load error:",
-                error
-            );
-
-
-            showChapterError(
-                "Chapter load করা যায়নি।"
-            );
-
-        });
-
-}
-
-
-// ==========================================
-// LOAD TOPICS
-// ==========================================
-
-function loadTopics() {
-
-    const container =
-        document.getElementById(
-            "topicList"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    container.innerHTML = `
-
-        <div class="chapter-loading">
-
-            Loading topics...
-
-        </div>
-
-    `;
-
-
-    db.collection("courses")
-        .doc(courseId)
-        .collection("chapters")
-        .doc(chapterId)
-        .collection("topics")
-        .get()
-
-        .then(function (snapshot) {
-
-            if (snapshot.empty) {
-
-                container.innerHTML = `
-
-                    <div class="chapter-empty">
-
-                        📚
-
-                        <br><br>
-
-                        এই chapter-এ এখনো কোনো topic
-                        যোগ করা হয়নি।
-
-                    </div>
-
-                `;
-
-                return;
-            }
-
-
-            let topics = [];
-
-
-            snapshot.forEach(function (doc) {
-
-                const data =
-                    doc.data() || {};
-
-
-                /*
-                  published false হলে
-                  student-কে দেখাবো না
-                */
-
-                if (
-                    data.published !== undefined &&
-                    data.published === false
-                ) {
-                    return;
-                }
-
-
-                topics.push({
-
-                    id: doc.id,
-
-                    ...data
-
-                });
-
-            });
-
-
-            /*
-              Order অনুযায়ী সাজানো
-            */
-
-            topics.sort(function (a, b) {
-
-                const orderA =
-                    Number(a.order || 0);
-
-
-                const orderB =
-                    Number(b.order || 0);
-
-
-                return orderA - orderB;
-
-            });
-
-
-            if (!topics.length) {
-
-                container.innerHTML = `
-
-                    <div class="chapter-empty">
-
-                        📚
-
-                        <br><br>
-
-                        কোনো published topic পাওয়া যায়নি।
-
-                    </div>
-
-                `;
-
-                return;
-            }
-
-
-            renderTopics(topics);
-
-        })
-
-        .catch(function (error) {
-
-            console.error(
-                "Topics load error:",
-                error
-            );
-
-
-            container.innerHTML = `
-
-                <div class="chapter-empty">
-
-                    ⚠️
-
-                    <br><br>
-
-                    Topics load করা যায়নি।
-
-                </div>
-
-            `;
-
-        });
-
-}
-
-
-// ==========================================
-// RENDER TOPICS
-// ==========================================
-
-function renderTopics(topics) {
-
-    const container =
-        document.getElementById(
-            "topicList"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    let html = "";
-
-
-    topics.forEach(function (topic, index) {
-
-        const title =
-            topic.name ||
-            topic.title ||
-            "Topic " + (index + 1);
-
-
-        const description =
-            topic.description ||
-            "Practice questions and notes";
-
-
-        html += `
-
-            <div class="topic-card">
-
-                <div class="topic-number">
-
-                    ${index + 1}
-
-                </div>
-
-
-                <div class="topic-content">
-
-                    <div class="topic-name">
-
-                        ${escapeHTML(title)}
-
-                    </div>
-
-
-                    <div class="topic-description">
-
-                        ${escapeHTML(description)}
-
-                    </div>
-
-                </div>
-
-
-                <button
-                    type="button"
-                    class="topic-open"
-                    onclick="openTopic('${escapeAttribute(topic.id)}')"
-                >
-
-                    Open
-
-                </button>
-
-            </div>
-
-        `;
-
-    });
-
-
-    container.innerHTML =
-        html;
-
-}
-
-
-// ==========================================
-// OPEN TOPIC
-// ==========================================
-
-window.openTopic =
-    function (topicIdValue) {
-
-        if (!topicIdValue) {
-
-            alert(
-                "Topic information পাওয়া যায়নি।"
+            showPageError(
+                "Chapter পাওয়া যায়নি।"
             );
 
             return;
         }
 
 
-        /*
-          Active IDs save
-        */
+        chapterData =
+            chapterSnap.data() || {};
 
-        localStorage.setItem(
-            "activeCourse",
-            courseId
+
+        renderChapterInfo();
+
+
+        await Promise.all([
+            loadTopics(chapterRef),
+            loadQuestionTypes(chapterRef)
+        ]);
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Chapter loading error:",
+            error
         );
 
 
-        localStorage.setItem(
-            "activeChapter",
-            chapterId
+        showPageError(
+            "Chapter load করতে সমস্যা হয়েছে।"
         );
 
+    }
 
-        localStorage.setItem(
-            "activeTopic",
-            topicIdValue
-        );
+}
 
 
-        /*
-          Old quiz keys clear
-          যাতে আগের quiz accidentally
-          open না হয়
-        */
+/* =====================================================
+   CHAPTER INFO
+===================================================== */
 
-        localStorage.removeItem(
-            "activeQuiz"
-        );
-
-
-        localStorage.removeItem(
-            "quizCourse"
-        );
-
-
-        localStorage.removeItem(
-            "quizChapter"
-        );
-
-
-        localStorage.removeItem(
-            "quizTopic"
-        );
-
-
-        /*
-          Topic page
-        */
-
-        window.location.href =
-            "topic.html";
-
-    };
-
-
-// ==========================================
-// BACK TO COURSE
-// ==========================================
-
-window.goBack =
-    function () {
-
-        window.location.href =
-            "course.html";
-
-    };
-
-
-// ==========================================
-// LOADING
-// ==========================================
-
-function setChapterLoading() {
+function renderChapterInfo() {
 
     const title =
+        chapterData.name ||
+        chapterData.title ||
+        "Biology Chapter";
+
+
+    const description =
+        chapterData.description ||
+        "";
+
+
+    const titleElement =
         document.getElementById(
             "chapterTitle"
         );
 
 
-    const description =
+    const descriptionElement =
         document.getElementById(
             "chapterDescription"
         );
 
 
+    if (titleElement) {
+
+        titleElement.textContent =
+            title;
+
+    }
+
+
+    if (descriptionElement) {
+
+        descriptionElement.textContent =
+            description;
+
+    }
+
+}
+
+
+/* =====================================================
+   LOAD TOPICS
+===================================================== */
+
+async function loadTopics(chapterRef) {
+
     const container =
         document.getElementById(
             "topicList"
         );
-
-
-    if (title) {
-
-        title.textContent =
-            "Loading...";
-
-    }
-
-
-    if (description) {
-
-        description.textContent =
-            "Please wait...";
-
-    }
 
 
     if (container) {
@@ -556,14 +306,584 @@ function setChapterLoading() {
 
     }
 
+
+    try {
+
+        const snap =
+            await chapterRef
+                .collection("topics")
+                .get();
+
+
+        topics = [];
+
+
+        snap.forEach(
+            function (doc) {
+
+                const data =
+                    doc.data() || {};
+
+
+                topics.push({
+
+                    id: doc.id,
+
+                    ...data
+
+                });
+
+            }
+        );
+
+
+        topics.sort(
+            function (a, b) {
+
+                const aOrder =
+                    Number(
+                        a.order ??
+                        a.serial ??
+                        999999
+                    );
+
+
+                const bOrder =
+                    Number(
+                        b.order ??
+                        b.serial ??
+                        999999
+                    );
+
+
+                return aOrder - bOrder;
+
+            }
+        );
+
+
+        renderTopics();
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Topic loading error:",
+            error
+        );
+
+
+        renderTopicError();
+
+    }
+
 }
 
 
-// ==========================================
-// ERROR
-// ==========================================
+/* =====================================================
+   RENDER TOPICS
+===================================================== */
 
-function showChapterError(message) {
+function renderTopics() {
+
+    const container =
+        document.getElementById(
+            "topicList"
+        );
+
+
+    const count =
+        document.getElementById(
+            "topicCount"
+        );
+
+
+    if (count) {
+
+        count.textContent =
+            topics.length +
+            (
+                topics.length === 1
+                    ? " Topic"
+                    : " Topics"
+            );
+
+    }
+
+
+    if (!container) {
+        return;
+    }
+
+
+    if (!topics.length) {
+
+        container.innerHTML = `
+
+            <div class="empty-state">
+
+                <div class="empty-icon">
+                    📚
+                </div>
+
+                <h3>
+                    No Topics Available
+                </h3>
+
+                <p>
+                    Topics will appear here.
+                </p>
+
+            </div>
+
+        `;
+
+        return;
+    }
+
+
+    let html = "";
+
+
+    topics.forEach(
+        function (topic, index) {
+
+            const title =
+                topic.name ||
+                topic.title ||
+                "Topic " +
+                (index + 1);
+
+
+            html += `
+
+                <div
+                    class="topic-card"
+                    onclick="openTopic('${escapeJS(topic.id)}')"
+                >
+
+                    <div class="topic-number">
+
+                        ${index + 1}
+
+                    </div>
+
+
+                    <div class="topic-card-content">
+
+                        <h3 class="topic-card-title">
+
+                            ${escapeHTML(title)}
+
+                        </h3>
+
+                    </div>
+
+
+                    <div class="topic-open-label">
+
+                        OPEN →
+
+                    </div>
+
+                </div>
+
+            `;
+
+        }
+    );
+
+
+    container.innerHTML =
+        html;
+
+}
+
+
+/* =====================================================
+   OPEN TOPIC
+===================================================== */
+
+window.openTopic =
+    function (topicId) {
+
+        if (!topicId) {
+            return;
+        }
+
+
+        localStorage.setItem(
+            "activeCourse",
+            courseId
+        );
+
+
+        localStorage.setItem(
+            "activeChapter",
+            chapterId
+        );
+
+
+        localStorage.setItem(
+            "activeTopic",
+            topicId
+        );
+
+
+        window.location.href =
+            "topic.html";
+
+    };
+
+
+/* =====================================================
+   LOAD QUESTION TYPES
+===================================================== */
+
+async function loadQuestionTypes(chapterRef) {
+
+    const container =
+        document.getElementById(
+            "typePracticeGrid"
+        );
+
+
+    if (container) {
+
+        container.innerHTML = `
+
+            <div class="chapter-loading">
+
+                Loading question types...
+
+            </div>
+
+        `;
+
+    }
+
+
+    /*
+       First try Firestore collection:
+
+       chapters/{chapterId}/typePractice
+    */
+
+    try {
+
+        const snap =
+            await chapterRef
+                .collection("typePractice")
+                .get();
+
+
+        if (!snap.empty) {
+
+            questionTypes = [];
+
+
+            snap.forEach(
+                function (doc) {
+
+                    const data =
+                        doc.data() || {};
+
+
+                    questionTypes.push({
+
+                        id: doc.id,
+
+                        ...data
+
+                    });
+
+                }
+            );
+
+
+            questionTypes.sort(
+                function (a, b) {
+
+                    return Number(
+                        a.order ??
+                        999999
+                    )
+                    -
+                    Number(
+                        b.order ??
+                        999999
+                    );
+
+                }
+            );
+
+
+            renderQuestionTypes();
+
+            return;
+        }
+
+    }
+
+    catch (error) {
+
+        console.warn(
+            "typePractice collection not available:",
+            error
+        );
+
+    }
+
+
+    /*
+       If Firestore collection is empty,
+       use the six required types.
+    */
+
+    questionTypes =
+        DEFAULT_TYPES.map(
+            function (item) {
+
+                return {
+                    ...item
+                };
+
+            }
+        );
+
+
+    renderQuestionTypes();
+
+}
+
+
+/* =====================================================
+   RENDER QUESTION TYPES
+===================================================== */
+
+function renderQuestionTypes() {
+
+    const container =
+        document.getElementById(
+            "typePracticeGrid"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    if (!questionTypes.length) {
+
+        container.innerHTML = `
+
+            <div class="empty-state">
+
+                <div class="empty-icon">
+                    📝
+                </div>
+
+                <h3>
+                    No Question Types
+                </h3>
+
+                <p>
+                    Question types will appear here.
+                </p>
+
+            </div>
+
+        `;
+
+        return;
+    }
+
+
+    let html = "";
+
+
+    questionTypes.forEach(
+        function (type, index) {
+
+            const title =
+                type.name ||
+                type.title ||
+                DEFAULT_TYPES[index]?.title ||
+                "Question Type";
+
+
+            const icon =
+                type.icon ||
+                DEFAULT_TYPES[index]?.icon ||
+                "📝";
+
+
+            html += `
+
+                <div
+                    class="type-card"
+                    onclick="openTypePractice('${escapeJS(type.id)}')"
+                >
+
+                    <div class="type-icon">
+
+                        ${escapeHTML(icon)}
+
+                    </div>
+
+
+                    <div class="type-content">
+
+                        <h3 class="type-title">
+
+                            ${escapeHTML(title)}
+
+                        </h3>
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        class="type-button"
+                        onclick="event.stopPropagation(); openTypePractice('${escapeJS(type.id)}')"
+                    >
+
+                        OPEN
+
+                    </button>
+
+                </div>
+
+            `;
+
+        }
+    );
+
+
+    container.innerHTML =
+        html;
+
+}
+
+
+/* =====================================================
+   OPEN TYPE PRACTICE
+===================================================== */
+
+window.openTypePractice =
+    function (typeId) {
+
+        if (!typeId) {
+            return;
+        }
+
+
+        localStorage.setItem(
+            "activeCourse",
+            courseId
+        );
+
+
+        localStorage.setItem(
+            "activeChapter",
+            chapterId
+        );
+
+
+        localStorage.setItem(
+            "activeType",
+            typeId
+        );
+
+
+        localStorage.setItem(
+            "activeTypePractice",
+            typeId
+        );
+
+
+        /*
+           quiz.js reads activeType.
+           typeId is also passed in URL.
+        */
+
+        window.location.href =
+            "quiz.html?courseId=" +
+            encodeURIComponent(
+                courseId
+            ) +
+            "&chapterId=" +
+            encodeURIComponent(
+                chapterId
+            ) +
+            "&typeId=" +
+            encodeURIComponent(
+                typeId
+            );
+
+    };
+
+
+/* =====================================================
+   BACK TO COURSE
+===================================================== */
+
+window.goBackToCourse =
+    function () {
+
+        window.location.href =
+            "course.html";
+
+    };
+
+
+/* =====================================================
+   BACK TO STUDENT
+===================================================== */
+
+window.goBackToStudent =
+    function () {
+
+        window.location.href =
+            "student.html";
+
+    };
+
+
+/* =====================================================
+   NCERT
+===================================================== */
+
+window.openNCERT =
+    function () {
+
+        window.location.href =
+            "ncert.html";
+
+    };
+
+
+/* =====================================================
+   VIDEOS
+===================================================== */
+
+window.openVideos =
+    function () {
+
+        window.location.href =
+            "videos.html";
+
+    };
+
+
+/* =====================================================
+   LOADING
+===================================================== */
+
+function showChapterLoading() {
 
     const title =
         document.getElementById(
@@ -571,15 +891,119 @@ function showChapterError(message) {
         );
 
 
-    const description =
+    const topicList =
         document.getElementById(
-            "chapterDescription"
+            "topicList"
         );
 
+
+    const typeList =
+        document.getElementById(
+            "typePracticeGrid"
+        );
+
+
+    if (title) {
+
+        title.textContent =
+            "Loading Chapter...";
+
+    }
+
+
+    if (topicList) {
+
+        topicList.innerHTML = `
+
+            <div class="chapter-loading">
+
+                Loading topics...
+
+            </div>
+
+        `;
+
+    }
+
+
+    if (typeList) {
+
+        typeList.innerHTML = `
+
+            <div class="chapter-loading">
+
+                Loading question types...
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+
+/* =====================================================
+   TOPIC ERROR
+===================================================== */
+
+function renderTopicError() {
 
     const container =
         document.getElementById(
             "topicList"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    container.innerHTML = `
+
+        <div class="empty-state">
+
+            <div class="empty-icon">
+                ⚠️
+            </div>
+
+            <h3>
+                Topics could not load
+            </h3>
+
+            <p>
+                Please try again.
+            </p>
+
+        </div>
+
+    `;
+
+}
+
+
+/* =====================================================
+   PAGE ERROR
+===================================================== */
+
+function showPageError(message) {
+
+    const title =
+        document.getElementById(
+            "chapterTitle"
+        );
+
+
+    const topicList =
+        document.getElementById(
+            "topicList"
+        );
+
+
+    const typeList =
+        document.getElementById(
+            "typePracticeGrid"
         );
 
 
@@ -591,58 +1015,23 @@ function showChapterError(message) {
     }
 
 
-    if (description) {
+    if (topicList) {
 
-        description.textContent =
-            message;
+        topicList.innerHTML = `
 
-    }
+            <div class="empty-state">
 
-
-    if (container) {
-
-        container.innerHTML = `
-
-            <div class="chapter-empty">
-
-                <div
-                    style="
-                        font-size:42px;
-                        margin-bottom:15px;
-                    "
-                >
+                <div class="empty-icon">
                     ⚠️
                 </div>
 
-
-                <div
-                    style="
-                        margin-bottom:20px;
-                    "
-                >
-
+                <h3>
                     ${escapeHTML(message)}
+                </h3>
 
-                </div>
-
-
-                <button
-                    type="button"
-                    onclick="goBack()"
-                    style="
-                        border:none;
-                        background:#ffc107;
-                        color:#111;
-                        padding:13px 24px;
-                        border-radius:10px;
-                        font-weight:900;
-                        cursor:pointer;
-                    "
-                >
-
-                    ← Back
-
-                </button>
+                <p>
+                    Please go back and try again.
+                </p>
 
             </div>
 
@@ -650,12 +1039,19 @@ function showChapterError(message) {
 
     }
 
+
+    if (typeList) {
+
+        typeList.innerHTML = "";
+
+    }
+
 }
 
 
-// ==========================================
-// HTML ESCAPE
-// ==========================================
+/* =====================================================
+   HTML ESCAPE
+===================================================== */
 
 function escapeHTML(value) {
 
@@ -689,8 +1085,27 @@ function escapeHTML(value) {
 }
 
 
-function escapeAttribute(value) {
+/* =====================================================
+   JAVASCRIPT ESCAPE
+===================================================== */
 
-    return escapeHTML(value);
+function escapeJS(value) {
+
+    return String(value)
+
+        .replace(
+            /\\/g,
+            "\\\\"
+        )
+
+        .replace(
+            /'/g,
+            "\\'"
+        )
+
+        .replace(
+            /"/g,
+            '\\"'
+        );
 
 }
