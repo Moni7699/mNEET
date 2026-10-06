@@ -3,905 +3,878 @@
 
 <head>
 
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
 
-    <title>mNEET - Chapter</title>
+<title>mNEET - Chapter</title>
 
+<link
+    rel="stylesheet"
+    href="css/style.css"
+>
 
-    <!-- ==================================================
-         MAIN CSS
-    =================================================== -->
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
 
-    <link
-        rel="stylesheet"
-        href="css/style.css"
-    >
 
+<style>
 
-    <!-- ==================================================
-         FIREBASE
-    =================================================== -->
+/* =====================================================
+   BASE
+===================================================== */
 
-    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+*{
+    box-sizing:border-box;
+}
 
-    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+body{
 
-    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+    margin:0;
 
+    min-height:100vh;
 
-    <!-- ==================================================
-         CHAPTER PAGE CSS
-    =================================================== -->
+    background:
+        linear-gradient(
+            180deg,
+            #071226 0%,
+            #050c1c 100%
+        );
 
-    <style>
+    color:white;
 
-        * {
-            box-sizing: border-box;
-        }
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+}
 
 
-        body {
+/* =====================================================
+   PAGE
+===================================================== */
 
-            margin: 0;
+.chapter-page{
 
-            min-height: 100vh;
+    min-height:100vh;
 
-            background:
-                linear-gradient(
-                    180deg,
-                    #071226 0%,
-                    #050c1c 100%
-                );
+    padding-bottom:85px;
+}
 
-            color: white;
 
-            font-family:
-                Arial,
-                Helvetica,
-                sans-serif;
-        }
+/* =====================================================
+   HEADER
+===================================================== */
 
+.chapter-header{
 
-        /* ==================================================
-           PAGE
-        ================================================== */
+    position:sticky;
 
-        .chapter-page {
+    top:0;
 
-            min-height: 100vh;
+    z-index:50;
 
-            padding-bottom: 40px;
-        }
+    display:flex;
 
+    align-items:center;
 
-        /* ==================================================
-           HEADER
-        ================================================== */
+    justify-content:space-between;
 
-        .chapter-header {
+    padding:13px 16px;
 
-            position: sticky;
+    background:
+        rgba(4,10,21,.97);
 
-            top: 0;
+    backdrop-filter:blur(16px);
 
-            z-index: 100;
+    border-bottom:
+        1px solid
+        rgba(255,255,255,.07);
+}
 
-            height: 70px;
 
-            display: flex;
+.header-left{
 
-            align-items: center;
+    display:flex;
 
-            gap: 13px;
+    align-items:center;
 
-            padding: 0 16px;
+    gap:12px;
 
-            background:
-                rgba(3, 9, 20, 0.97);
+    min-width:0;
+}
 
-            backdrop-filter:
-                blur(18px);
 
-            border-bottom:
-                1px solid
-                rgba(255,255,255,0.06);
-        }
+.header-back{
 
+    width:38px;
 
-        .chapter-back {
+    height:38px;
 
-            width: 44px;
+    border:none;
 
-            height: 44px;
+    border-radius:10px;
 
-            display: flex;
+    background:
+        rgba(255,255,255,.06);
 
-            align-items: center;
+    color:white;
 
-            justify-content: center;
+    font-size:21px;
 
-            border: none;
+    cursor:pointer;
+}
 
-            border-radius: 12px;
 
-            background: #111a2c;
+.brand-logo{
 
-            color: white;
+    color:#ffc107;
 
-            font-size: 24px;
+    font-size:21px;
 
-            cursor: pointer;
-        }
+    font-weight:900;
+}
 
 
-        .chapter-back:active {
+.brand-logo span{
 
-            transform: scale(0.94);
-        }
+    color:white;
+}
 
 
-        .brand {
+.header-logout{
 
-            font-size: 26px;
+    border:
+        1px solid
+        rgba(255,255,255,.10);
 
-            font-weight: 900;
+    background:transparent;
 
-            letter-spacing: -1px;
+    color:#aab5c5;
 
-            color: #ffc107;
-        }
+    border-radius:8px;
 
+    padding:8px 11px;
 
-        .brand span {
+    font-size:11px;
 
-            color: white;
-        }
+    font-weight:800;
 
+    cursor:pointer;
+}
 
-        /* ==================================================
-           MAIN
-        ================================================== */
 
-        .chapter-main {
+/* =====================================================
+   MAIN
+===================================================== */
 
-            width: 100%;
+.chapter-main{
 
-            max-width: 850px;
+    width:100%;
 
-            margin: 0 auto;
+    max-width:900px;
 
-            padding:
-                20px 15px 45px;
-        }
+    margin:auto;
 
+    padding:20px 15px;
+}
 
-        /* ==================================================
-           HERO
-        ================================================== */
 
-        .chapter-hero {
+/* =====================================================
+   HERO
+===================================================== */
 
-            position: relative;
+.chapter-hero{
 
-            overflow: hidden;
+    display:flex;
 
-            padding:
-                22px 20px;
+    align-items:center;
 
-            border-radius: 18px;
+    justify-content:space-between;
 
-            background:
-                linear-gradient(
-                    145deg,
-                    #102342,
-                    #081326
-                );
+    gap:18px;
 
-            border:
-                1px solid
-                rgba(255,193,7,0.20);
+    padding:21px;
 
-            box-shadow:
-                0 12px 35px
-                rgba(0,0,0,0.22);
-        }
+    border-radius:19px;
 
+    background:
+        linear-gradient(
+            145deg,
+            #10213b,
+            #07101f
+        );
 
-        .chapter-hero::after {
+    border:
+        1px solid
+        rgba(255,193,7,.15);
+}
 
-            content: "";
 
-            position: absolute;
+.hero-small{
 
-            width: 180px;
+    color:#ffc107;
 
-            height: 180px;
+    font-size:9px;
 
-            right: -80px;
+    font-weight:900;
 
-            top: -90px;
+    letter-spacing:1px;
 
-            border-radius: 50%;
+    margin-bottom:6px;
+}
 
-            background:
-                rgba(255,193,7,0.05);
-        }
 
+.chapter-hero h1{
 
-        .chapter-label {
+    margin:0;
 
-            position: relative;
+    color:white;
 
-            z-index: 2;
+    font-size:24px;
 
-            color: #ffc107;
+    line-height:1.25;
+}
 
-            font-size: 10px;
 
-            font-weight: 900;
+.chapter-hero p{
 
-            letter-spacing: 1.2px;
+    display:none;
+}
 
-            margin-bottom: 7px;
-        }
 
+.hero-icon{
 
-        .chapter-title {
+    width:58px;
 
-            position: relative;
+    height:58px;
 
-            z-index: 2;
+    flex-shrink:0;
 
-            margin: 0;
+    display:flex;
 
-            color: white;
+    align-items:center;
 
-            font-size: 27px;
+    justify-content:center;
 
-            line-height: 1.25;
+    border-radius:16px;
 
-            font-weight: 900;
-        }
+    background:
+        rgba(255,193,7,.08);
 
+    font-size:29px;
+}
 
-        .chapter-description {
 
-            position: relative;
+/* =====================================================
+   SECTION HEADING
+===================================================== */
 
-            z-index: 2;
+.section-heading{
 
-            margin-top: 8px;
+    display:flex;
 
-            color: #9ba9bd;
+    align-items:center;
 
-            font-size: 12px;
+    justify-content:space-between;
 
-            line-height: 1.55;
-        }
+    margin:22px 2px 11px;
+}
 
 
-        /* ==================================================
-           SECTION
-        ================================================== */
+.section-heading h2{
 
-        .section-head {
+    margin:0;
 
-            margin-top: 22px;
+    color:white;
 
-            margin-bottom: 9px;
-        }
+    font-size:17px;
 
+    font-weight:900;
+}
 
-        .section-label {
 
-            color: #ffc107;
+.section-heading span{
 
-            font-size: 10px;
+    color:#8492a7;
 
-            font-weight: 900;
+    font-size:10px;
+}
 
-            letter-spacing: 1.1px;
 
-            margin-bottom: 4px;
-        }
+/* =====================================================
+   TOPIC LIST
+   ONE CARD PER ROW
+===================================================== */
 
+.topic-grid{
 
-        .section-title {
+    display:flex;
 
-            margin: 0;
+    flex-direction:column;
 
-            color: white;
+    gap:9px;
+}
 
-            font-size: 19px;
 
-            font-weight: 900;
-        }
+.topic-card{
 
+    width:100%;
 
-        /* ==================================================
-           TOPIC LIST
-        ================================================== */
+    min-height:62px;
 
-        #topicList {
+    display:flex;
 
-            display: flex;
+    align-items:center;
 
-            flex-direction: column;
+    gap:11px;
 
-            gap: 7px;
-        }
+    padding:10px 12px;
 
+    border-radius:13px;
 
-        /* ==================================================
-           TOPIC ROW
-        ================================================== */
+    background:
+        linear-gradient(
+            145deg,
+            #101f35,
+            #0b1628
+        );
 
-        .topic-card {
+    border:
+        1px solid
+        rgba(255,255,255,.07);
 
-            width: 100%;
+    cursor:pointer;
 
-            min-height: 54px;
+    transition:.18s;
+}
 
-            display: flex;
 
-            align-items: center;
+.topic-card:hover{
 
-            justify-content: space-between;
+    transform:translateY(-1px);
 
-            gap: 12px;
+    border-color:
+        rgba(255,193,7,.28);
+}
 
-            padding:
-                9px 11px;
 
-            border-radius: 11px;
+.topic-number{
 
-            background:
-                #0d192c;
+    width:38px;
 
-            border:
-                1px solid
-                rgba(255,255,255,0.06);
+    height:38px;
 
-            transition:
-                border-color 0.2s,
-                transform 0.2s;
-        }
+    flex-shrink:0;
 
+    display:flex;
 
-        .topic-card:hover {
+    align-items:center;
 
-            border-color:
-                rgba(255,193,7,0.25);
+    justify-content:center;
 
-            transform:
-                translateY(-1px);
-        }
+    border-radius:10px;
 
+    background:
+        rgba(255,193,7,.09);
 
-        .topic-content {
+    border:
+        1px solid
+        rgba(255,193,7,.17);
 
-            flex: 1;
+    color:#ffc107;
 
-            min-width: 0;
+    font-size:13px;
 
-            display: flex;
+    font-weight:900;
+}
 
-            align-items: center;
 
-            gap: 9px;
-        }
+.topic-card-content{
 
+    min-width:0;
 
-        .topic-number {
+    flex:1;
+}
 
-            flex-shrink: 0;
 
-            width: 25px;
+.topic-badge{
 
-            height: 25px;
+    display:none;
+}
 
-            display: flex;
 
-            align-items: center;
+.topic-card-title{
 
-            justify-content: center;
+    margin:0;
 
-            border-radius: 7px;
+    color:white;
 
-            background:
-                rgba(255,193,7,0.09);
+    font-size:13px;
 
-            color: #ffc107;
+    font-weight:900;
 
-            font-size: 10px;
+    line-height:1.3;
+}
 
-            font-weight: 900;
-        }
 
+.topic-card-description{
 
-        .topic-name {
+    display:none;
+}
 
-            color: white;
 
-            font-size: 13px;
+.topic-open-label{
 
-            font-weight: 800;
+    flex-shrink:0;
 
-            line-height: 1.3;
-        }
+    color:#ffc107;
 
+    font-size:9px;
 
-        /*
-           যদি chapter.js description দেয়,
-           সেটি hidden থাকবে।
-        */
+    font-weight:900;
+}
 
-        .topic-description {
 
-            display: none !important;
-        }
+/* =====================================================
+   QUESTION TYPE PRACTICE
+   ONE CARD PER ROW
+===================================================== */
 
+.type-practice-list{
 
-        .topic-button {
+    display:flex;
 
-            flex-shrink: 0;
+    flex-direction:column;
 
-            min-width: 62px;
+    gap:9px;
+}
 
-            height: 32px;
 
-            padding:
-                0 10px;
+.type-card{
 
-            border-radius: 8px;
+    width:100%;
 
-            border:
-                1px solid
-                rgba(255,193,7,0.25);
+    min-height:62px;
 
-            background:
-                #17263d;
+    display:flex;
 
-            color: #ffc107;
+    align-items:center;
 
-            font-size: 10px;
+    gap:11px;
 
-            font-weight: 900;
+    padding:10px 12px;
 
-            cursor: pointer;
-        }
+    border-radius:13px;
 
+    background:
+        linear-gradient(
+            145deg,
+            #101f35,
+            #0b1628
+        );
 
-        .topic-button:active {
+    border:
+        1px solid
+        rgba(255,255,255,.07);
 
-            transform:
-                scale(0.96);
-        }
+    cursor:pointer;
 
+    transition:.18s;
+}
 
-        /* ==================================================
-           QUESTION TYPE LIST
-        ================================================== */
 
-        #typePracticeGrid {
+.type-card:hover{
 
-            display: flex;
+    transform:translateY(-1px);
 
-            flex-direction: column;
+    border-color:
+        rgba(255,193,7,.28);
+}
 
-            gap: 7px;
-        }
 
+.type-icon{
 
-        /* ==================================================
-           QUESTION TYPE ROW
-        ================================================== */
+    width:38px;
 
-        .type-card {
+    height:38px;
 
-            width: 100%;
+    flex-shrink:0;
 
-            min-height: 54px;
+    display:flex;
 
-            display: flex;
+    align-items:center;
 
-            align-items: center;
+    justify-content:center;
 
-            justify-content: space-between;
+    border-radius:10px;
 
-            gap: 12px;
+    background:
+        rgba(255,193,7,.09);
 
-            padding:
-                9px 11px;
+    border:
+        1px solid
+        rgba(255,193,7,.17);
 
-            border-radius: 11px;
+    font-size:18px;
+}
 
-            background:
-                #0d192c;
 
-            border:
-                1px solid
-                rgba(255,255,255,0.06);
+.type-content{
 
-            transition:
-                border-color 0.2s,
-                transform 0.2s;
-        }
+    flex:1;
 
+    min-width:0;
+}
 
-        .type-card:hover {
 
-            border-color:
-                rgba(255,193,7,0.25);
+.type-title{
 
-            transform:
-                translateY(-1px);
-        }
+    margin:0;
 
+    color:white;
 
-        .type-content {
+    font-size:13px;
 
-            flex: 1;
+    font-weight:900;
 
-            min-width: 0;
+    line-height:1.3;
+}
 
-            display: flex;
 
-            align-items: center;
+.type-description{
 
-            gap: 9px;
-        }
+    display:none;
+}
 
 
-        .type-icon {
+.type-button{
 
-            flex-shrink: 0;
+    flex-shrink:0;
 
-            width: 30px;
+    min-width:65px;
 
-            height: 30px;
+    min-height:34px;
 
-            display: flex;
+    border:none;
 
-            align-items: center;
+    border-radius:9px;
 
-            justify-content: center;
+    background:#ffc107;
 
-            border-radius: 8px;
+    color:#111827;
 
-            background:
-                rgba(255,193,7,0.09);
+    font-size:10px;
 
-            border:
-                1px solid
-                rgba(255,193,7,0.12);
+    font-weight:900;
 
-            font-size: 15px;
-        }
+    cursor:pointer;
+}
 
 
-        .type-title {
+/* =====================================================
+   LOADING / EMPTY
+===================================================== */
 
-            color: white;
+.chapter-loading{
 
-            font-size: 13px;
+    width:100%;
 
-            font-weight: 800;
+    padding:35px 15px;
 
-            line-height: 1.3;
+    text-align:center;
 
-            margin: 0;
-        }
+    color:#8997aa;
 
+    font-size:12px;
+}
 
-        /*
-           যদি chapter.js description দেয়,
-           সেটি hidden থাকবে।
-        */
 
-        .type-description {
+.empty-state{
 
-            display: none !important;
-        }
+    padding:30px 15px;
 
+    text-align:center;
 
-        .type-button {
+    border-radius:14px;
 
-            flex-shrink: 0;
+    background:#0d192c;
 
-            width: auto;
+    border:
+        1px solid
+        rgba(255,255,255,.06);
+}
 
-            min-width: 62px;
 
-            height: 32px;
+.empty-icon{
 
-            margin: 0;
+    font-size:28px;
 
-            padding:
-                0 10px;
+    margin-bottom:7px;
+}
 
-            border: none;
 
-            border-radius: 8px;
+.empty-state h3{
 
-            background:
-                #ffc107;
+    margin:0 0 5px;
 
-            color: #111827;
+    color:white;
 
-            font-size: 10px;
+    font-size:14px;
+}
 
-            font-weight: 900;
 
-            cursor: pointer;
-        }
+.empty-state p{
 
+    margin:0;
 
-        .type-button:active {
+    color:#8492a7;
 
-            transform:
-                scale(0.96);
-        }
+    font-size:10px;
+}
 
 
-        /* ==================================================
-           EMPTY / LOADING
-        ================================================== */
+/* =====================================================
+   INFO
+===================================================== */
 
-        .chapter-empty {
+.chapter-info{
 
-            width: 100%;
+    margin-top:20px;
 
-            min-height: 70px;
+    padding:15px 16px;
 
-            display: flex;
+    border-radius:14px;
 
-            align-items: center;
+    background:
+        rgba(255,193,7,.045);
 
-            justify-content: center;
+    border:
+        1px solid
+        rgba(255,193,7,.13);
 
-            text-align: center;
+    color:#909eb1;
 
-            padding: 15px;
+    font-size:11px;
 
-            border-radius: 11px;
+    line-height:1.5;
+}
 
-            background:
-                #0d192c;
 
-            border:
-                1px solid
-                rgba(255,255,255,0.06);
+.chapter-info strong{
 
-            color: #8d9aae;
+    color:#ffc107;
+}
 
-            font-size: 11px;
 
-            line-height: 1.5;
-        }
+/* =====================================================
+   BOTTOM NAV
+===================================================== */
 
+.chapter-bottom-nav{
 
-        .error-button {
+    position:fixed;
 
-            border: none;
+    left:0;
 
-            border-radius: 8px;
+    right:0;
 
-            padding:
-                9px 17px;
+    bottom:0;
 
-            background:
-                #ffc107;
+    z-index:60;
 
-            color: #111;
+    display:flex;
 
-            font-weight: 900;
+    justify-content:space-around;
 
-            cursor: pointer;
-        }
+    padding:8px 6px;
 
+    background:
+        rgba(4,10,21,.97);
 
-        /* ==================================================
-           INFO
-        ================================================== */
+    border-top:
+        1px solid
+        rgba(255,255,255,.07);
 
-        .chapter-info {
+    backdrop-filter:blur(15px);
+}
 
-            margin-top: 18px;
 
-            padding:
-                13px 14px;
+.bottom-item{
 
-            border-radius: 12px;
+    flex:1;
 
-            background:
-                rgba(255,193,7,0.045);
+    border:none;
 
-            border:
-                1px solid
-                rgba(255,193,7,0.13);
+    background:transparent;
 
-            color: #909eb1;
+    color:#748197;
 
-            font-size: 10px;
+    padding:5px;
 
-            line-height: 1.55;
-        }
+    cursor:pointer;
+}
 
 
-        .chapter-info strong {
+.bottom-item span{
 
-            color: #ffc107;
-        }
+    display:block;
 
+    font-size:17px;
 
-        /* ==================================================
-           MOBILE
-        ================================================== */
+    margin-bottom:2px;
+}
 
-        @media (max-width: 600px) {
 
-            .chapter-header {
+.bottom-item small{
 
-                height: 66px;
+    font-size:8px;
 
-                padding: 0 13px;
-            }
+    font-weight:800;
+}
 
 
-            .chapter-back {
+.bottom-item.active{
 
-                width: 42px;
+    color:#ffc107;
+}
 
-                height: 42px;
 
-                font-size: 23px;
-            }
+/* =====================================================
+   MOBILE
+===================================================== */
 
+@media(max-width:600px){
 
-            .brand {
+    .chapter-main{
 
-                font-size: 24px;
-            }
+        padding:
+            16px 12px 35px;
+    }
 
 
-            .chapter-main {
+    .chapter-hero{
 
-                padding:
-                    16px 12px 35px;
-            }
+        padding:17px;
 
+        border-radius:16px;
+    }
 
-            .chapter-hero {
 
-                padding:
-                    19px 16px;
+    .chapter-hero h1{
 
-                border-radius: 16px;
-            }
+        font-size:20px;
+    }
 
 
-            .chapter-title {
+    .hero-icon{
 
-                font-size: 24px;
-            }
+        width:48px;
 
+        height:48px;
 
-            .chapter-description {
+        border-radius:13px;
 
-                font-size: 11px;
-            }
+        font-size:24px;
+    }
 
 
-            .section-head {
+    .section-heading{
 
-                margin-top: 18px;
+        margin-top:19px;
 
-                margin-bottom: 8px;
-            }
+        margin-bottom:9px;
+    }
 
 
-            .section-title {
+    .section-heading h2{
 
-                font-size: 17px;
-            }
+        font-size:15px;
+    }
 
 
-            .topic-card,
-            .type-card {
+    .topic-card,
+    .type-card{
 
-                min-height: 52px;
+        min-height:58px;
 
-                padding:
-                    8px 10px;
-            }
+        padding:9px 10px;
 
+        border-radius:12px;
+    }
 
-            .topic-name,
-            .type-title {
 
-                font-size: 12px;
-            }
+    .topic-number,
+    .type-icon{
 
+        width:35px;
 
-            .topic-button,
-            .type-button {
+        height:35px;
 
-                min-width: 58px;
+        border-radius:9px;
+    }
 
-                height: 30px;
 
-                padding:
-                    0 8px;
+    .topic-card-title,
+    .type-title{
 
-                font-size: 9px;
-            }
+        font-size:12px;
+    }
 
 
-            .topic-number {
+    .topic-open-label{
 
-                width: 24px;
+        font-size:8px;
+    }
 
-                height: 24px;
 
-                font-size: 9px;
-            }
+    .type-button{
 
+        min-width:58px;
 
-            .type-icon {
+        min-height:32px;
 
-                width: 28px;
+        font-size:9px;
+    }
 
-                height: 28px;
+}
 
-                font-size: 14px;
-            }
 
-        }
+/* =====================================================
+   DESKTOP
+===================================================== */
 
+@media(min-width:700px){
 
-        /* ==================================================
-           DESKTOP
-        ================================================== */
+    .topic-card,
+    .type-card{
 
-        @media (min-width: 900px) {
+        min-height:66px;
 
-            .chapter-main {
+        padding:
+            11px 14px;
+    }
 
-                padding-top: 28px;
-            }
+}
 
 
-            .chapter-title {
+/* =====================================================
+   IMPORTANT
+   Hide old description elements if chapter.js
+   creates them
+===================================================== */
 
-                font-size: 32px;
-            }
+.topic-card-description,
+.type-description{
 
+    display:none !important;
+}
 
-            .topic-card,
-            .type-card {
-
-                min-height: 58px;
-
-                padding:
-                    10px 13px;
-            }
-
-
-            .topic-name,
-            .type-title {
-
-                font-size: 14px;
-            }
-
-        }
-
-    </style>
+</style>
 
 </head>
 
@@ -912,191 +885,258 @@
 <div class="chapter-page">
 
 
-    <!-- ==================================================
-         HEADER
-    ================================================== -->
+<!-- =====================================================
+     HEADER
+===================================================== -->
 
-    <header class="chapter-header">
+<header class="chapter-header">
 
+    <div class="header-left">
 
         <button
+            class="header-back"
             type="button"
-            class="chapter-back"
-            onclick="goBack()"
-            aria-label="Back"
+            onclick="goBackToCourse()"
         >
-
             ←
-
         </button>
 
 
-        <div class="brand">
+        <div class="brand-logo">
 
             <span>m</span>NEET
 
         </div>
 
-
-    </header>
-
+    </div>
 
 
-    <!-- ==================================================
-         MAIN
-    ================================================== -->
+    <button
+        class="header-logout"
+        type="button"
+        onclick="logoutUser()"
+    >
+        Logout
+    </button>
 
-    <main class="chapter-main">
-
-
-        <!-- ==================================================
-             CHAPTER HERO
-        ================================================== -->
-
-        <section class="chapter-hero">
-
-
-            <div class="chapter-label">
-
-                NEET BIOLOGY • CHAPTER
-
-            </div>
-
-
-            <h1
-                id="chapterTitle"
-                class="chapter-title"
-            >
-
-                Loading...
-
-            </h1>
-
-
-            <div
-                id="chapterDescription"
-                class="chapter-description"
-            >
-
-                Please wait...
-
-            </div>
-
-
-        </section>
+</header>
 
 
 
-        <!-- ==================================================
-             TOPIC WISE PRACTICE
-        ================================================== -->
+<!-- =====================================================
+     MAIN
+===================================================== -->
 
-        <div class="section-head">
-
-
-            <div class="section-label">
-
-                TOPIC WISE PRACTICE
-
-            </div>
+<main class="chapter-main">
 
 
-            <h2 class="section-title">
+<!-- =====================================================
+     HERO
+===================================================== -->
 
-                Chapter Topics
+<section class="chapter-hero">
 
-            </h2>
+    <div>
 
+        <div class="hero-small">
+
+            NEET BIOLOGY CHAPTER
 
         </div>
 
 
-        <section
-            id="topicList"
-        >
+        <h1 id="chapterTitle">
+
+            Loading Chapter...
+
+        </h1>
 
 
-            <div class="chapter-empty">
+        <p id="chapterDescription">
 
-                Loading topics...
+            Please wait...
 
-            </div>
+        </p>
 
-
-        </section>
-
+    </div>
 
 
-        <!-- ==================================================
-             CHAPTER WISE PRACTICE
-        ================================================== -->
+    <div class="hero-icon">
 
-        <div class="section-head">
+        🧬
 
+    </div>
 
-            <div class="section-label">
-
-                CHAPTER WISE PRACTICE
-
-            </div>
-
-
-            <h2 class="section-title">
-
-                Practice by Question Type
-
-            </h2>
-
-
-        </div>
-
-
-        <section
-            id="typePracticeGrid"
-        >
-
-
-            <div class="chapter-empty">
-
-                Loading practice...
-
-            </div>
-
-
-        </section>
+</section>
 
 
 
-        <!-- ==================================================
-             INFO
-        ================================================== -->
+<!-- =====================================================
+     TOPIC WISE — FIRST
+===================================================== -->
 
-        <div class="chapter-info">
+<div class="section-heading">
 
-            💡
+    <h2>
 
-            <strong>
-                mNEET Practice Tip:
-            </strong>
+        Topic Wise Practice
 
-            Start with Topic Wise Practice
-            to learn the concepts. Then use
-            Assertion, Statement, Match,
-            Diagram, PYQ and Rapid Revision
-            for exam-level practice.
-
-        </div>
+    </h2>
 
 
-    </main>
+    <span id="topicCount">
+
+        0 Topics
+
+    </span>
+
+</div>
+
+
+<section
+    id="topicList"
+    class="topic-grid"
+>
+
+    <div class="chapter-loading">
+
+        Loading topics...
+
+    </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     CHAPTER WISE — SECOND
+===================================================== -->
+
+<div class="section-heading">
+
+    <h2>
+
+        Chapter Wise Practice
+
+    </h2>
+
+
+    <span>
+
+        Question Types
+
+    </span>
+
+</div>
+
+
+<section
+    id="typePracticeGrid"
+    class="type-practice-list"
+>
+
+    <div class="chapter-loading">
+
+        Loading question types...
+
+    </div>
+
+</section>
+
+
+
+<!-- =====================================================
+     INFO
+===================================================== -->
+
+<div class="chapter-info">
+
+    💡
+
+    <strong>
+        mNEET Practice:
+    </strong>
+
+    First practice topic-wise questions,
+    then use different question types for
+    exam-level preparation.
+
+</div>
+
+
+</main>
+
+
+
+<!-- =====================================================
+     BOTTOM NAV
+===================================================== -->
+
+<nav class="chapter-bottom-nav">
+
+
+<button
+    class="bottom-item"
+    type="button"
+    onclick="goBackToStudent()"
+>
+
+    <span>🏠</span>
+
+    <small>Home</small>
+
+</button>
+
+
+<button
+    class="bottom-item active"
+    type="button"
+    onclick="goBackToCourse()"
+>
+
+    <span>📝</span>
+
+    <small>Practice</small>
+
+</button>
+
+
+<button
+    class="bottom-item"
+    type="button"
+    onclick="openNCERT()"
+>
+
+    <span>📖</span>
+
+    <small>NCERT</small>
+
+</button>
+
+
+<button
+    class="bottom-item"
+    type="button"
+    onclick="openVideos()"
+>
+
+    <span>▶️</span>
+
+    <small>Videos</small>
+
+</button>
+
+
+</nav>
+
 
 </div>
 
 
 
-<!-- ==================================================
+<!-- =====================================================
      JAVASCRIPT
-================================================== -->
+===================================================== -->
 
 <script src="js/firebase.js"></script>
 
