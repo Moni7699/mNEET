@@ -1,35 +1,26 @@
-// =====================================================
+// ==========================================================
 // mNEET - CHAPTER PAGE
-// Firebase Firestore
-// Topic Wise + Chapter Wise Question Types
-// =====================================================
-
-"use strict";
+// Firebase Firestore Version
+// ==========================================================
 
 
-/* =====================================================
-   GLOBAL
-===================================================== */
+// ==========================================================
+// GLOBAL VARIABLES
+// ==========================================================
 
 let courseId = "";
 let chapterId = "";
 
-let chapterData = {};
 
-let topics = [];
+// ==========================================================
+// QUESTION TYPES
+// ==========================================================
 
-let questionTypes = [];
-
-
-/* =====================================================
-   DEFAULT QUESTION TYPES
-===================================================== */
-
-const DEFAULT_TYPES = [
+const QUESTION_TYPES = [
 
     {
         id: "assertion-reason",
-        title: "Assertion & Reason",
+        title: "Assertion Reason",
         icon: "🧠"
     },
 
@@ -66,56 +57,674 @@ const DEFAULT_TYPES = [
 ];
 
 
-/* =====================================================
-   START
-===================================================== */
+// ==========================================================
+// PAGE START
+// ==========================================================
 
 document.addEventListener(
     "DOMContentLoaded",
     function () {
 
-        waitForFirebase();
+        // ------------------------------------------
+        // Firebase check
+        // ------------------------------------------
+
+        if (
+            typeof firebase === "undefined" ||
+            typeof db === "undefined" ||
+            typeof auth === "undefined"
+        ) {
+
+            showChapterError(
+                "Firebase properly load হয়নি।"
+            );
+
+            return;
+
+        }
+
+
+        // ------------------------------------------
+        // Login check
+        // ------------------------------------------
+
+        auth.onAuthStateChanged(
+            function (user) {
+
+                if (!user) {
+
+                    window.location.href =
+                        "index.html";
+
+                    return;
+
+                }
+
+
+                // ----------------------------------
+                // Get active IDs
+                // ----------------------------------
+
+                courseId =
+                    localStorage.getItem(
+                        "activeCourse"
+                    );
+
+
+                chapterId =
+                    localStorage.getItem(
+                        "activeChapter"
+                    );
+
+
+                // ----------------------------------
+                // Check IDs
+                // ----------------------------------
+
+                if (
+                    !courseId ||
+                    !chapterId
+                ) {
+
+                    showChapterError(
+                        "Course বা Chapter information পাওয়া যায়নি।"
+                    );
+
+                    return;
+
+                }
+
+
+                // ----------------------------------
+                // Start loading
+                // ----------------------------------
+
+                loadChapter();
+
+            }
+        );
 
     }
 );
 
 
-/* =====================================================
-   WAIT FIREBASE
-===================================================== */
+// ==========================================================
+// LOAD CHAPTER
+// ==========================================================
 
-function waitForFirebase() {
+function loadChapter() {
 
-    if (
-        typeof firebase === "undefined" ||
-        typeof db === "undefined" ||
-        typeof auth === "undefined"
-    ) {
+    showChapterLoading();
 
-        setTimeout(
-            waitForFirebase,
-            300
+
+    db.collection("courses")
+        .doc(courseId)
+        .collection("chapters")
+        .doc(chapterId)
+        .get()
+
+        .then(
+            function (doc) {
+
+                if (!doc.exists) {
+
+                    showChapterError(
+                        "Chapter পাওয়া যায়নি।"
+                    );
+
+                    return;
+
+                }
+
+
+                const chapter =
+                    doc.data();
+
+
+                // ----------------------------------
+                // Chapter title
+                // ----------------------------------
+
+                const title =
+                    chapter.name ||
+                    chapter.title ||
+                    "Biology Chapter";
+
+
+                // ----------------------------------
+                // Chapter description
+                // ----------------------------------
+
+                const description =
+                    chapter.description ||
+                    "Practice this chapter for NEET Biology.";
+
+
+                // ----------------------------------
+                // Display chapter
+                // ----------------------------------
+
+                const titleElement =
+                    document.getElementById(
+                        "chapterTitle"
+                    );
+
+
+                const descriptionElement =
+                    document.getElementById(
+                        "chapterDescription"
+                    );
+
+
+                if (titleElement) {
+
+                    titleElement.textContent =
+                        title;
+
+                }
+
+
+                if (descriptionElement) {
+
+                    descriptionElement.textContent =
+                        description;
+
+                }
+
+
+                // ----------------------------------
+                // Save active chapter again
+                // ----------------------------------
+
+                localStorage.setItem(
+                    "activeCourse",
+                    courseId
+                );
+
+
+                localStorage.setItem(
+                    "activeChapter",
+                    chapterId
+                );
+
+
+                // ----------------------------------
+                // Load topics
+                // ----------------------------------
+
+                loadTopics();
+
+
+                // ----------------------------------
+                // Render question types
+                // ----------------------------------
+
+                renderQuestionTypes();
+
+            }
+        )
+
+        .catch(
+            function (error) {
+
+                console.error(
+                    "Chapter Firestore Error:",
+                    error
+                );
+
+
+                showChapterError(
+                    "Chapter load করা যায়নি।"
+                );
+
+            }
         );
 
+}
+
+
+// ==========================================================
+// LOAD TOPICS
+// ==========================================================
+
+function loadTopics() {
+
+    const topicList =
+        document.getElementById(
+            "topicList"
+        );
+
+
+    if (!topicList) {
+
         return;
+
     }
 
 
-    auth.onAuthStateChanged(
-        function (user) {
+    topicList.innerHTML = `
 
-            if (!user) {
+        <div class="chapter-loading">
 
-                window.location.href =
-                    "index.html";
+            Loading topics...
 
-                return;
+        </div>
+
+    `;
+
+
+    db.collection("courses")
+        .doc(courseId)
+        .collection("chapters")
+        .doc(chapterId)
+        .collection("topics")
+        .get()
+
+        .then(
+            function (snapshot) {
+
+                // ----------------------------------
+                // No topics
+                // ----------------------------------
+
+                if (
+                    snapshot.empty
+                ) {
+
+                    topicList.innerHTML = `
+
+                        <div class="empty-state">
+
+                            <div class="empty-icon">
+                                📚
+                            </div>
+
+                            <h3>
+                                No Topics Available
+                            </h3>
+
+                            <p>
+                                এই chapter-এর জন্য এখনো
+                                কোনো topic যোগ করা হয়নি।
+                            </p>
+
+                        </div>
+
+                    `;
+
+
+                    updateTopicCount(0);
+
+                    return;
+
+                }
+
+
+                // ----------------------------------
+                // Convert documents to array
+                // ----------------------------------
+
+                const topics = [];
+
+
+                snapshot.forEach(
+                    function (doc) {
+
+                        topics.push({
+
+                            id: doc.id,
+
+                            data: doc.data()
+
+                        });
+
+                    }
+                );
+
+
+                // ----------------------------------
+                // Optional order sorting
+                // ----------------------------------
+
+                topics.sort(
+                    function (a, b) {
+
+                        const orderA =
+                            Number(
+                                a.data.order ||
+                                a.data.serial ||
+                                999999
+                            );
+
+
+                        const orderB =
+                            Number(
+                                b.data.order ||
+                                b.data.serial ||
+                                999999
+                            );
+
+
+                        return orderA - orderB;
+
+                    }
+                );
+
+
+                // ----------------------------------
+                // Topic count
+                // ----------------------------------
+
+                updateTopicCount(
+                    topics.length
+                );
+
+
+                // ----------------------------------
+                // Render topics
+                // ----------------------------------
+
+                topicList.innerHTML = "";
+
+
+                topics.forEach(
+                    function (topic, index) {
+
+                        const card =
+                            createTopicCard(
+                                topic.id,
+                                topic.data,
+                                index + 1
+                            );
+
+
+                        topicList.appendChild(
+                            card
+                        );
+
+                    }
+                );
+
             }
+        )
+
+        .catch(
+            function (error) {
+
+                console.error(
+                    "Topics Firestore Error:",
+                    error
+                );
 
 
-            getIds();
+                topicList.innerHTML = `
 
-            loadChapter();
+                    <div class="empty-state">
+
+                        <div class="empty-icon">
+                            ⚠️
+                        </div>
+
+                        <h3>
+                            Topics Load Error
+                        </h3>
+
+                        <p>
+                            Topics load করা যায়নি।
+                        </p>
+
+                    </div>
+
+                `;
+
+
+                updateTopicCount(0);
+
+            }
+        );
+
+}
+
+
+// ==========================================================
+// CREATE TOPIC CARD
+// ==========================================================
+
+function createTopicCard(
+    id,
+    data,
+    number
+) {
+
+    const card =
+        document.createElement(
+            "div"
+        );
+
+
+    card.className =
+        "topic-card";
+
+
+    // ------------------------------------------
+    // Topic name
+    // ------------------------------------------
+
+    const topicName =
+        data.name ||
+        data.title ||
+        "Biology Topic";
+
+
+    // ------------------------------------------
+    // Card HTML
+    // ------------------------------------------
+
+    card.innerHTML = `
+
+        <div class="topic-number">
+
+            ${number}
+
+        </div>
+
+
+        <div class="topic-card-content">
+
+            <div class="topic-badge">
+
+                TOPIC
+
+            </div>
+
+
+            <div class="topic-card-title">
+
+                ${escapeHTML(topicName)}
+
+            </div>
+
+
+            <div class="topic-card-description">
+
+                ${escapeHTML(
+                    data.description || ""
+                )}
+
+            </div>
+
+        </div>
+
+
+        <div class="topic-open-label">
+
+            OPEN →
+
+        </div>
+
+    `;
+
+
+    // ------------------------------------------
+    // Click event
+    // ------------------------------------------
+
+    card.addEventListener(
+        "click",
+        function () {
+
+            openTopic(id);
+
+        }
+    );
+
+
+    return card;
+
+}
+
+
+// ==========================================================
+// UPDATE TOPIC COUNT
+// ==========================================================
+
+function updateTopicCount(count) {
+
+    const element =
+        document.getElementById(
+            "topicCount"
+        );
+
+
+    if (!element) {
+
+        return;
+
+    }
+
+
+    if (count === 1) {
+
+        element.textContent =
+            "1 Topic";
+
+        return;
+
+    }
+
+
+    element.textContent =
+        count + " Topics";
+
+}
+
+
+// ==========================================================
+// RENDER QUESTION TYPES
+// ==========================================================
+
+function renderQuestionTypes() {
+
+    const container =
+        document.getElementById(
+            "typePracticeGrid"
+        );
+
+
+    if (!container) {
+
+        return;
+
+    }
+
+
+    container.innerHTML = "";
+
+
+    QUESTION_TYPES.forEach(
+        function (type) {
+
+            const card =
+                document.createElement(
+                    "div"
+                );
+
+
+            card.className =
+                "type-card";
+
+
+            card.innerHTML = `
+
+                <div class="type-icon">
+
+                    ${type.icon}
+
+                </div>
+
+
+                <div class="type-content">
+
+                    <div class="type-title">
+
+                        ${escapeHTML(
+                            type.title
+                        )}
+
+                    </div>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="type-button"
+                >
+
+                    Start
+
+                </button>
+
+            `;
+
+
+            const button =
+                card.querySelector(
+                    ".type-button"
+                );
+
+
+            button.addEventListener(
+                "click",
+                function (event) {
+
+                    event.stopPropagation();
+
+                    openQuestionType(
+                        type.id,
+                        type.title
+                    );
+
+                }
+            );
+
+
+            card.addEventListener(
+                "click",
+                function () {
+
+                    openQuestionType(
+                        type.id,
+                        type.title
+                    );
+
+                }
+            );
+
+
+            container.appendChild(
+                card
+            );
 
         }
     );
@@ -123,132 +732,249 @@ function waitForFirebase() {
 }
 
 
-/* =====================================================
-   GET IDS
-===================================================== */
+// ==========================================================
+// OPEN TOPIC
+// ==========================================================
 
-function getIds() {
+function openTopic(topicId) {
 
-    courseId =
-        localStorage.getItem(
-            "activeCourse"
-        ) ||
-        localStorage.getItem(
-            "courseId"
-        ) ||
-        "";
+    if (
+        !courseId ||
+        !chapterId ||
+        !topicId
+    ) {
 
+        alert(
+            "Topic information পাওয়া যায়নি।"
+        );
 
-    chapterId =
-        localStorage.getItem(
-            "activeChapter"
-        ) ||
-        localStorage.getItem(
-            "chapterId"
-        ) ||
-        "";
+        return;
+
+    }
 
 
-    return {
-        courseId,
+    // ------------------------------------------
+    // Save active information
+    // ------------------------------------------
+
+    localStorage.setItem(
+        "activeCourse",
+        courseId
+    );
+
+
+    localStorage.setItem(
+        "activeChapter",
         chapterId
-    };
+    );
+
+
+    localStorage.setItem(
+        "activeTopic",
+        topicId
+    );
+
+
+    // ------------------------------------------
+    // Open topic page
+    // ------------------------------------------
+
+    window.location.href =
+        "topic.html";
+
 }
 
 
-/* =====================================================
-   LOAD CHAPTER
-===================================================== */
+// ==========================================================
+// OPEN QUESTION TYPE
+// ==========================================================
 
-async function loadChapter() {
+function openQuestionType(
+    typeId,
+    typeTitle
+) {
 
     if (
         !courseId ||
         !chapterId
     ) {
 
-        showPageError(
+        alert(
             "Chapter information পাওয়া যায়নি।"
         );
 
         return;
-    }
-
-
-    showChapterLoading();
-
-
-    try {
-
-        const chapterRef =
-            db
-                .collection("courses")
-                .doc(courseId)
-                .collection("chapters")
-                .doc(chapterId);
-
-
-        const chapterSnap =
-            await chapterRef.get();
-
-
-        if (!chapterSnap.exists) {
-
-            showPageError(
-                "Chapter পাওয়া যায়নি।"
-            );
-
-            return;
-        }
-
-
-        chapterData =
-            chapterSnap.data() || {};
-
-
-        renderChapterInfo();
-
-
-        await Promise.all([
-            loadTopics(chapterRef),
-            loadQuestionTypes(chapterRef)
-        ]);
 
     }
 
-    catch (error) {
 
-        console.error(
-            "Chapter loading error:",
-            error
-        );
+    // ------------------------------------------
+    // Save quiz information
+    // ------------------------------------------
+
+    localStorage.setItem(
+        "quizCourse",
+        courseId
+    );
 
 
-        showPageError(
-            "Chapter load করতে সমস্যা হয়েছে।"
-        );
+    localStorage.setItem(
+        "quizChapter",
+        chapterId
+    );
 
-    }
+
+    localStorage.setItem(
+        "quizType",
+        typeId
+    );
+
+
+    localStorage.setItem(
+        "quizTypeTitle",
+        typeTitle
+    );
+
+
+    // ------------------------------------------
+    // Make sure topic quiz is not used
+    // ------------------------------------------
+
+    localStorage.removeItem(
+        "quizTopic"
+    );
+
+
+    // ------------------------------------------
+    // Open quiz
+    // ------------------------------------------
+
+    window.location.href =
+        "quiz.html";
 
 }
 
 
-/* =====================================================
-   CHAPTER INFO
-===================================================== */
+// ==========================================================
+// BACK TO COURSE
+// ==========================================================
 
-function renderChapterInfo() {
+function goBackToCourse() {
 
-    const title =
-        chapterData.name ||
-        chapterData.title ||
-        "Biology Chapter";
+    window.location.href =
+        "course.html";
+
+}
 
 
-    const description =
-        chapterData.description ||
-        "";
+// ==========================================================
+// BACK TO STUDENT
+// ==========================================================
 
+function goBackToStudent() {
+
+    window.location.href =
+        "student.html";
+
+}
+
+
+// ==========================================================
+// OPEN NCERT
+// ==========================================================
+
+function openNCERT() {
+
+    window.location.href =
+        "ncert.html";
+
+}
+
+
+// ==========================================================
+// OPEN VIDEOS
+// ==========================================================
+
+function openVideos() {
+
+    window.location.href =
+        "videos.html";
+
+}
+
+
+// ==========================================================
+// LOGOUT
+// ==========================================================
+
+function logoutUser() {
+
+    if (
+        typeof auth === "undefined"
+    ) {
+
+        window.location.href =
+            "index.html";
+
+        return;
+
+    }
+
+
+    auth.signOut()
+
+        .then(
+            function () {
+
+                // ----------------------------------
+                // Clear active navigation data
+                // ----------------------------------
+
+                localStorage.removeItem(
+                    "activeCourse"
+                );
+
+
+                localStorage.removeItem(
+                    "activeChapter"
+                );
+
+
+                localStorage.removeItem(
+                    "activeTopic"
+                );
+
+
+                window.location.href =
+                    "index.html";
+
+            }
+        )
+
+        .catch(
+            function (error) {
+
+                console.error(
+                    "Logout Error:",
+                    error
+                );
+
+
+                alert(
+                    "Logout করা যায়নি। আবার চেষ্টা করুন।"
+                );
+
+            }
+        );
+
+}
+
+
+// ==========================================================
+// LOADING STATE
+// ==========================================================
+
+function showChapterLoading() {
 
     const titleElement =
         document.getElementById(
@@ -262,10 +988,22 @@ function renderChapterInfo() {
         );
 
 
+    const topicList =
+        document.getElementById(
+            "topicList"
+        );
+
+
+    const typeGrid =
+        document.getElementById(
+            "typePracticeGrid"
+        );
+
+
     if (titleElement) {
 
         titleElement.textContent =
-            title;
+            "Loading Chapter...";
 
     }
 
@@ -273,640 +1011,7 @@ function renderChapterInfo() {
     if (descriptionElement) {
 
         descriptionElement.textContent =
-            description;
-
-    }
-
-}
-
-
-/* =====================================================
-   LOAD TOPICS
-===================================================== */
-
-async function loadTopics(chapterRef) {
-
-    const container =
-        document.getElementById(
-            "topicList"
-        );
-
-
-    if (container) {
-
-        container.innerHTML = `
-
-            <div class="chapter-loading">
-
-                Loading topics...
-
-            </div>
-
-        `;
-
-    }
-
-
-    try {
-
-        const snap =
-            await chapterRef
-                .collection("topics")
-                .get();
-
-
-        topics = [];
-
-
-        snap.forEach(
-            function (doc) {
-
-                const data =
-                    doc.data() || {};
-
-
-                topics.push({
-
-                    id: doc.id,
-
-                    ...data
-
-                });
-
-            }
-        );
-
-
-        topics.sort(
-            function (a, b) {
-
-                const aOrder =
-                    Number(
-                        a.order ??
-                        a.serial ??
-                        999999
-                    );
-
-
-                const bOrder =
-                    Number(
-                        b.order ??
-                        b.serial ??
-                        999999
-                    );
-
-
-                return aOrder - bOrder;
-
-            }
-        );
-
-
-        renderTopics();
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "Topic loading error:",
-            error
-        );
-
-
-        renderTopicError();
-
-    }
-
-}
-
-
-/* =====================================================
-   RENDER TOPICS
-===================================================== */
-
-function renderTopics() {
-
-    const container =
-        document.getElementById(
-            "topicList"
-        );
-
-
-    const count =
-        document.getElementById(
-            "topicCount"
-        );
-
-
-    if (count) {
-
-        count.textContent =
-            topics.length +
-            (
-                topics.length === 1
-                    ? " Topic"
-                    : " Topics"
-            );
-
-    }
-
-
-    if (!container) {
-        return;
-    }
-
-
-    if (!topics.length) {
-
-        container.innerHTML = `
-
-            <div class="empty-state">
-
-                <div class="empty-icon">
-                    📚
-                </div>
-
-                <h3>
-                    No Topics Available
-                </h3>
-
-                <p>
-                    Topics will appear here.
-                </p>
-
-            </div>
-
-        `;
-
-        return;
-    }
-
-
-    let html = "";
-
-
-    topics.forEach(
-        function (topic, index) {
-
-            const title =
-                topic.name ||
-                topic.title ||
-                "Topic " +
-                (index + 1);
-
-
-            html += `
-
-                <div
-                    class="topic-card"
-                    onclick="openTopic('${escapeJS(topic.id)}')"
-                >
-
-                    <div class="topic-number">
-
-                        ${index + 1}
-
-                    </div>
-
-
-                    <div class="topic-card-content">
-
-                        <h3 class="topic-card-title">
-
-                            ${escapeHTML(title)}
-
-                        </h3>
-
-                    </div>
-
-
-                    <div class="topic-open-label">
-
-                        OPEN →
-
-                    </div>
-
-                </div>
-
-            `;
-
-        }
-    );
-
-
-    container.innerHTML =
-        html;
-
-}
-
-
-/* =====================================================
-   OPEN TOPIC
-===================================================== */
-
-window.openTopic =
-    function (topicId) {
-
-        if (!topicId) {
-            return;
-        }
-
-
-        localStorage.setItem(
-            "activeCourse",
-            courseId
-        );
-
-
-        localStorage.setItem(
-            "activeChapter",
-            chapterId
-        );
-
-
-        localStorage.setItem(
-            "activeTopic",
-            topicId
-        );
-
-
-        window.location.href =
-            "topic.html";
-
-    };
-
-
-/* =====================================================
-   LOAD QUESTION TYPES
-===================================================== */
-
-async function loadQuestionTypes(chapterRef) {
-
-    const container =
-        document.getElementById(
-            "typePracticeGrid"
-        );
-
-
-    if (container) {
-
-        container.innerHTML = `
-
-            <div class="chapter-loading">
-
-                Loading question types...
-
-            </div>
-
-        `;
-
-    }
-
-
-    /*
-       First try Firestore collection:
-
-       chapters/{chapterId}/typePractice
-    */
-
-    try {
-
-        const snap =
-            await chapterRef
-                .collection("typePractice")
-                .get();
-
-
-        if (!snap.empty) {
-
-            questionTypes = [];
-
-
-            snap.forEach(
-                function (doc) {
-
-                    const data =
-                        doc.data() || {};
-
-
-                    questionTypes.push({
-
-                        id: doc.id,
-
-                        ...data
-
-                    });
-
-                }
-            );
-
-
-            questionTypes.sort(
-                function (a, b) {
-
-                    return Number(
-                        a.order ??
-                        999999
-                    )
-                    -
-                    Number(
-                        b.order ??
-                        999999
-                    );
-
-                }
-            );
-
-
-            renderQuestionTypes();
-
-            return;
-        }
-
-    }
-
-    catch (error) {
-
-        console.warn(
-            "typePractice collection not available:",
-            error
-        );
-
-    }
-
-
-    /*
-       If Firestore collection is empty,
-       use the six required types.
-    */
-
-    questionTypes =
-        DEFAULT_TYPES.map(
-            function (item) {
-
-                return {
-                    ...item
-                };
-
-            }
-        );
-
-
-    renderQuestionTypes();
-
-}
-
-
-/* =====================================================
-   RENDER QUESTION TYPES
-===================================================== */
-
-function renderQuestionTypes() {
-
-    const container =
-        document.getElementById(
-            "typePracticeGrid"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    if (!questionTypes.length) {
-
-        container.innerHTML = `
-
-            <div class="empty-state">
-
-                <div class="empty-icon">
-                    📝
-                </div>
-
-                <h3>
-                    No Question Types
-                </h3>
-
-                <p>
-                    Question types will appear here.
-                </p>
-
-            </div>
-
-        `;
-
-        return;
-    }
-
-
-    let html = "";
-
-
-    questionTypes.forEach(
-        function (type, index) {
-
-            const title =
-                type.name ||
-                type.title ||
-                DEFAULT_TYPES[index]?.title ||
-                "Question Type";
-
-
-            const icon =
-                type.icon ||
-                DEFAULT_TYPES[index]?.icon ||
-                "📝";
-
-
-            html += `
-
-                <div
-                    class="type-card"
-                    onclick="openTypePractice('${escapeJS(type.id)}')"
-                >
-
-                    <div class="type-icon">
-
-                        ${escapeHTML(icon)}
-
-                    </div>
-
-
-                    <div class="type-content">
-
-                        <h3 class="type-title">
-
-                            ${escapeHTML(title)}
-
-                        </h3>
-
-                    </div>
-
-
-                    <button
-                        type="button"
-                        class="type-button"
-                        onclick="event.stopPropagation(); openTypePractice('${escapeJS(type.id)}')"
-                    >
-
-                        OPEN
-
-                    </button>
-
-                </div>
-
-            `;
-
-        }
-    );
-
-
-    container.innerHTML =
-        html;
-
-}
-
-
-/* =====================================================
-   OPEN TYPE PRACTICE
-===================================================== */
-
-window.openTypePractice =
-    function (typeId) {
-
-        if (!typeId) {
-            return;
-        }
-
-
-        localStorage.setItem(
-            "activeCourse",
-            courseId
-        );
-
-
-        localStorage.setItem(
-            "activeChapter",
-            chapterId
-        );
-
-
-        localStorage.setItem(
-            "activeType",
-            typeId
-        );
-
-
-        localStorage.setItem(
-            "activeTypePractice",
-            typeId
-        );
-
-
-        /*
-           quiz.js reads activeType.
-           typeId is also passed in URL.
-        */
-
-        window.location.href =
-            "quiz.html?courseId=" +
-            encodeURIComponent(
-                courseId
-            ) +
-            "&chapterId=" +
-            encodeURIComponent(
-                chapterId
-            ) +
-            "&typeId=" +
-            encodeURIComponent(
-                typeId
-            );
-
-    };
-
-
-/* =====================================================
-   BACK TO COURSE
-===================================================== */
-
-window.goBackToCourse =
-    function () {
-
-        window.location.href =
-            "course.html";
-
-    };
-
-
-/* =====================================================
-   BACK TO STUDENT
-===================================================== */
-
-window.goBackToStudent =
-    function () {
-
-        window.location.href =
-            "student.html";
-
-    };
-
-
-/* =====================================================
-   NCERT
-===================================================== */
-
-window.openNCERT =
-    function () {
-
-        window.location.href =
-            "ncert.html";
-
-    };
-
-
-/* =====================================================
-   VIDEOS
-===================================================== */
-
-window.openVideos =
-    function () {
-
-        window.location.href =
-            "videos.html";
-
-    };
-
-
-/* =====================================================
-   LOADING
-===================================================== */
-
-function showChapterLoading() {
-
-    const title =
-        document.getElementById(
-            "chapterTitle"
-        );
-
-
-    const topicList =
-        document.getElementById(
-            "topicList"
-        );
-
-
-    const typeList =
-        document.getElementById(
-            "typePracticeGrid"
-        );
-
-
-    if (title) {
-
-        title.textContent =
-            "Loading Chapter...";
+            "Please wait...";
 
     }
 
@@ -926,9 +1031,9 @@ function showChapterLoading() {
     }
 
 
-    if (typeList) {
+    if (typeGrid) {
 
-        typeList.innerHTML = `
+        typeGrid.innerHTML = `
 
             <div class="chapter-loading">
 
@@ -943,55 +1048,23 @@ function showChapterLoading() {
 }
 
 
-/* =====================================================
-   TOPIC ERROR
-===================================================== */
+// ==========================================================
+// ERROR STATE
+// ==========================================================
 
-function renderTopicError() {
+function showChapterError(
+    message
+) {
 
-    const container =
+    const titleElement =
         document.getElementById(
-            "topicList"
+            "chapterTitle"
         );
 
 
-    if (!container) {
-        return;
-    }
-
-
-    container.innerHTML = `
-
-        <div class="empty-state">
-
-            <div class="empty-icon">
-                ⚠️
-            </div>
-
-            <h3>
-                Topics could not load
-            </h3>
-
-            <p>
-                Please try again.
-            </p>
-
-        </div>
-
-    `;
-
-}
-
-
-/* =====================================================
-   PAGE ERROR
-===================================================== */
-
-function showPageError(message) {
-
-    const title =
+    const descriptionElement =
         document.getElementById(
-            "chapterTitle"
+            "chapterDescription"
         );
 
 
@@ -1001,16 +1074,24 @@ function showPageError(message) {
         );
 
 
-    const typeList =
+    const typeGrid =
         document.getElementById(
             "typePracticeGrid"
         );
 
 
-    if (title) {
+    if (titleElement) {
 
-        title.textContent =
+        titleElement.textContent =
             "Chapter Error";
+
+    }
+
+
+    if (descriptionElement) {
+
+        descriptionElement.textContent =
+            message;
 
     }
 
@@ -1026,11 +1107,11 @@ function showPageError(message) {
                 </div>
 
                 <h3>
-                    ${escapeHTML(message)}
+                    Something went wrong
                 </h3>
 
                 <p>
-                    Please go back and try again.
+                    ${escapeHTML(message)}
                 </p>
 
             </div>
@@ -1040,20 +1121,22 @@ function showPageError(message) {
     }
 
 
-    if (typeList) {
+    if (typeGrid) {
 
-        typeList.innerHTML = "";
+        typeGrid.innerHTML = "";
 
     }
 
 }
 
 
-/* =====================================================
-   HTML ESCAPE
-===================================================== */
+// ==========================================================
+// HTML ESCAPE
+// ==========================================================
 
-function escapeHTML(value) {
+function escapeHTML(
+    value
+) {
 
     return String(value)
 
@@ -1080,32 +1163,6 @@ function escapeHTML(value) {
         .replace(
             /'/g,
             "&#039;"
-        );
-
-}
-
-
-/* =====================================================
-   JAVASCRIPT ESCAPE
-===================================================== */
-
-function escapeJS(value) {
-
-    return String(value)
-
-        .replace(
-            /\\/g,
-            "\\\\"
-        )
-
-        .replace(
-            /'/g,
-            "\\'"
-        )
-
-        .replace(
-            /"/g,
-            '\\"'
         );
 
 }
