@@ -2,81 +2,247 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
 
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#050b18"
+    >
 
     <title>mNEET - Result</title>
 
-    <link rel="stylesheet" href="css/style.css">
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+
 
     <style>
+
+        /* =====================================================
+           RESET
+           ===================================================== */
+
         * {
             box-sizing: border-box;
         }
 
-        body {
-            margin: 0;
-            background: #050b18;
-            color: white;
-            font-family: Arial, sans-serif;
+
+        html {
+            min-height: 100%;
         }
+
+
+        body {
+
+            margin: 0;
+
+            min-height: 100vh;
+
+            background: #050b18;
+
+            color: white;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            -webkit-font-smoothing: antialiased;
+
+        }
+
+
+        button {
+
+            font-family: inherit;
+
+            -webkit-tap-highlight-color:
+                transparent;
+
+        }
+
+
+        /* =====================================================
+           PAGE
+           ===================================================== */
 
         .result-page {
+
             min-height: 100vh;
+
             padding-bottom: 35px;
+
         }
 
+
+        /* =====================================================
+           HEADER
+           ===================================================== */
+
         .result-header {
-            padding: 14px 16px;
+
+            position: sticky;
+
+            top: 0;
+
+            z-index: 50;
+
+            width: 100%;
+
+            min-height: 70px;
+
+            padding:
+                13px
+                16px;
 
             display: flex;
+
             align-items: center;
+
             gap: 14px;
 
-            background: #050d1a;
+            background:
+                rgba(
+                    5,
+                    13,
+                    26,
+                    0.97
+                );
 
             border-bottom:
                 1px solid
-                rgba(255,255,255,0.08);
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+
+            backdrop-filter:
+                blur(12px);
+
+            -webkit-backdrop-filter:
+                blur(12px);
+
         }
 
+
+        /* =====================================================
+           BACK BUTTON
+           ===================================================== */
+
         .result-back {
+
+            flex-shrink: 0;
+
             width: 42px;
+
             height: 42px;
 
+            padding: 0;
+
             border: none;
+
             border-radius: 11px;
 
             background: #111a2c;
+
             color: white;
 
             font-size: 22px;
 
+            line-height: 42px;
+
+            text-align: center;
+
             cursor: pointer;
+
+            transition:
+                transform 0.15s ease,
+                background 0.15s ease;
+
         }
+
+
+        .result-back:hover {
+
+            background: #17243a;
+
+        }
+
+
+        .result-back:active {
+
+            transform:
+                scale(0.94);
+
+        }
+
+
+        /* =====================================================
+           BRAND
+           ===================================================== */
 
         .result-brand {
+
             color: #ffc107;
+
             font-size: 21px;
+
             font-weight: 900;
+
+            letter-spacing: 0.2px;
+
         }
+
 
         .result-brand span {
+
             color: white;
+
         }
+
+
+        /* =====================================================
+           MAIN
+           ===================================================== */
 
         .result-main {
+
             width: 100%;
+
             max-width: 850px;
 
-            margin: auto;
-            padding: 22px 15px;
+            margin: 0 auto;
+
+            padding:
+                22px
+                15px
+                35px;
+
         }
 
+
+        /* =====================================================
+           HERO
+           ===================================================== */
+
         .result-hero {
-            padding: 28px 18px;
+
+            position: relative;
+
+            overflow: hidden;
+
+            padding:
+                28px
+                18px;
 
             text-align: center;
 
@@ -91,46 +257,133 @@
 
             border:
                 1px solid
-                rgba(255,193,7,0.18);
+                rgba(
+                    255,
+                    193,
+                    7,
+                    0.18
+                );
+
+            box-shadow:
+                0 12px 35px
+                rgba(
+                    0,
+                    0,
+                    0,
+                    0.22
+                );
+
         }
+
+
+        .result-hero::before {
+
+            content: "";
+
+            position: absolute;
+
+            width: 180px;
+
+            height: 180px;
+
+            top: -100px;
+
+            right: -70px;
+
+            border-radius: 50%;
+
+            background:
+                rgba(
+                    255,
+                    193,
+                    7,
+                    0.06
+                );
+
+            pointer-events: none;
+
+        }
+
 
         .result-icon {
+
+            position: relative;
+
             font-size: 45px;
+
+            line-height: 1;
+
         }
 
+
         .result-small {
-            margin-top: 7px;
+
+            margin-top: 10px;
 
             color: #8997aa;
 
             font-size: 10px;
+
             font-weight: 900;
 
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
+
         }
+
 
         .result-title {
-            margin: 8px 0;
+
+            position: relative;
+
+            margin:
+                8px
+                0;
 
             color: white;
+
             font-size: 24px;
+
+            line-height: 1.3;
+
+            font-weight: 900;
+
+            word-break: break-word;
+
         }
 
+
         .result-score {
+
             margin-top: 14px;
 
             color: #ffc107;
 
             font-size: 50px;
+
+            line-height: 1;
+
             font-weight: 900;
+
         }
+
 
         .result-score-label {
+
+            margin-top: 7px;
+
             color: #8997aa;
+
             font-size: 12px;
+
         }
 
+
+        /* =====================================================
+           RESULT STAT GRID
+           ===================================================== */
+
         .result-grid {
+
             display: grid;
 
             grid-template-columns:
@@ -139,10 +392,17 @@
             gap: 10px;
 
             margin-top: 15px;
+
         }
 
+
         .result-card {
-            padding: 17px 8px;
+
+            min-width: 0;
+
+            padding:
+                17px
+                8px;
 
             text-align: center;
 
@@ -152,29 +412,74 @@
 
             border:
                 1px solid
-                rgba(255,255,255,0.07);
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.07
+                );
+
+            box-shadow:
+                0 7px 20px
+                rgba(
+                    0,
+                    0,
+                    0,
+                    0.10
+                );
+
         }
+
 
         .result-card-icon {
-            font-size: 21px;
+
             margin-bottom: 7px;
+
+            font-size: 21px;
+
+            line-height: 1;
+
         }
 
+
         .result-card-value {
+
+            overflow: hidden;
+
             color: white;
 
             font-size: 21px;
+
+            line-height: 1.2;
+
             font-weight: 900;
+
+            text-overflow: ellipsis;
+
+            white-space: nowrap;
+
         }
+
 
         .result-card-label {
-            margin-top: 4px;
+
+            margin-top: 5px;
 
             color: #8997aa;
+
             font-size: 10px;
+
+            line-height: 1.2;
+
         }
 
+
+        /* =====================================================
+           ACCURACY
+           ===================================================== */
+
         .accuracy-card {
+
             margin-top: 15px;
 
             padding: 18px;
@@ -185,24 +490,50 @@
 
             border:
                 1px solid
-                rgba(255,255,255,0.07);
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.07
+                );
+
         }
 
+
         .accuracy-top {
+
             display: flex;
+
+            align-items: center;
+
             justify-content: space-between;
+
+            gap: 10px;
 
             margin-bottom: 10px;
 
             color: #c6d0dd;
+
             font-size: 13px;
+
         }
+
 
         .accuracy-top strong {
+
             color: #ffc107;
+
+            font-size: 14px;
+
+            font-weight: 900;
+
         }
 
+
         .accuracy-bar {
+
+            width: 100%;
+
             height: 8px;
 
             overflow: hidden;
@@ -210,18 +541,32 @@
             border-radius: 20px;
 
             background: #18263c;
+
         }
 
+
         .accuracy-fill {
+
             width: 0%;
+
             height: 100%;
 
             border-radius: 20px;
 
             background: #ffc107;
+
+            transition:
+                width 0.6s ease;
+
         }
 
+
+        /* =====================================================
+           MESSAGE
+           ===================================================== */
+
         .result-message {
+
             margin-top: 15px;
 
             padding: 15px;
@@ -231,19 +576,37 @@
             text-align: center;
 
             background:
-                rgba(255,193,7,0.06);
+                rgba(
+                    255,
+                    193,
+                    7,
+                    0.06
+                );
 
             border:
                 1px solid
-                rgba(255,193,7,0.12);
+                rgba(
+                    255,
+                    193,
+                    7,
+                    0.12
+                );
 
             color: #b9c4d2;
 
             font-size: 13px;
+
             line-height: 1.6;
+
         }
 
+
+        /* =====================================================
+           ACTIONS
+           ===================================================== */
+
         .result-actions {
+
             display: grid;
 
             grid-template-columns:
@@ -252,12 +615,21 @@
             gap: 10px;
 
             margin-top: 18px;
+
         }
 
+
         .result-button {
+
             min-height: 48px;
 
-            border: 1px solid #2a3b55;
+            padding:
+                10px
+                12px;
+
+            border:
+                1px solid
+                #2a3b55;
 
             border-radius: 11px;
 
@@ -265,241 +637,571 @@
 
             color: white;
 
+            font-size: 13px;
+
             font-weight: 900;
 
             cursor: pointer;
+
+            transition:
+                transform 0.15s ease,
+                background 0.15s ease,
+                border-color 0.15s ease;
+
         }
+
+
+        .result-button:hover {
+
+            background: #132138;
+
+            border-color:
+                #3a506f;
+
+        }
+
 
         .result-button.primary {
+
             background: #ffc107;
+
             border-color: #ffc107;
+
             color: #111;
+
         }
 
-        .result-button:active {
-            transform: scale(0.98);
+
+        .result-button.primary:hover {
+
+            background: #ffd04a;
+
+            border-color: #ffd04a;
+
         }
+
+
+        .result-button:active {
+
+            transform:
+                scale(0.98);
+
+        }
+
+
+        /* =====================================================
+           TABLET
+           ===================================================== */
+
+        @media (max-width: 700px) {
+
+            .result-main {
+
+                padding-top: 18px;
+
+            }
+
+        }
+
+
+        /* =====================================================
+           MOBILE
+           ===================================================== */
 
         @media (max-width: 600px) {
 
-            .result-grid {
-                grid-template-columns:
-                    repeat(2, 1fr);
+            .result-header {
+
+                min-height: 64px;
+
+                padding:
+                    11px
+                    13px;
+
             }
 
+
+            .result-main {
+
+                padding:
+                    16px
+                    12px
+                    30px;
+
+            }
+
+
+            .result-hero {
+
+                padding:
+                    25px
+                    15px;
+
+                border-radius: 17px;
+
+            }
+
+
+            .result-icon {
+
+                font-size: 40px;
+
+            }
+
+
+            .result-title {
+
+                font-size: 21px;
+
+            }
+
+
+            .result-score {
+
+                font-size: 45px;
+
+            }
+
+
+            .result-grid {
+
+                grid-template-columns:
+                    repeat(2, 1fr);
+
+                gap: 9px;
+
+            }
+
+
+            .result-card {
+
+                padding:
+                    15px
+                    7px;
+
+            }
+
+
             .result-actions {
+
                 grid-template-columns: 1fr;
+
             }
 
         }
+
+
+        /* =====================================================
+           SMALL MOBILE
+           ===================================================== */
+
+        @media (max-width: 380px) {
+
+            .result-brand {
+
+                font-size: 19px;
+
+            }
+
+
+            .result-back {
+
+                width: 40px;
+
+                height: 40px;
+
+                line-height: 40px;
+
+            }
+
+
+            .result-score {
+
+                font-size: 42px;
+
+            }
+
+
+            .result-card-value {
+
+                font-size: 19px;
+
+            }
+
+
+            .result-card-label {
+
+                font-size: 9px;
+
+            }
+
+        }
+
+
+        /* =====================================================
+           ACCESSIBILITY
+           ===================================================== */
+
+        button:focus-visible {
+
+            outline:
+                2px solid
+                #ffc107;
+
+            outline-offset: 2px;
+
+        }
+
     </style>
 
 </head>
 
+
 <body>
 
-<div class="result-page">
 
-    <header class="result-header">
+    <!-- =====================================================
+         RESULT PAGE
+         ===================================================== -->
 
-        <button
-            class="result-back"
-            onclick="goToTopic()">
-            ←
-        </button>
-
-        <div class="result-brand">
-            <span>m</span>NEET
-        </div>
-
-    </header>
+    <div class="result-page">
 
 
-    <main class="result-main">
+        <!-- =================================================
+             HEADER
+             ================================================= -->
 
-        <section class="result-hero">
+        <header class="result-header">
 
-            <div class="result-icon">
-                🏆
+
+            <button
+                type="button"
+                class="result-back"
+                aria-label="Back to Topic"
+                onclick="goToTopic()"
+            >
+                ←
+            </button>
+
+
+            <div class="result-brand">
+
+                <span>m</span>NEET
+
             </div>
 
-            <div class="result-small">
-                QUIZ COMPLETED
-            </div>
 
-            <h1
-                id="resultTitle"
-                class="result-title">
-                Your Result
-            </h1>
+        </header>
+
+
+        <!-- =================================================
+             MAIN
+             ================================================= -->
+
+        <main class="result-main">
+
+
+            <!-- =============================================
+                 RESULT HERO
+                 ============================================= -->
+
+            <section
+                class="result-hero"
+                aria-label="Quiz Result"
+            >
+
+
+                <div class="result-icon">
+                    🏆
+                </div>
+
+
+                <div class="result-small">
+                    QUIZ COMPLETED
+                </div>
+
+
+                <h1
+                    id="resultTitle"
+                    class="result-title"
+                >
+                    Your Result
+                </h1>
+
+
+                <div
+                    id="score"
+                    class="result-score"
+                >
+                    0
+                </div>
+
+
+                <div class="result-score-label">
+                    Total Score
+                </div>
+
+
+            </section>
+
+
+            <!-- =============================================
+                 RESULT STATISTICS
+                 ============================================= -->
+
+            <section
+                class="result-grid"
+                aria-label="Quiz Statistics"
+            >
+
+
+                <!-- CORRECT -->
+
+                <div class="result-card">
+
+                    <div class="result-card-icon">
+                        ✅
+                    </div>
+
+                    <div
+                        id="correct"
+                        class="result-card-value"
+                    >
+                        0
+                    </div>
+
+                    <div class="result-card-label">
+                        Correct
+                    </div>
+
+                </div>
+
+
+                <!-- INCORRECT -->
+
+                <div class="result-card">
+
+                    <div class="result-card-icon">
+                        ❌
+                    </div>
+
+                    <div
+                        id="incorrect"
+                        class="result-card-value"
+                    >
+                        0
+                    </div>
+
+                    <div class="result-card-label">
+                        Incorrect
+                    </div>
+
+                </div>
+
+
+                <!-- SKIPPED -->
+
+                <div class="result-card">
+
+                    <div class="result-card-icon">
+                        ⏭️
+                    </div>
+
+                    <div
+                        id="skipped"
+                        class="result-card-value"
+                    >
+                        0
+                    </div>
+
+                    <div class="result-card-label">
+                        Skipped
+                    </div>
+
+                </div>
+
+
+                <!-- TIME -->
+
+                <div class="result-card">
+
+                    <div class="result-card-icon">
+                        ⏱️
+                    </div>
+
+                    <div
+                        id="time"
+                        class="result-card-value"
+                    >
+                        00:00
+                    </div>
+
+                    <div class="result-card-label">
+                        Time
+                    </div>
+
+                </div>
+
+
+            </section>
+
+
+            <!-- =============================================
+                 ACCURACY
+                 ============================================= -->
+
+            <section
+                class="accuracy-card"
+                aria-label="Accuracy"
+            >
+
+
+                <div class="accuracy-top">
+
+                    <span>
+                        Accuracy
+                    </span>
+
+
+                    <strong id="accuracy">
+                        0%
+                    </strong>
+
+                </div>
+
+
+                <div class="accuracy-bar">
+
+                    <div
+                        id="accuracyFill"
+                        class="accuracy-fill"
+                    >
+                    </div>
+
+                </div>
+
+
+            </section>
+
+
+            <!-- =============================================
+                 RESULT MESSAGE
+                 ============================================= -->
 
             <div
-                id="score"
-                class="result-score">
-                0
-            </div>
+                id="resultMessage"
+                class="result-message"
+                role="status"
+            >
 
-            <div class="result-score-label">
-                Total Score
-            </div>
-
-        </section>
-
-
-        <section class="result-grid">
-
-            <div class="result-card">
-                <div class="result-card-icon">✅</div>
-
-                <div
-                    id="correct"
-                    class="result-card-value">
-                    0
-                </div>
-
-                <div class="result-card-label">
-                    Correct
-                </div>
-            </div>
-
-
-            <div class="result-card">
-                <div class="result-card-icon">❌</div>
-
-                <div
-                    id="incorrect"
-                    class="result-card-value">
-                    0
-                </div>
-
-                <div class="result-card-label">
-                    Incorrect
-                </div>
-            </div>
-
-
-            <div class="result-card">
-                <div class="result-card-icon">⏭️</div>
-
-                <div
-                    id="skipped"
-                    class="result-card-value">
-                    0
-                </div>
-
-                <div class="result-card-label">
-                    Skipped
-                </div>
-            </div>
-
-
-            <div class="result-card">
-                <div class="result-card-icon">⏱️</div>
-
-                <div
-                    id="time"
-                    class="result-card-value">
-                    00:00
-                </div>
-
-                <div class="result-card-label">
-                    Time
-                </div>
-            </div>
-
-        </section>
-
-
-        <section class="accuracy-card">
-
-            <div class="accuracy-top">
-
-                <span>
-                    Accuracy
-                </span>
-
-                <strong id="accuracy">
-                    0%
-                </strong>
+                Keep practicing and improve your score.
 
             </div>
 
-            <div class="accuracy-bar">
 
-                <div
-                    id="accuracyFill"
-                    class="accuracy-fill">
-                </div>
+            <!-- =============================================
+                 RESULT ACTIONS
+                 ============================================= -->
 
-            </div>
-
-        </section>
-
-
-        <div
-            id="resultMessage"
-            class="result-message">
-
-            Keep practicing and improve your score.
-
-        </div>
+            <section
+                class="result-actions"
+                aria-label="Result Actions"
+            >
 
 
-        <section class="result-actions">
+                <!-- REATTEMPT -->
 
-            <button
-                class="result-button primary"
-                onclick="reattemptQuiz()">
+                <button
+                    type="button"
+                    class="
+                        result-button
+                        primary
+                    "
+                    onclick="reattemptQuiz()"
+                >
 
-                🔄 Reattempt Quiz
+                    🔄 Reattempt Quiz
 
-            </button>
-
-
-            <button
-                class="result-button"
-                onclick="goToTopic()">
-
-                📚 Back to Topic
-
-            </button>
+                </button>
 
 
-            <button
-                class="result-button"
-                onclick="goToChapter()">
+                <!-- TOPIC -->
 
-                📖 Back to Chapter
+                <button
+                    type="button"
+                    class="result-button"
+                    onclick="goToTopic()"
+                >
 
-            </button>
+                    📚 Back to Topic
 
-
-            <button
-                class="result-button"
-                onclick="goToStudent()">
-
-                🏠 Dashboard
-
-            </button>
-
-        </section>
-
-    </main>
-
-</div>
+                </button>
 
 
-<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+                <!-- CHAPTER -->
 
-<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+                <button
+                    type="button"
+                    class="result-button"
+                    onclick="goToChapter()"
+                >
 
-<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+                    📖 Back to Chapter
 
-<script src="js/firebase.js"></script>
+                </button>
 
-<script src="js/auth.js"></script>
 
-<script src="js/result.js"></script>
+                <!-- DASHBOARD -->
+
+                <button
+                    type="button"
+                    class="result-button"
+                    onclick="goToStudent()"
+                >
+
+                    🏠 Dashboard
+
+                </button>
+
+
+            </section>
+
+
+        </main>
+
+
+    </div>
+
+
+    <!-- =====================================================
+         FIREBASE
+         ===================================================== -->
+
+    <script
+        src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"
+    ></script>
+
+
+    <script
+        src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"
+    ></script>
+
+
+    <script
+        src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"
+    ></script>
+
+
+    <!-- =====================================================
+         APP FILES
+         ===================================================== -->
+
+    <script src="js/firebase.js"></script>
+
+    <script src="js/auth.js"></script>
+
+    <script src="js/result.js"></script>
+
 
 </body>
 
