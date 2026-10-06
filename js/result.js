@@ -5,19 +5,32 @@
 
 "use strict";
 
+
+// ==========================================================
+// GLOBAL STATE
+// ==========================================================
+
 let resultData = null;
+
 let currentUser = null;
+
+let resultSaveStarted = false;
+
+let resultSaveCompleted = false;
 
 
 // ==========================================================
 // PAGE START
 // ==========================================================
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
 
-    waitForFirebase();
+        waitForFirebase();
 
-});
+    }
+);
 
 
 // ==========================================================
@@ -52,7 +65,9 @@ function waitForFirebase() {
             }
 
 
-            currentUser = user;
+            currentUser =
+                user;
+
 
             loadResult();
 
@@ -69,20 +84,29 @@ function waitForFirebase() {
 function loadResult() {
 
     let savedResult =
-        localStorage.getItem("quizResult");
+        localStorage.getItem(
+            "quizResult"
+        );
 
 
     /*
-      Backup: sessionStorage
+      Backup:
+      sessionStorage
     */
 
     if (!savedResult) {
 
         savedResult =
-            sessionStorage.getItem("quizResult");
+            sessionStorage.getItem(
+                "quizResult"
+            );
 
     }
 
+
+    /*
+      No result
+    */
 
     if (!savedResult) {
 
@@ -92,10 +116,16 @@ function loadResult() {
     }
 
 
+    /*
+      Parse result
+    */
+
     try {
 
         resultData =
-            JSON.parse(savedResult);
+            JSON.parse(
+                savedResult
+            );
 
     } catch (error) {
 
@@ -104,6 +134,7 @@ function loadResult() {
             error
         );
 
+
         showNoResult();
 
         return;
@@ -111,7 +142,22 @@ function loadResult() {
 
 
     /*
-      Display result first
+      Validate object
+    */
+
+    if (
+        !resultData ||
+        typeof resultData !== "object"
+    ) {
+
+        showNoResult();
+
+        return;
+    }
+
+
+    /*
+      Display immediately
     */
 
     displayResult();
@@ -132,55 +178,97 @@ function loadResult() {
 
 function displayResult() {
 
+    if (!resultData) {
+        return;
+    }
+
+
     const total =
-        Number(
-            resultData.totalQuestions ??
-            resultData.total ??
+        getNumber(
+            resultData.totalQuestions,
+            resultData.total,
             0
         );
 
 
     const correct =
-        Number(
-            resultData.correct ?? 0
+        getNumber(
+            resultData.correct,
+            0
         );
 
 
     const incorrect =
-        Number(
-            resultData.incorrect ?? 0
+        getNumber(
+            resultData.incorrect,
+            0
         );
 
 
     const skipped =
-        Number(
-            resultData.skipped ?? 0
+        getNumber(
+            resultData.skipped,
+            0
         );
 
 
     const score =
-        Number(
-            resultData.score ?? 0
-        );
-
-
-    const accuracy =
-        Number(
-            resultData.accuracy ?? 0
+        getNumber(
+            resultData.score,
+            0
         );
 
 
     /*
-      Result JS and quiz.js compatibility
+      Accuracy:
+      Prefer saved accuracy.
+      If missing, calculate it.
+    */
+
+    let accuracy =
+        getNumber(
+            resultData.accuracy,
+            -1
+        );
+
+
+    if (
+        accuracy < 0
+    ) {
+
+        const attempted =
+            correct +
+            incorrect;
+
+
+        accuracy =
+            attempted > 0
+                ? Math.round(
+                    (
+                        correct /
+                        attempted
+                    ) * 100
+                )
+                : 0;
+
+    }
+
+
+    /*
+      Total time
     */
 
     const time =
-        Number(
-            resultData.totalTime ??
-            resultData.time ??
+        getNumber(
+            resultData.totalTime,
+            resultData.time,
             0
         );
 
+
+    /*
+      Display
+    */
 
     setText(
         "score",
@@ -219,7 +307,7 @@ function displayResult() {
 
 
     /*
-      Accuracy progress bar
+      Accuracy bar
     */
 
     const accuracyFill =
@@ -263,7 +351,7 @@ function displayResult() {
 
 
     /*
-      Message
+      Result message
     */
 
     updateMessage(
@@ -271,6 +359,44 @@ function displayResult() {
         correct,
         total
     );
+
+}
+
+
+// ==========================================================
+// NUMBER HELPER
+// ==========================================================
+
+function getNumber() {
+
+    const values =
+        Array.from(arguments);
+
+
+    for (
+        let i = 0;
+        i < values.length;
+        i++
+    ) {
+
+        const value =
+            Number(
+                values[i]
+            );
+
+
+        if (
+            Number.isFinite(value)
+        ) {
+
+            return value;
+
+        }
+
+    }
+
+
+    return 0;
 
 }
 
@@ -285,13 +411,15 @@ function setText(
 ) {
 
     const element =
-        document.getElementById(id);
+        document.getElementById(
+            id
+        );
 
 
     if (element) {
 
         element.textContent =
-            value;
+            String(value);
 
     }
 
@@ -304,20 +432,40 @@ function setText(
 
 async function saveProgress() {
 
+    /*
+      Prevent accidental duplicate
+      save calls during same page.
+    */
+
+    if (
+        resultSaveStarted
+    ) {
+
+        return;
+
+    }
+
+
     if (
         !currentUser ||
         !resultData
     ) {
 
         return;
+
     }
 
 
+    resultSaveStarted =
+        true;
+
+
     /*
-      Firebase Firestore
+      Firestore
     */
 
     let firestore;
+
 
     try {
 
@@ -330,6 +478,9 @@ async function saveProgress() {
             "Firestore unavailable:",
             error
         );
+
+        resultSaveStarted =
+            false;
 
         return;
     }
@@ -363,6 +514,10 @@ async function saveProgress() {
         ).trim();
 
 
+    /*
+      Required IDs
+    */
+
     if (
         !courseId ||
         !chapterId ||
@@ -374,6 +529,10 @@ async function saveProgress() {
             resultData
         );
 
+
+        resultSaveStarted =
+            false;
+
         return;
     }
 
@@ -383,48 +542,77 @@ async function saveProgress() {
     */
 
     const total =
-        Number(
-            resultData.totalQuestions ??
-            resultData.total ??
+        getNumber(
+            resultData.totalQuestions,
+            resultData.total,
             0
         );
 
 
     const correct =
-        Number(
-            resultData.correct ?? 0
+        getNumber(
+            resultData.correct,
+            0
         );
 
 
     const incorrect =
-        Number(
-            resultData.incorrect ?? 0
+        getNumber(
+            resultData.incorrect,
+            0
         );
 
 
     const skipped =
-        Number(
-            resultData.skipped ?? 0
+        getNumber(
+            resultData.skipped,
+            0
         );
 
 
     const score =
-        Number(
-            resultData.score ?? 0
+        getNumber(
+            resultData.score,
+            0
         );
 
 
-    const accuracy =
-        Number(
-            resultData.accuracy ?? 0
+    let accuracy =
+        getNumber(
+            resultData.accuracy,
+            -1
         );
+
+
+    if (
+        accuracy < 0
+    ) {
+
+        const attempted =
+            correct +
+            incorrect;
+
+
+        accuracy =
+            attempted > 0
+                ? Math.round(
+                    (
+                        correct /
+                        attempted
+                    ) * 100
+                )
+                : 0;
+
+    }
 
 
     /*
       Topic percentage
 
       Example:
-      8 correct out of 10
+
+      8 correct
+      10 total
       = 80%
     */
 
@@ -441,24 +629,26 @@ async function saveProgress() {
 
     /*
       Progress document ID
-
-      course_chapter_topic
     */
 
     const progressId =
-        courseId +
-        "_" +
-        chapterId +
-        "_" +
-        topicId;
+        [
+            courseId,
+            chapterId,
+            topicId
+        ].join("_");
 
 
     const progressRef =
         firestore
             .collection("users")
-            .doc(currentUser.uid)
+            .doc(
+                currentUser.uid
+            )
             .collection("progress")
-            .doc(progressId);
+            .doc(
+                progressId
+            );
 
 
     try {
@@ -471,16 +661,23 @@ async function saveProgress() {
             await progressRef.get();
 
 
-        let oldData = {};
+        let oldData =
+            {};
 
 
-        if (oldDoc.exists) {
+        if (
+            oldDoc.exists
+        ) {
 
             oldData =
                 oldDoc.data() || {};
 
         }
 
+
+        /*
+          Old values
+        */
 
         const oldAttempts =
             Number(
@@ -523,7 +720,7 @@ async function saveProgress() {
 
 
         /*
-          New progress data
+          Progress data
         */
 
         const progressData = {
@@ -587,7 +784,7 @@ async function saveProgress() {
 
 
         /*
-          Save
+          Save main progress
         */
 
         await progressRef.set(
@@ -605,8 +802,7 @@ async function saveProgress() {
 
 
         /*
-          Also save a separate
-          attempt history document.
+          Save attempt history
         */
 
         await saveAttemptHistory(
@@ -618,12 +814,30 @@ async function saveProgress() {
         );
 
 
+        resultSaveCompleted =
+            true;
+
+
+        console.log(
+            "Result progress system completed."
+        );
+
+
     } catch (error) {
 
         console.error(
             "Progress save error:",
             error
         );
+
+
+        /*
+          Allow retry if Firestore
+          temporarily failed.
+        */
+
+        resultSaveStarted =
+            false;
 
     }
 
@@ -642,8 +856,13 @@ async function saveAttemptHistory(
     quizId
 ) {
 
-    if (!currentUser) {
+    if (
+        !currentUser ||
+        !resultData
+    ) {
+
         return;
+
     }
 
 
@@ -652,12 +871,90 @@ async function saveAttemptHistory(
         const historyRef =
             firestore
                 .collection("users")
-                .doc(currentUser.uid)
+                .doc(
+                    currentUser.uid
+                )
                 .collection("quizAttempts")
                 .doc();
 
 
+        const total =
+            getNumber(
+                resultData.totalQuestions,
+                resultData.total,
+                0
+            );
+
+
+        const correct =
+            getNumber(
+                resultData.correct,
+                0
+            );
+
+
+        const incorrect =
+            getNumber(
+                resultData.incorrect,
+                0
+            );
+
+
+        const skipped =
+            getNumber(
+                resultData.skipped,
+                0
+            );
+
+
+        const score =
+            getNumber(
+                resultData.score,
+                0
+            );
+
+
+        let accuracy =
+            getNumber(
+                resultData.accuracy,
+                -1
+            );
+
+
+        if (
+            accuracy < 0
+        ) {
+
+            const attempted =
+                correct +
+                incorrect;
+
+
+            accuracy =
+                attempted > 0
+                    ? Math.round(
+                        (
+                            correct /
+                            attempted
+                        ) * 100
+                    )
+                    : 0;
+
+        }
+
+
+        const totalTime =
+            getNumber(
+                resultData.totalTime,
+                resultData.time,
+                0
+            );
+
+
         await historyRef.set({
+
+            userId:
+                currentUser.uid,
 
             courseId:
                 courseId,
@@ -673,45 +970,44 @@ async function saveAttemptHistory(
 
             quizTitle:
                 resultData.quizTitle ||
+                resultData.title ||
                 "Practice Quiz",
 
             score:
-                Number(
-                    resultData.score || 0
-                ),
+                score,
 
             correct:
-                Number(
-                    resultData.correct || 0
-                ),
+                correct,
 
             incorrect:
-                Number(
-                    resultData.incorrect || 0
-                ),
+                incorrect,
 
             skipped:
-                Number(
-                    resultData.skipped || 0
-                ),
+                skipped,
 
             accuracy:
-                Number(
-                    resultData.accuracy || 0
-                ),
+                accuracy,
 
             totalQuestions:
-                Number(
-                    resultData.totalQuestions ??
-                    resultData.total ??
-                    0
-                ),
+                total,
+
+            attempted:
+                correct +
+                incorrect,
 
             totalTime:
-                Number(
-                    resultData.totalTime ??
-                    resultData.time ??
-                    0
+                totalTime,
+
+            positiveMark:
+                getNumber(
+                    resultData.positiveMark,
+                    4
+                ),
+
+            negativeMark:
+                getNumber(
+                    resultData.negativeMark,
+                    1
                 ),
 
             completedAt:
@@ -765,7 +1061,9 @@ function updateMessage(
     }
 
 
-    if (total <= 0) {
+    if (
+        total <= 0
+    ) {
 
         element.textContent =
             "No questions were attempted.";
@@ -774,17 +1072,23 @@ function updateMessage(
     }
 
 
-    if (accuracy >= 90) {
+    if (
+        accuracy >= 90
+    ) {
 
         element.textContent =
             "Excellent performance! Keep this level of preparation for NEET.";
 
-    } else if (accuracy >= 75) {
+    } else if (
+        accuracy >= 75
+    ) {
 
         element.textContent =
             "Great work! A little more practice can make your performance even stronger.";
 
-    } else if (accuracy >= 50) {
+    } else if (
+        accuracy >= 50
+    ) {
 
         element.textContent =
             "Good attempt. Review the incorrect questions and try again.";
@@ -810,24 +1114,36 @@ function reattemptQuiz() {
     }
 
 
+    /*
+      IDs
+    */
+
     const courseId =
-        resultData.courseId || "";
+        String(
+            resultData.courseId || ""
+        ).trim();
 
 
     const chapterId =
-        resultData.chapterId || "";
+        String(
+            resultData.chapterId || ""
+        ).trim();
 
 
     const topicId =
-        resultData.topicId || "";
+        String(
+            resultData.topicId || ""
+        ).trim();
 
 
     const quizId =
-        resultData.quizId || "";
+        String(
+            resultData.quizId || ""
+        ).trim();
 
 
     /*
-      Save all IDs
+      Save IDs
     */
 
     localStorage.setItem(
@@ -855,9 +1171,26 @@ function reattemptQuiz() {
 
 
     /*
-      IMPORTANT:
-      Delete previous attempt
-      so reattempt starts fresh.
+      Preserve active type if
+      result contains it.
+    */
+
+    if (
+        resultData.typeId
+    ) {
+
+        localStorage.setItem(
+            "activeType",
+            String(
+                resultData.typeId
+            )
+        );
+
+    }
+
+
+    /*
+      Attempt key
     */
 
     const attemptKey =
@@ -870,13 +1203,17 @@ function reattemptQuiz() {
         ].join("_");
 
 
+    /*
+      Delete previous attempt
+    */
+
     localStorage.removeItem(
         attemptKey
     );
 
 
     /*
-      Clear old quiz result
+      Clear result
     */
 
     localStorage.removeItem(
@@ -890,10 +1227,10 @@ function reattemptQuiz() {
 
 
     /*
-      Open quiz with IDs
+      Build quiz URL
     */
 
-    const url =
+    let url =
         "quiz.html" +
         "?courseId=" +
         encodeURIComponent(
@@ -911,6 +1248,25 @@ function reattemptQuiz() {
         encodeURIComponent(
             quizId
         );
+
+
+    /*
+      Type practice compatibility
+    */
+
+    if (
+        resultData.typeId
+    ) {
+
+        url +=
+            "&typeId=" +
+            encodeURIComponent(
+                String(
+                    resultData.typeId
+                )
+            );
+
+    }
 
 
     window.location.href =
@@ -935,16 +1291,26 @@ function goToTopic() {
 
 
     const courseId =
-        resultData.courseId || "";
+        String(
+            resultData.courseId || ""
+        ).trim();
 
 
     const chapterId =
-        resultData.chapterId || "";
+        String(
+            resultData.chapterId || ""
+        ).trim();
 
 
     const topicId =
-        resultData.topicId || "";
+        String(
+            resultData.topicId || ""
+        ).trim();
 
+
+    /*
+      Save IDs
+    */
 
     localStorage.setItem(
         "activeCourse",
@@ -963,6 +1329,10 @@ function goToTopic() {
         topicId
     );
 
+
+    /*
+      Topic URL
+    */
 
     window.location.href =
         "topic.html" +
@@ -998,12 +1368,20 @@ function goToChapter() {
 
 
     const courseId =
-        resultData.courseId || "";
+        String(
+            resultData.courseId || ""
+        ).trim();
 
 
     const chapterId =
-        resultData.chapterId || "";
+        String(
+            resultData.chapterId || ""
+        ).trim();
 
+
+    /*
+      Save IDs
+    */
 
     localStorage.setItem(
         "activeCourse",
@@ -1016,6 +1394,10 @@ function goToChapter() {
         chapterId
     );
 
+
+    /*
+      Chapter URL
+    */
 
     window.location.href =
         "chapter.html" +
@@ -1049,24 +1431,70 @@ function goToStudent() {
 
 function showNoResult() {
 
-    const title =
+    /*
+      Reset visible values
+    */
+
+    setText(
+        "score",
+        "0"
+    );
+
+
+    setText(
+        "correct",
+        "0"
+    );
+
+
+    setText(
+        "incorrect",
+        "0"
+    );
+
+
+    setText(
+        "skipped",
+        "0"
+    );
+
+
+    setText(
+        "accuracy",
+        "0%"
+    );
+
+
+    setText(
+        "time",
+        "00:00"
+    );
+
+
+    setText(
+        "resultTitle",
+        "Result Not Found"
+    );
+
+
+    const accuracyFill =
         document.getElementById(
-            "resultTitle"
+            "accuracyFill"
         );
+
+
+    if (accuracyFill) {
+
+        accuracyFill.style.width =
+            "0%";
+
+    }
 
 
     const message =
         document.getElementById(
             "resultMessage"
         );
-
-
-    if (title) {
-
-        title.textContent =
-            "Result Not Found";
-
-    }
 
 
     if (message) {
@@ -1086,7 +1514,9 @@ function showNoResult() {
 function formatTime(seconds) {
 
     seconds =
-        Number(seconds || 0);
+        Number(
+            seconds || 0
+        );
 
 
     if (
@@ -1099,6 +1529,12 @@ function formatTime(seconds) {
     }
 
 
+    seconds =
+        Math.floor(
+            seconds
+        );
+
+
     const minutes =
         Math.floor(
             seconds / 60
@@ -1106,18 +1542,45 @@ function formatTime(seconds) {
 
 
     const remainingSeconds =
-        Math.floor(
-            seconds % 60
-        );
+        seconds % 60;
 
 
     return (
         String(minutes)
-            .padStart(2, "0")
+            .padStart(
+                2,
+                "0"
+            )
         +
-        ":" +
-        String(remainingSeconds)
-            .padStart(2, "0")
+        ":"
+        +
+        String(
+            remainingSeconds
+        )
+            .padStart(
+                2,
+                "0"
+            )
     );
 
 }
+
+
+// ==========================================================
+// PAGE EXIT CLEANUP
+// ==========================================================
+
+window.addEventListener(
+    "beforeunload",
+    function () {
+
+        /*
+          No active timer exists
+          on result page.
+
+          This section is intentionally
+          kept lightweight.
+        */
+
+    }
+);
