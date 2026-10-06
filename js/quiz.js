@@ -1,15 +1,16 @@
 /* =========================================================
    mNEET QUIZ ENGINE
-   IMAGE QUESTION + FIRESTORE
+   Firebase Firestore Compatible
+   IMAGE QUESTION + TEXT QUESTION
    ========================================================= */
 
 (function () {
 
     "use strict";
 
-    // =====================================================
-    // GLOBAL STATE
-    // =====================================================
+    /* =====================================================
+       GLOBAL STATE
+    ===================================================== */
 
     let db = null;
 
@@ -37,9 +38,9 @@
     let quizPath = "";
 
 
-    // =====================================================
-    // FIREBASE
-    // =====================================================
+    /* =====================================================
+       FIREBASE
+    ===================================================== */
 
     function getFirestore() {
 
@@ -67,9 +68,9 @@
     }
 
 
-    // =====================================================
-    // STORAGE / URL
-    // =====================================================
+    /* =====================================================
+       PARAMETER
+    ===================================================== */
 
     function getParam(name) {
 
@@ -82,16 +83,27 @@
     }
 
 
+    /* =====================================================
+       STORAGE
+    ===================================================== */
+
     function getStorage(...keys) {
 
         for (const key of keys) {
 
-            const value =
-                localStorage.getItem(key) ||
+            const local =
+                localStorage.getItem(key);
+
+            if (local) {
+                return local;
+            }
+
+
+            const session =
                 sessionStorage.getItem(key);
 
-            if (value) {
-                return value;
+            if (session) {
+                return session;
             }
         }
 
@@ -101,7 +113,10 @@
 
     function cleanValue(value) {
 
-        if (!value) {
+        if (
+            value === null ||
+            value === undefined
+        ) {
             return "";
         }
 
@@ -109,9 +124,9 @@
     }
 
 
-    // =====================================================
-    // GET IDS
-    // =====================================================
+    /* =====================================================
+       GET IDS
+    ===================================================== */
 
     function getIds() {
 
@@ -189,9 +204,9 @@
     }
 
 
-    // =====================================================
-    // SAVE IDS
-    // =====================================================
+    /* =====================================================
+       SAVE IDS
+    ===================================================== */
 
     function saveIds(ids) {
 
@@ -215,27 +230,34 @@
             ids.quizId
         );
 
+        if (ids.typeId) {
+
+            localStorage.setItem(
+                "activeType",
+                ids.typeId
+            );
+        }
     }
 
 
-    // =====================================================
-    // FIND QUIZ DOCUMENT
-    // =====================================================
+    /* =====================================================
+       LOAD QUIZ DOCUMENT
+    ===================================================== */
 
     async function loadQuizDocument(ids) {
 
         const normalRef =
             db.collection("courses")
-              .doc(ids.courseId)
-              .collection("chapters")
-              .doc(ids.chapterId)
-              .collection("topics")
-              .doc(ids.topicId)
-              .collection("quiz")
-              .doc(ids.quizId);
+                .doc(ids.courseId)
+                .collection("chapters")
+                .doc(ids.chapterId)
+                .collection("topics")
+                .doc(ids.topicId)
+                .collection("quiz")
+                .doc(ids.quizId);
 
 
-        const snap =
+        let snap =
             await normalRef.get();
 
 
@@ -256,29 +278,25 @@
 
                 ref: normalRef,
 
-                data:
-                    snap.data() || {},
+                data: snap.data(),
 
-                mode:
-                    "topic"
+                mode: "topic"
 
             };
         }
 
 
-        // ===============================================
-        // TYPE PRACTICE FALLBACK
-        // ===============================================
+        /* TYPE PRACTICE */
 
         if (ids.typeId) {
 
             const typeRef =
                 db.collection("courses")
-                  .doc(ids.courseId)
-                  .collection("chapters")
-                  .doc(ids.chapterId)
-                  .collection("typePractice")
-                  .doc(ids.typeId);
+                    .doc(ids.courseId)
+                    .collection("chapters")
+                    .doc(ids.chapterId)
+                    .collection("typePractice")
+                    .doc(ids.typeId);
 
 
             const typeSnap =
@@ -300,13 +318,11 @@
 
                     ref: typeRef,
 
-                    typeRef: typeRef,
+                    data: typeSnap.data(),
 
-                    data:
-                        typeSnap.data() || {},
+                    mode: "type",
 
-                    mode:
-                        "type"
+                    typeRef: typeRef
 
                 };
             }
@@ -325,9 +341,9 @@
     }
 
 
-    // =====================================================
-    // LOAD QUESTIONS
-    // =====================================================
+    /* =====================================================
+       LOAD QUESTIONS
+    ===================================================== */
 
     async function loadQuestions(
         quizInfo
@@ -349,16 +365,13 @@
             questionRef =
                 quizInfo.typeRef
                     .collection("questions");
-
         }
 
 
         let snap;
 
 
-        // ===============================================
-        // TRY PUBLISHED + ORDER
-        // ===============================================
+        /* FIRST QUERY */
 
         try {
 
@@ -383,10 +396,6 @@
             );
 
 
-            // ===========================================
-            // TRY ORDER ONLY
-            // ===========================================
-
             try {
 
                 snap =
@@ -405,10 +414,6 @@
                 );
 
 
-                // =======================================
-                // LOAD ALL
-                // =======================================
-
                 snap =
                     await questionRef.get();
             }
@@ -418,52 +423,67 @@
         const list = [];
 
 
-        snap.forEach(function (doc) {
+        snap.forEach(
+            function (doc) {
 
-            const data =
-                doc.data() || {};
+                const data =
+                    doc.data() || {};
 
 
-            if (
-                data.published !== undefined &&
-                data.published === false
-            ) {
-                return;
+                if (
+                    data.published !==
+                        undefined &&
+                    data.published === false
+                ) {
+
+                    return;
+                }
+
+
+                list.push({
+
+                    id: doc.id,
+
+                    ...data
+
+                });
+
             }
+        );
 
 
-            list.push({
+        /* SORT */
 
-                id: doc.id,
+        list.sort(
+            function (a, b) {
 
-                ...data
+                const aOrder =
+                    Number(
+                        a.order || 0
+                    );
 
-            });
+                const bOrder =
+                    Number(
+                        b.order || 0
+                    );
 
-        });
 
+                return (
+                    aOrder -
+                    bOrder
+                );
 
-        // ===============================================
-        // SORT
-        // ===============================================
-
-        list.sort(function (a, b) {
-
-            return (
-                Number(a.order || 0) -
-                Number(b.order || 0)
-            );
-
-        });
+            }
+        );
 
 
         return list;
     }
 
 
-    // =====================================================
-    // LOAD QUIZ
-    // =====================================================
+    /* =====================================================
+       LOAD QUIZ
+    ===================================================== */
 
     async function loadQuiz() {
 
@@ -518,9 +538,7 @@
             );
 
 
-            // ==========================================
-            // MARKING
-            // ==========================================
+            /* MARKING */
 
             positiveMark =
                 Number(
@@ -538,9 +556,7 @@
                 );
 
 
-            // ==========================================
-            // TIME
-            // ==========================================
+            /* TIME */
 
             perQuestionTime =
                 Number(
@@ -558,13 +574,10 @@
             ) {
 
                 perQuestionTime = 60;
-
             }
 
 
-            // ==========================================
-            // QUESTIONS
-            // ==========================================
+            /* QUESTIONS */
 
             questions =
                 await loadQuestions(
@@ -574,13 +587,8 @@
 
             console.log(
                 "Questions loaded:",
-                questions.length
-            );
-
-
-            console.log(
-                "First question:",
-                questions[0]
+                questions.length,
+                questions
             );
 
 
@@ -598,23 +606,13 @@
             }
 
 
-            // ==========================================
-            // TOTAL TIME
-            // ==========================================
+            totalSeconds = 0;
 
-            totalSeconds =
-                0;
-
-
-            // ==========================================
-            // RESTORE
-            // ==========================================
 
             restoreAttempt();
 
 
-            quizFinished =
-                false;
+            quizFinished = false;
 
 
             updateQuizHeader();
@@ -647,9 +645,9 @@
     }
 
 
-    // =====================================================
-    // HEADER
-    // =====================================================
+    /* =====================================================
+       HEADER
+    ===================================================== */
 
     function updateQuizHeader() {
 
@@ -659,22 +657,20 @@
             "Practice Quiz";
 
 
-        const titleElement =
+        const titleEl =
             document.getElementById(
                 "quizTitle"
             );
 
 
-        if (titleElement) {
+        if (titleEl) {
 
-            titleElement.textContent =
+            titleEl.textContent =
                 title;
-
         }
 
 
         updateCounter();
-
     }
 
 
@@ -691,11 +687,10 @@
             counter.textContent =
                 questions.length
                     ? (
-                        currentIndex + 1
-                    ) +
-                    " / " +
-                    questions.length
-
+                        (currentIndex + 1) +
+                        " / " +
+                        questions.length
+                    )
                     : "0 / 0";
         }
 
@@ -713,42 +708,20 @@
 
             const percent =
                 (
-                    (
-                        currentIndex + 1
-                    ) /
+                    (currentIndex + 1) /
                     questions.length
-                ) *
-                100;
+                ) * 100;
 
 
             fill.style.width =
                 percent + "%";
-
         }
-
     }
 
 
-    // =====================================================
-    // GET QUESTION IMAGE
-    // =====================================================
-
-    function getQuestionImage(q) {
-
-        return (
-            q.questionImageUrl ||
-            q.questionImageURL ||
-            q.imageUrl ||
-            q.imageURL ||
-            q.questionImage ||
-            ""
-        );
-    }
-
-
-    // =====================================================
-    // GET QUESTION TEXT
-    // =====================================================
+    /* =====================================================
+       GET QUESTION TEXT
+    ===================================================== */
 
     function getQuestionText(q) {
 
@@ -762,101 +735,27 @@
     }
 
 
-    // =====================================================
-    // GET CORRECT ANSWER
-    // =====================================================
+    /* =====================================================
+       GET QUESTION IMAGE
+    ===================================================== */
 
-    function getCorrectOption(q) {
+    function getQuestionImage(q) {
 
-        let answer =
-            q.correctOption;
-
-
-        if (
-            answer === undefined ||
-            answer === null ||
-            answer === ""
-        ) {
-
-            answer =
-                q.answer;
-        }
-
-
-        if (
-            answer === undefined ||
-            answer === null ||
-            answer === ""
-        ) {
-
-            answer =
-                q.correctAnswer;
-        }
-
-
-        if (
-            typeof answer === "string"
-        ) {
-
-            const value =
-                answer
-                    .trim()
-                    .toUpperCase();
-
-
-            if (
-                value === "A"
-            ) return 1;
-
-            if (
-                value === "B"
-            ) return 2;
-
-            if (
-                value === "C"
-            ) return 3;
-
-            if (
-                value === "D"
-            ) return 4;
-
-
-            const number =
-                Number(value);
-
-
-            if (
-                number >= 1 &&
-                number <= 4
-            ) {
-
-                return number;
-
-            }
-        }
-
-
-        const number =
-            Number(answer);
-
-
-        if (
-            number >= 1 &&
-            number <= 4
-        ) {
-
-            return number;
-
-        }
-
-
-        return 0;
+        return (
+            q.questionImageUrl ||
+            q.questionImageURL ||
+            q.imageUrl ||
+            q.imageURL ||
+            q.questionImage ||
+            q.image ||
+            ""
+        );
     }
 
 
-    // =====================================================
-    // RENDER QUESTION
-    // =====================================================
+    /* =====================================================
+       RENDER QUESTION
+    ===================================================== */
 
     function renderQuestion() {
 
@@ -889,168 +788,102 @@
 
 
         const correctOption =
-            getCorrectOption(q);
+            Number(
+                q.correctOption ||
+                q.answer ||
+                q.correctAnswer ||
+                0
+            );
+
+
+        const questionText =
+            getQuestionText(q);
+
+
+        const imageUrl =
+            getQuestionImage(q);
 
 
         let html = "";
 
 
         html += `
-
             <div class="question-card">
-
         `;
 
 
-        // =================================================
-        // QUESTION NUMBER
-        // =================================================
+        /* =================================================
+           QUESTION TEXT
+           ================================================= */
 
-        html += `
+        if (questionText) {
 
-            <div
-                style="
-                    color:#ffc107;
-                    font-size:12px;
-                    font-weight:900;
-                    margin-bottom:12px;
-                "
-            >
+            html += `
+                <p class="question-text">
+                    ${escapeHTML(
+                        questionText
+                    )}
+                </p>
+            `;
 
-                QUESTION ${currentIndex + 1}
+        } else if (!imageUrl) {
 
-            </div>
+            html += `
+                <p class="question-text">
+                    Question not available
+                </p>
+            `;
+        }
 
-        `;
 
-
-        // =================================================
-        // QUESTION IMAGE
-        // =================================================
-
-        const imageUrl =
-            getQuestionImage(q);
-
+        /* =================================================
+           QUESTION IMAGE
+           ================================================= */
 
         if (imageUrl) {
 
             html += `
-
                 <div
+                    class="question-image-wrapper"
                     style="
                         width:100%;
                         display:flex;
                         justify-content:center;
-                        margin-bottom:18px;
+                        margin:15px 0;
                     "
                 >
 
                     <img
-                        src="${escapeAttribute(imageUrl)}"
+                        src="${escapeAttribute(
+                            imageUrl
+                        )}"
                         class="question-image"
                         alt="Question"
                         style="
                             max-width:100%;
                             width:auto;
-                            max-height:520px;
+                            height:auto;
+                            max-height:500px;
                             object-fit:contain;
-                            border-radius:12px;
                             display:block;
+                            border-radius:12px;
                         "
                         onerror="
                             this.style.display='none';
-                            this.nextElementSibling.style.display='block';
                         "
                     >
 
-                    <div
-                        style="
-                            display:none;
-                            color:#9ba8ba;
-                            padding:20px;
-                            text-align:center;
-                        "
-                    >
-                        Question image could not be loaded.
-                    </div>
-
                 </div>
-
             `;
         }
 
 
-        // =================================================
-        // QUESTION TEXT
-        // =================================================
-
-        const questionText =
-            getQuestionText(q);
-
-
-        if (questionText) {
-
-            html += `
-
-                <div
-                    class="question-text"
-                    style="
-                        color:#ffffff;
-                        font-size:18px;
-                        font-weight:800;
-                        line-height:1.6;
-                        margin-bottom:18px;
-                    "
-                >
-
-                    ${escapeHTML(
-                        questionText
-                    )}
-
-                </div>
-
-            `;
-        }
-
-
-        // =================================================
-        // IF NO IMAGE + NO TEXT
-        // =================================================
-
-        if (
-            !imageUrl &&
-            !questionText
-        ) {
-
-            html += `
-
-                <div
-                    style="
-                        padding:20px;
-                        background:#111c30;
-                        border-radius:12px;
-                        color:#ffc107;
-                        text-align:center;
-                    "
-                >
-
-                    Question not available.
-
-                </div>
-
-            `;
-
-        }
-
-
-        // =================================================
-        // OPTIONS
-        // =================================================
+        /* =================================================
+           OPTIONS
+           ================================================= */
 
         html += `
-
             <div class="options">
-
         `;
 
 
@@ -1060,16 +893,19 @@
             i++
         ) {
 
-            const optionValue =
+            const optionText =
                 q[
                     "option" + i
                 ];
 
 
             if (
-                optionValue === undefined ||
-                optionValue === null ||
-                optionValue === ""
+                optionText ===
+                    undefined ||
+                optionText ===
+                    null ||
+                String(optionText)
+                    .trim() === ""
             ) {
 
                 continue;
@@ -1080,6 +916,8 @@
                 "option";
 
 
+            /* SELECTED */
+
             if (
                 Number(selected) === i &&
                 !submitted
@@ -1087,30 +925,31 @@
 
                 classes +=
                     " selected";
-
             }
 
+
+            /* SUBMITTED */
 
             if (submitted) {
 
                 if (
-                    i === correctOption
+                    i ===
+                    correctOption
                 ) {
 
                     classes +=
                         " correct";
-
                 }
 
 
                 if (
                     Number(selected) === i &&
-                    i !== correctOption
+                    Number(selected) !==
+                        correctOption
                 ) {
 
                     classes +=
                         " wrong";
-
                 }
 
 
@@ -1120,7 +959,6 @@
 
 
             html += `
-
                 <button
                     type="button"
                     class="${classes}"
@@ -1133,44 +971,31 @@
                     }
                 >
 
-                    <span
-                        class="option-letter"
-                    >
-
+                    <span class="option-letter">
                         ${i}
-
                     </span>
 
-
-                    <span
-                        class="option-text"
-                    >
-
+                    <span class="option-text">
                         ${escapeHTML(
                             String(
-                                optionValue
+                                optionText
                             )
                         )}
-
                     </span>
 
                 </button>
-
             `;
-
         }
 
 
         html += `
-
             </div>
-
         `;
 
 
-        // =================================================
-        // ANSWER STATUS
-        // =================================================
+        /* =================================================
+           ANSWER STATUS
+           ================================================= */
 
         if (submitted) {
 
@@ -1179,10 +1004,12 @@
                 correctOption;
 
 
-            if (isCorrect) {
+            if (
+                isCorrect &&
+                selected
+            ) {
 
                 html += `
-
                     <div
                         class="
                             answer-status
@@ -1190,17 +1017,13 @@
                             correct-status
                         "
                     >
-
                         ✅ Correct Answer
-
                     </div>
-
                 `;
 
             } else if (selected) {
 
                 html += `
-
                     <div
                         class="
                             answer-status
@@ -1219,13 +1042,11 @@
                         </b>
 
                     </div>
-
                 `;
 
             } else {
 
                 html += `
-
                     <div
                         class="
                             answer-status
@@ -1244,14 +1065,11 @@
                         </b>
 
                     </div>
-
                 `;
             }
 
 
-            // =============================================
-            // SOLUTION
-            // =============================================
+            /* SOLUTION */
 
             const solution =
                 q.solution ||
@@ -1262,6 +1080,7 @@
             const reference =
                 q.reference ||
                 q.ncertReference ||
+                q.ncertPage ||
                 "";
 
 
@@ -1271,69 +1090,65 @@
             ) {
 
                 html += `
-
                     <div
-                        class="solution-box show"
+                        class="
+                            solution-box
+                            show
+                        "
                     >
 
                         <div
                             class="solution-title"
                         >
-
                             📖 Solution
-
                         </div>
 
-
-                        <div
-                            class="solution-text"
-                        >
-
-                            ${escapeHTML(
-                                solution ||
-                                "Solution not available."
-                            )}
-
-                        </div>
-
+                        ${
+                            solution
+                                ? `
+                                    <div
+                                        class="
+                                            solution-text
+                                        "
+                                    >
+                                        ${escapeHTML(
+                                            solution
+                                        )}
+                                    </div>
+                                  `
+                                : ""
+                        }
 
                         ${
                             reference
                                 ? `
-
                                     <div
-                                        class="reference-text"
+                                        class="
+                                            reference-text
+                                        "
                                     >
-
                                         📚 NCERT Reference:
-
                                         ${escapeHTML(
                                             reference
                                         )}
-
                                     </div>
-
-                                `
+                                  `
                                 : ""
                         }
 
                     </div>
-
                 `;
-
             }
-
         }
 
 
-        // =================================================
-        // SUBMIT ANSWER
-        // =================================================
+        /* =================================================
+           SUBMIT ANSWER
+           ================================================= */
 
         if (!submitted) {
 
             html += `
-
                 <button
                     type="button"
                     id="submitAnswerButton"
@@ -1345,27 +1160,25 @@
                             : "disabled"
                     }
                 >
-
                     ✓ Submit Answer
-
                 </button>
-
             `;
-
         }
 
 
-        // =================================================
-        // NAVIGATION
-        // =================================================
+        /* =================================================
+           NAVIGATION
+           ================================================= */
 
         html += `
-
             <div class="quiz-actions">
 
                 <button
                     type="button"
-                    class="quiz-button previous-button"
+                    class="
+                        quiz-button
+                        previous-button
+                    "
                     onclick="previousQuestion()"
                     ${
                         currentIndex === 0
@@ -1373,61 +1186,52 @@
                             : ""
                     }
                 >
-
                     ← Previous
-
                 </button>
 
 
                 <button
                     type="button"
-                    class="quiz-button next-button"
+                    class="
+                        quiz-button
+                        next-button
+                    "
                     onclick="nextQuestion()"
                 >
-
                     ${
                         currentIndex ===
                         questions.length - 1
-
                             ? "Finish"
-
                             : "Next →"
                     }
-
                 </button>
 
             </div>
-
         `;
 
 
-        // =================================================
-        // SUBMIT QUIZ
-        // =================================================
+        /* =================================================
+           SUBMIT QUIZ
+           ================================================= */
 
         if (submitted) {
 
             html += `
-
                 <button
                     type="button"
-                    class="submit-quiz-button"
+                    class="
+                        submit-quiz-button
+                    "
                     onclick="finishQuiz()"
                 >
-
                     Submit Quiz
-
                 </button>
-
             `;
-
         }
 
 
         html += `
-
             </div>
-
         `;
 
 
@@ -1438,6 +1242,8 @@
         updateCounter();
 
 
+        /* TIMER */
+
         if (submitted) {
 
             stopQuestionTimer();
@@ -1445,18 +1251,16 @@
         } else {
 
             startQuestionTimer();
-
         }
 
 
         saveAttempt();
-
     }
 
 
-    // =====================================================
-    // SELECT OPTION
-    // =====================================================
+    /* =====================================================
+       SELECT OPTION
+    ===================================================== */
 
     window.selectOption =
         function (option) {
@@ -1478,7 +1282,6 @@
             if (
                 submittedAnswers[q.id]
             ) {
-
                 return;
             }
 
@@ -1491,13 +1294,12 @@
 
 
             saveAttempt();
-
         };
 
 
-    // =====================================================
-    // SUBMIT ANSWER
-    // =====================================================
+    /* =====================================================
+       SUBMIT ANSWER
+    ===================================================== */
 
     window.submitAnswer =
         function () {
@@ -1541,21 +1343,17 @@
 
 
             saveAttempt();
-
         };
 
 
-    // =====================================================
-    // PREVIOUS
-    // =====================================================
+    /* =====================================================
+       PREVIOUS
+    ===================================================== */
 
     window.previousQuestion =
         function () {
 
-            if (
-                currentIndex <= 0
-            ) {
-
+            if (currentIndex <= 0) {
                 return;
             }
 
@@ -1580,7 +1378,6 @@
 
                 questionTimeLeft =
                     perQuestionTime;
-
             }
 
 
@@ -1588,13 +1385,12 @@
 
 
             saveAttempt();
-
         };
 
 
-    // =====================================================
-    // NEXT
-    // =====================================================
+    /* =====================================================
+       NEXT
+    ===================================================== */
 
     window.nextQuestion =
         function () {
@@ -1630,7 +1426,6 @@
 
                 questionTimeLeft =
                     perQuestionTime;
-
             }
 
 
@@ -1638,13 +1433,12 @@
 
 
             saveAttempt();
-
         };
 
 
-    // =====================================================
-    // QUESTION TIMER
-    // =====================================================
+    /* =====================================================
+       QUESTION TIMER
+    ===================================================== */
 
     function startQuestionTimer() {
 
@@ -1677,7 +1471,6 @@
 
             questionTimeLeft =
                 perQuestionTime;
-
         }
 
 
@@ -1711,37 +1504,24 @@
                     questionTimeLeft--;
 
 
+                    updateQuestionTimer(
+                        questionTimeLeft
+                    );
+
+
                     if (
                         questionTimeLeft <= 0
                     ) {
-
-                        questionTimeLeft =
-                            0;
-
-
-                        updateQuestionTimer(
-                            0
-                        );
-
 
                         stopQuestionTimer();
 
 
                         autoSubmitOnTimeout();
-
-
-                        return;
                     }
-
-
-                    updateQuestionTimer(
-                        questionTimeLeft
-                    );
 
                 },
                 1000
             );
-
     }
 
 
@@ -1754,9 +1534,7 @@
             );
 
             questionTimer = null;
-
         }
-
     }
 
 
@@ -1778,7 +1556,7 @@
         const value =
             Math.max(
                 0,
-                Number(seconds)
+                Number(seconds) || 0
             );
 
 
@@ -1786,9 +1564,7 @@
             value;
 
 
-        if (
-            value <= 10
-        ) {
+        if (value <= 10) {
 
             el.classList.add(
                 "timer-danger"
@@ -1799,15 +1575,13 @@
             el.classList.remove(
                 "timer-danger"
             );
-
         }
-
     }
 
 
-    // =====================================================
-    // AUTO SUBMIT
-    // =====================================================
+    /* =====================================================
+       AUTO SUBMIT
+    ===================================================== */
 
     function autoSubmitOnTimeout() {
 
@@ -1823,7 +1597,6 @@
         if (
             submittedAnswers[q.id]
         ) {
-
             return;
         }
 
@@ -1836,13 +1609,12 @@
 
 
         saveAttempt();
-
     }
 
 
-    // =====================================================
-    // TOTAL TIMER
-    // =====================================================
+    /* =====================================================
+       TOTAL TIMER
+       ===================================================== */
 
     function startTotalTimer() {
 
@@ -1851,7 +1623,6 @@
             clearInterval(
                 totalTimer
             );
-
         }
 
 
@@ -1883,7 +1654,6 @@
                 },
                 1000
             );
-
     }
 
 
@@ -1917,13 +1687,12 @@
             ":" +
             String(seconds)
                 .padStart(2, "0");
-
     }
 
 
-    // =====================================================
-    // FINISH QUIZ
-    // =====================================================
+    /* =====================================================
+       FINISH QUIZ
+    ===================================================== */
 
     window.finishQuiz =
         function () {
@@ -1937,9 +1706,11 @@
                 questions.filter(
                     function (q) {
 
-                        return !submittedAnswers[
-                            q.id
-                        ];
+                        return !(
+                            submittedAnswers[
+                                q.id
+                            ]
+                        );
 
                     }
                 ).length;
@@ -1974,12 +1745,10 @@
                             submittedAnswers[
                                 q.id
                             ] = true;
-
                         }
 
                     }
                 );
-
             }
 
 
@@ -1996,7 +1765,6 @@
                 );
 
                 totalTimer = null;
-
             }
 
 
@@ -2004,13 +1772,12 @@
 
 
             clearAttempt();
-
         };
 
 
-    // =====================================================
-    // CALCULATE RESULT
-    // =====================================================
+    /* =====================================================
+       CALCULATE RESULT
+    ===================================================== */
 
     function calculateResult() {
 
@@ -2035,7 +1802,12 @@
 
 
                 const correctAnswer =
-                    getCorrectOption(q);
+                    Number(
+                        q.correctOption ||
+                        q.answer ||
+                        q.correctAnswer ||
+                        0
+                    );
 
 
                 if (!selected) {
@@ -2062,7 +1834,6 @@
 
                     score -=
                         negativeMark;
-
                 }
 
             }
@@ -2080,14 +1851,9 @@
                     (
                         correct /
                         attempted
-                    ) *
-                    100
+                    ) * 100
                 )
                 : 0;
-
-
-        const ids =
-            getIds();
 
 
         const result = {
@@ -2096,61 +1862,49 @@
 
                 score,
 
-
             correct:
 
                 correct,
-
 
             incorrect:
 
                 incorrect,
 
-
             skipped:
 
                 skipped,
-
 
             accuracy:
 
                 accuracy,
 
-
             total:
 
                 questions.length,
-
 
             totalQuestions:
 
                 questions.length,
 
-
             attempted:
 
                 attempted,
-
 
             time:
 
                 totalSeconds,
 
-
             totalTime:
 
                 totalSeconds,
-
 
             positiveMark:
 
                 positiveMark,
 
-
             negativeMark:
 
                 negativeMark,
-
 
             quizTitle:
 
@@ -2158,26 +1912,21 @@
                 quizData.name ||
                 "Practice Quiz",
 
-
             courseId:
 
-                ids.courseId,
-
+                getIds().courseId,
 
             chapterId:
 
-                ids.chapterId,
-
+                getIds().chapterId,
 
             topicId:
 
-                ids.topicId,
-
+                getIds().topicId,
 
             quizId:
 
-                ids.quizId,
-
+                getIds().quizId,
 
             questionIds:
 
@@ -2187,27 +1936,19 @@
                     }
                 ),
 
-
             selectedAnswers:
 
                 selectedAnswers,
-
 
             submittedAnswers:
 
                 submittedAnswers,
 
-
             completedAt:
 
                 Date.now()
-
         };
 
-
-        // ===============================================
-        // SAVE RESULT
-        // ===============================================
 
         localStorage.setItem(
             "quizResult",
@@ -2221,9 +1962,7 @@
         );
 
 
-        // ===============================================
-        // HISTORY
-        // ===============================================
+        /* HISTORY */
 
         let history = [];
 
@@ -2240,7 +1979,6 @@
         } catch (error) {
 
             history = [];
-
         }
 
 
@@ -2260,9 +1998,7 @@
         );
 
 
-        // ===============================================
-        // REDIRECT
-        // ===============================================
+        /* REDIRECT */
 
         setTimeout(
             function () {
@@ -2273,13 +2009,12 @@
             },
             100
         );
-
     }
 
 
-    // =====================================================
-    // ATTEMPT KEY
-    // =====================================================
+    /* =====================================================
+       ATTEMPT KEY
+    ===================================================== */
 
     function getAttemptKey() {
 
@@ -2300,13 +2035,12 @@
             ids.quizId
 
         ].join("_");
-
     }
 
 
-    // =====================================================
-    // SAVE ATTEMPT
-    // =====================================================
+    /* =====================================================
+       SAVE ATTEMPT
+    ===================================================== */
 
     function saveAttempt() {
 
@@ -2314,7 +2048,6 @@
             !questions.length ||
             quizFinished
         ) {
-
             return;
         }
 
@@ -2325,26 +2058,21 @@
 
                 currentIndex,
 
-
             selectedAnswers:
 
                 selectedAnswers,
-
 
             submittedAnswers:
 
                 submittedAnswers,
 
-
             questionTimeLeft:
 
                 questionTimeLeft,
 
-
             totalSeconds:
 
                 totalSeconds,
-
 
             savedAt:
 
@@ -2357,13 +2085,12 @@
             getAttemptKey(),
             JSON.stringify(attempt)
         );
-
     }
 
 
-    // =====================================================
-    // RESTORE ATTEMPT
-    // =====================================================
+    /* =====================================================
+       RESTORE ATTEMPT
+    ===================================================== */
 
     function restoreAttempt() {
 
@@ -2398,23 +2125,14 @@
 
             if (
                 !attempt.savedAt ||
-                Date.now() -
-                attempt.savedAt >
+                (
+                    Date.now() -
+                    attempt.savedAt
+                ) >
                 6 * 60 * 60 * 1000
             ) {
 
                 clearAttempt();
-
-                currentIndex = 0;
-
-                selectedAnswers = {};
-
-                submittedAnswers = {};
-
-                questionTimeLeft =
-                    perQuestionTime;
-
-                totalSeconds = 0;
 
                 return;
             }
@@ -2422,7 +2140,8 @@
 
             currentIndex =
                 Number(
-                    attempt.currentIndex || 0
+                    attempt.currentIndex ||
+                    0
                 );
 
 
@@ -2432,7 +2151,6 @@
             ) {
 
                 currentIndex = 0;
-
             }
 
 
@@ -2477,28 +2195,25 @@
                 perQuestionTime;
 
             totalSeconds = 0;
-
         }
-
     }
 
 
-    // =====================================================
-    // CLEAR ATTEMPT
-    // =====================================================
+    /* =====================================================
+       CLEAR ATTEMPT
+    ===================================================== */
 
     function clearAttempt() {
 
         localStorage.removeItem(
             getAttemptKey()
         );
-
     }
 
 
-    // =====================================================
-    // BACK TO TOPIC
-    // =====================================================
+    /* =====================================================
+       BACK TO TOPIC
+    ===================================================== */
 
     window.goBackToTopic =
         function () {
@@ -2521,13 +2236,12 @@
                 encodeURIComponent(
                     ids.topicId
                 );
-
         };
 
 
-    // =====================================================
-    // LOADING
-    // =====================================================
+    /* =====================================================
+       LOADING
+    ===================================================== */
 
     function showLoading(message) {
 
@@ -2543,7 +2257,6 @@
 
 
         container.innerHTML = `
-
             <div class="quiz-loading">
 
                 ${escapeHTML(
@@ -2552,15 +2265,13 @@
                 )}
 
             </div>
-
         `;
-
     }
 
 
-    // =====================================================
-    // ERROR
-    // =====================================================
+    /* =====================================================
+       ERROR
+    ===================================================== */
 
     function showError(message) {
 
@@ -2576,7 +2287,6 @@
 
 
         container.innerHTML = `
-
             <div class="quiz-error">
 
                 ⚠️
@@ -2597,23 +2307,20 @@
                         background:#ffc107;
                         color:#111;
                         font-weight:900;
+                        cursor:pointer;
                     "
                 >
-
                     ← Back to Topic
-
                 </button>
 
             </div>
-
         `;
-
     }
 
 
-    // =====================================================
-    // ESCAPE HTML
-    // =====================================================
+    /* =====================================================
+       ESCAPE HTML
+    ===================================================== */
 
     function escapeHTML(value) {
 
@@ -2643,20 +2350,18 @@
                 /'/g,
                 "&#039;"
             );
-
     }
 
 
     function escapeAttribute(value) {
 
         return escapeHTML(value);
-
     }
 
 
-    // =====================================================
-    // START
-    // =====================================================
+    /* =====================================================
+       START
+    ===================================================== */
 
     function start() {
 
@@ -2675,13 +2380,12 @@
 
 
         loadQuiz();
-
     }
 
 
-    // =====================================================
-    // DOM READY
-    // =====================================================
+    /* =====================================================
+       DOM READY
+    ===================================================== */
 
     if (
         document.readyState ===
@@ -2696,7 +2400,7 @@
     } else {
 
         start();
-
     }
+
 
 })();
