@@ -1,6 +1,6 @@
 // ==========================================================
 // mNEET - NCERT READING
-// Fresh Complete Firebase Firestore Version
+// Fresh Complete Firebase Firestore + Storage Version
 // Chapter-wise NCERT + Chapter-wise PYQ
 // ==========================================================
 
@@ -15,6 +15,8 @@ let currentUser = null;
 
 let db = null;
 
+let storage = null;
+
 let chapters = [];
 
 let filteredChapters = [];
@@ -22,6 +24,8 @@ let filteredChapters = [];
 let currentCourseId = "";
 
 let currentCourse = {};
+
+let firebaseReady = false;
 
 
 
@@ -62,6 +66,20 @@ function waitForFirebase() {
     }
 
 
+    if (
+        !firebase.apps ||
+        !firebase.apps.length
+    ) {
+
+        setTimeout(
+            waitForFirebase,
+            300
+        );
+
+        return;
+    }
+
+
     firebase.auth().onAuthStateChanged(
         function (user) {
 
@@ -75,6 +93,8 @@ function waitForFirebase() {
 
 
             currentUser = user;
+
+            firebaseReady = true;
 
             initializeNCERT();
 
@@ -91,7 +111,12 @@ function waitForFirebase() {
 
 async function initializeNCERT() {
 
-    db = getFirestore();
+    db =
+        getFirestore();
+
+
+    storage =
+        getStorage();
 
 
     if (!db) {
@@ -113,10 +138,14 @@ async function initializeNCERT() {
         ids.courseId;
 
 
-    localStorage.setItem(
-        "activeCourse",
-        currentCourseId
-    );
+    if (currentCourseId) {
+
+        localStorage.setItem(
+            "activeCourse",
+            currentCourseId
+        );
+
+    }
 
 
     try {
@@ -181,6 +210,57 @@ function getFirestore() {
 
         console.error(
             "Firestore error:",
+            error
+        );
+
+        return null;
+    }
+
+}
+
+
+
+/* ==========================================================
+   FIREBASE STORAGE
+   ========================================================== */
+
+function getStorage() {
+
+    try {
+
+        if (
+            typeof firebase ===
+            "undefined"
+        ) {
+
+            return null;
+        }
+
+
+        if (
+            !firebase.apps ||
+            !firebase.apps.length
+        ) {
+
+            return null;
+        }
+
+
+        if (
+            typeof firebase.storage !==
+            "function"
+        ) {
+
+            return null;
+        }
+
+
+        return firebase.storage();
+
+    } catch (error) {
+
+        console.warn(
+            "Firebase Storage unavailable:",
             error
         );
 
@@ -380,8 +460,28 @@ async function loadChapters() {
         );
 
 
-        snap =
-            await chapterRef.get();
+        try {
+
+            snap =
+                await chapterRef
+                    .orderBy(
+                        "chapterOrder",
+                        "asc"
+                    )
+                    .get();
+
+        } catch (error2) {
+
+            console.warn(
+                "ChapterOrder query failed:",
+                error2
+            );
+
+
+            snap =
+                await chapterRef.get();
+
+        }
 
     }
 
@@ -440,18 +540,20 @@ function sortChapters() {
 
             const aOrder =
                 Number(
-                    a.order ||
-                    a.chapterOrder ||
-                    a.number ||
+                    a.order ??
+                    a.chapterOrder ??
+                    a.number ??
+                    a.chapterNumber ??
                     9999
                 );
 
 
             const bOrder =
                 Number(
-                    b.order ||
-                    b.chapterOrder ||
-                    b.number ||
+                    b.order ??
+                    b.chapterOrder ??
+                    b.number ??
+                    b.chapterNumber ??
                     9999
                 );
 
@@ -555,9 +657,10 @@ function createChapterCard(
 
     const number =
         Number(
-            chapter.number ||
-            chapter.chapterNumber ||
-            chapter.order ||
+            chapter.number ??
+            chapter.chapterNumber ??
+            chapter.order ??
+            chapter.chapterOrder ??
             index + 1
         );
 
@@ -582,8 +685,8 @@ function createChapterCard(
 
 
     const topicCount =
-        chapter.topicCount ||
-        chapter.topicsCount ||
+        chapter.topicCount ??
+        chapter.topicsCount ??
         "";
 
 
@@ -593,7 +696,9 @@ function createChapterCard(
 
             <div class="chapter-number">
 
-                ${number}
+                ${escapeHTML(
+                    String(number)
+                )}
 
             </div>
 
@@ -610,7 +715,7 @@ function createChapterCard(
                 <div class="chapter-meta">
 
                     ${
-                        topicCount
+                        topicCount !== ""
                             ? escapeHTML(
                                 String(
                                     topicCount
@@ -663,38 +768,40 @@ function createChapterCard(
         );
 
 
-    ncertButton.addEventListener(
-        "click",
-        function () {
+    if (ncertButton) {
 
-            openPDF(
-                ncertUrl,
-                "NCERT PDF"
-            );
+        ncertButton.addEventListener(
+            "click",
+            async function () {
 
-        }
-    );
+                await openPDF(
+                    ncertUrl,
+                    "NCERT PDF",
+                    chapter
+                );
 
+            }
+        );
 
-    pyqButton.addEventListener(
-        "click",
-        function () {
-
-            openPDF(
-                pyqUrl,
-                "PYQ PDF"
-            );
-
-        }
-    );
+    }
 
 
-    /*
-      If PDF is not available,
-      button stays usable and gives
-      a clear message instead of
-      breaking the page.
-    */
+    if (pyqButton) {
+
+        pyqButton.addEventListener(
+            "click",
+            async function () {
+
+                await openPDF(
+                    pyqUrl,
+                    "PYQ PDF",
+                    chapter
+                );
+
+            }
+        );
+
+    }
 
 
     return card;
@@ -704,7 +811,7 @@ function createChapterCard(
 
 
 /* ==========================================================
-   NCERT URL
+   NCERT URL / PATH
    ========================================================== */
 
 function getNCERTUrl(chapter) {
@@ -715,6 +822,8 @@ function getNCERTUrl(chapter) {
 
         chapter.ncertPDFUrl ||
 
+        chapter.ncertPdfURL ||
+
         chapter.ncertUrl ||
 
         chapter.ncertURL ||
@@ -723,13 +832,31 @@ function getNCERTUrl(chapter) {
 
         chapter.ncertPDF ||
 
-        chapter.pdfUrl ||
-
-        chapter.pdfURL ||
+        chapter.ncert ||
 
         chapter.bookPdfUrl ||
 
         chapter.bookPDFUrl ||
+
+        chapter.bookPdf ||
+
+        chapter.bookPDF ||
+
+        chapter.ncertBookUrl ||
+
+        chapter.ncertBookURL ||
+
+        chapter.pdfUrl ||
+
+        chapter.pdfURL ||
+
+        chapter.pdf ||
+
+        chapter.ncertStoragePath ||
+
+        chapter.ncertPdfPath ||
+
+        chapter.ncertPath ||
 
         ""
 
@@ -740,7 +867,7 @@ function getNCERTUrl(chapter) {
 
 
 /* ==========================================================
-   PYQ URL
+   PYQ URL / PATH
    ========================================================== */
 
 function getPYQUrl(chapter) {
@@ -751,6 +878,8 @@ function getPYQUrl(chapter) {
 
         chapter.pyqPDFUrl ||
 
+        chapter.pyqPdfURL ||
+
         chapter.pyqUrl ||
 
         chapter.pyqURL ||
@@ -759,9 +888,21 @@ function getPYQUrl(chapter) {
 
         chapter.pyqPDF ||
 
+        chapter.pyq ||
+
         chapter.previousYearPdfUrl ||
 
         chapter.previousYearPDFUrl ||
+
+        chapter.previousYearPdf ||
+
+        chapter.previousYearPDF ||
+
+        chapter.pyqStoragePath ||
+
+        chapter.pyqPdfPath ||
+
+        chapter.pyqPath ||
 
         ""
 
@@ -772,15 +913,186 @@ function getPYQUrl(chapter) {
 
 
 /* ==========================================================
+   CHECK FIREBASE STORAGE PATH
+   ========================================================== */
+
+function looksLikeStoragePath(value) {
+
+    const text =
+        cleanValue(value);
+
+
+    if (!text) {
+        return false;
+    }
+
+
+    /*
+      Normal URL হলে false.
+    */
+
+    if (
+        text.startsWith("http://") ||
+        text.startsWith("https://") ||
+        text.startsWith("blob:") ||
+        text.startsWith("data:")
+    ) {
+
+        return false;
+    }
+
+
+    /*
+      Firebase Storage gs:// path
+    */
+
+    if (
+        text.startsWith("gs://")
+    ) {
+
+        return true;
+    }
+
+
+    /*
+      Common PDF/storage path
+    */
+
+    if (
+        text.includes("/") &&
+        (
+            text.toLowerCase().includes(".pdf") ||
+            text.toLowerCase().includes("ncert") ||
+            text.toLowerCase().includes("pyq")
+        )
+    ) {
+
+        return true;
+    }
+
+
+    return false;
+
+}
+
+
+
+/* ==========================================================
+   RESOLVE STORAGE PATH
+   ========================================================== */
+
+async function resolvePDFUrl(value) {
+
+    const clean =
+        cleanValue(value);
+
+
+    if (!clean) {
+
+        return "";
+
+    }
+
+
+    /*
+      Already a URL
+    */
+
+    if (
+        clean.startsWith("http://") ||
+        clean.startsWith("https://") ||
+        clean.startsWith("blob:") ||
+        clean.startsWith("data:")
+    ) {
+
+        return clean;
+
+    }
+
+
+    /*
+      Storage unavailable
+    */
+
+    if (
+        !storage ||
+        !looksLikeStoragePath(clean)
+    ) {
+
+        return clean;
+
+    }
+
+
+    try {
+
+        const ref =
+            storage.ref(
+                clean
+            );
+
+
+        const url =
+            await ref.getDownloadURL();
+
+
+        return url || "";
+
+    } catch (error) {
+
+        console.warn(
+            "Storage PDF URL resolve failed:",
+            error
+        );
+
+
+        return "";
+
+    }
+
+}
+
+
+
+/* ==========================================================
    OPEN PDF
    ========================================================== */
 
-function openPDF(
+async function openPDF(
     url,
-    label
+    label,
+    chapter
 ) {
 
-    if (!url) {
+    let finalUrl =
+        cleanValue(url);
+
+
+    /*
+      If Firestore stores Firebase
+      Storage path instead of URL,
+      convert it to download URL.
+    */
+
+    if (
+        finalUrl &&
+        !(
+            finalUrl.startsWith("http://") ||
+            finalUrl.startsWith("https://") ||
+            finalUrl.startsWith("blob:") ||
+            finalUrl.startsWith("data:")
+        )
+    ) {
+
+        finalUrl =
+            await resolvePDFUrl(
+                finalUrl
+            );
+
+    }
+
+
+    if (!finalUrl) {
 
         alert(
             label +
@@ -797,19 +1109,44 @@ function openPDF(
 
     localStorage.setItem(
         "lastNCERTPdf",
-        url
+        finalUrl
     );
+
+
+    if (chapter) {
+
+        localStorage.setItem(
+            "lastNCERTChapter",
+            chapter.id ||
+            ""
+        );
+
+    }
 
 
     /*
       Open PDF
     */
 
-    window.open(
-        url,
-        "_blank",
-        "noopener,noreferrer"
-    );
+    const opened =
+        window.open(
+            finalUrl,
+            "_blank",
+            "noopener,noreferrer"
+        );
+
+
+    /*
+      Browser popup blocker
+    */
+
+    if (!opened) {
+
+        alert(
+            "PDF open করা যায়নি। Browser popup permission allow করুন।"
+        );
+
+    }
 
 }
 
@@ -862,11 +1199,22 @@ function setupSearch() {
                                 "";
 
 
-                            return String(
-                                title
-                            )
-                            .toLowerCase()
-                            .includes(value);
+                            const number =
+                                chapter.number ||
+                                chapter.chapterNumber ||
+                                chapter.order ||
+                                "";
+
+
+                            const combined =
+                                String(title) +
+                                " " +
+                                String(number);
+
+
+                            return combined
+                                .toLowerCase()
+                                .includes(value);
 
                         }
                     );
@@ -1019,12 +1367,14 @@ function goBack() {
 }
 
 
+
 function goHome() {
 
     window.location.href =
         "student.html";
 
 }
+
 
 
 function goTop() {
@@ -1038,6 +1388,7 @@ function goTop() {
     });
 
 }
+
 
 
 function openPractice() {
@@ -1075,6 +1426,7 @@ function openPractice() {
 }
 
 
+
 function openProfile() {
 
     /*
@@ -1090,7 +1442,41 @@ function openProfile() {
 
 
 /* ==========================================================
-   HELPERS
+   OPTIONAL QUICK NAVIGATION
+   ========================================================== */
+
+function openNCERT() {
+
+    const courseId =
+        currentCourseId ||
+        localStorage.getItem(
+            "activeCourse"
+        ) ||
+        "";
+
+
+    if (courseId) {
+
+        window.location.href =
+            "ncert.html" +
+            "?courseId=" +
+            encodeURIComponent(
+                courseId
+            );
+
+    } else {
+
+        window.location.href =
+            "student.html";
+
+    }
+
+}
+
+
+
+/* ==========================================================
+   CLEAN VALUE
    ========================================================== */
 
 function cleanValue(value) {
@@ -1110,6 +1496,10 @@ function cleanValue(value) {
 }
 
 
+
+/* ==========================================================
+   HTML ESCAPE
+   ========================================================== */
 
 function escapeHTML(value) {
 
