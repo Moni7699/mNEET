@@ -1,7 +1,7 @@
 // ==========================================================
-// mNEET - NCERT READING SYSTEM
-// Firebase Firestore Compatible
-// Chapter-wise NCERT + Chapter-wise PYQ PDF
+// mNEET - NCERT READING
+// Fresh Complete Firebase Firestore Version
+// Chapter-wise NCERT + Chapter-wise PYQ
 // ==========================================================
 
 "use strict";
@@ -15,17 +15,13 @@ let currentUser = null;
 
 let db = null;
 
-let currentCourseId = "";
-
-let currentCourse = {};
-
 let chapters = [];
 
 let filteredChapters = [];
 
-let currentReaderUrl = "";
+let currentCourseId = "";
 
-let currentReaderPyqUrl = "";
+let currentCourse = {};
 
 
 
@@ -80,28 +76,7 @@ function waitForFirebase() {
 
             currentUser = user;
 
-
-            try {
-
-                db =
-                    firebase.firestore();
-
-            } catch (error) {
-
-                console.error(
-                    "Firestore error:",
-                    error
-                );
-
-                showMessage(
-                    "Firebase Firestore load করতে সমস্যা হয়েছে."
-                );
-
-                return;
-            }
-
-
-            loadNCERT();
+            initializeNCERT();
 
         }
     );
@@ -111,90 +86,31 @@ function waitForFirebase() {
 
 
 /* ==========================================================
-   GET URL PARAMETER
+   INITIALIZE
    ========================================================== */
 
-function getParam(name) {
+async function initializeNCERT() {
 
-    try {
-
-        const params =
-            new URLSearchParams(
-                window.location.search
-            );
+    db = getFirestore();
 
 
-        return (
-            params.get(name) || ""
-        ).trim();
+    if (!db) {
 
-    } catch (error) {
-
-        return "";
-
-    }
-
-}
-
-
-
-/* ==========================================================
-   GET COURSE ID
-   ========================================================== */
-
-function getCourseId() {
-
-    const fromUrl =
-        getParam("courseId") ||
-        getParam("course");
-
-
-    if (fromUrl) {
-
-        return fromUrl;
-
-    }
-
-
-    const fromStorage =
-        localStorage.getItem(
-            "activeCourse"
+        showError(
+            "Firebase Firestore load হয়নি।<br><br>" +
+            "Please check js/firebase.js"
         );
-
-
-    return (
-        fromStorage || ""
-    ).trim();
-
-}
-
-
-
-/* ==========================================================
-   LOAD NCERT
-   ========================================================== */
-
-async function loadNCERT() {
-
-    currentCourseId =
-        getCourseId();
-
-
-    if (!currentCourseId) {
-
-        setText(
-            "courseTitle",
-            "No Course Selected"
-        );
-
-
-        showMessage(
-            "Please select a course first."
-        );
-
 
         return;
     }
+
+
+    const ids =
+        getIds();
+
+
+    currentCourseId =
+        ids.courseId;
 
 
     localStorage.setItem(
@@ -205,21 +121,11 @@ async function loadNCERT() {
 
     try {
 
-        showLoading();
-
-
         await loadCourse();
-
 
         await loadChapters();
 
-
-        filteredChapters =
-            chapters.slice();
-
-
         renderChapters();
-
 
     } catch (error) {
 
@@ -229,8 +135,8 @@ async function loadNCERT() {
         );
 
 
-        showMessage(
-            "NCERT load করতে সমস্যা হয়েছে.<br><br>" +
+        showError(
+            "NCERT page load করতে সমস্যা হয়েছে।<br><br>" +
             escapeHTML(
                 error.message ||
                 "Unknown error"
@@ -244,32 +150,158 @@ async function loadNCERT() {
 
 
 /* ==========================================================
+   FIRESTORE
+   ========================================================== */
+
+function getFirestore() {
+
+    try {
+
+        if (
+            typeof firebase ===
+            "undefined"
+        ) {
+
+            return null;
+        }
+
+
+        if (
+            !firebase.apps ||
+            !firebase.apps.length
+        ) {
+
+            return null;
+        }
+
+
+        return firebase.firestore();
+
+    } catch (error) {
+
+        console.error(
+            "Firestore error:",
+            error
+        );
+
+        return null;
+    }
+
+}
+
+
+
+/* ==========================================================
+   GET URL / STORAGE IDS
+   ========================================================== */
+
+function getIds() {
+
+    const params =
+        new URLSearchParams(
+            window.location.search
+        );
+
+
+    const courseId =
+        cleanValue(
+            params.get("courseId") ||
+            params.get("course") ||
+            localStorage.getItem(
+                "activeCourse"
+            ) ||
+            sessionStorage.getItem(
+                "activeCourse"
+            )
+        );
+
+
+    return {
+
+        courseId:
+            courseId
+
+    };
+
+}
+
+
+
+/* ==========================================================
    LOAD COURSE
    ========================================================== */
 
 async function loadCourse() {
 
-    const courseRef =
-        db
-            .collection("courses")
-            .doc(currentCourseId);
+    if (!currentCourseId) {
 
+        currentCourse = {};
 
-    const courseSnap =
-        await courseRef.get();
+        updateCourseInfo();
 
-
-    if (!courseSnap.exists) {
-
-        throw new Error(
-            "Course not found."
-        );
-
+        return;
     }
 
 
-    currentCourse =
-        courseSnap.data() || {};
+    try {
+
+        const courseRef =
+            db
+                .collection("courses")
+                .doc(currentCourseId);
+
+
+        const snap =
+            await courseRef.get();
+
+
+        if (snap.exists) {
+
+            currentCourse =
+                snap.data() || {};
+
+        } else {
+
+            currentCourse = {};
+
+        }
+
+
+        updateCourseInfo();
+
+    } catch (error) {
+
+        console.warn(
+            "Course information error:",
+            error
+        );
+
+
+        currentCourse = {};
+
+        updateCourseInfo();
+
+    }
+
+}
+
+
+
+/* ==========================================================
+   COURSE INFO
+   ========================================================== */
+
+function updateCourseInfo() {
+
+    const element =
+        document.getElementById(
+            "courseInfo"
+        );
+
+
+    if (!element) {
+        return;
+    }
 
 
     const title =
@@ -280,19 +312,24 @@ async function loadCourse() {
 
     const description =
         currentCourse.description ||
-        "NCERT Biology Reading";
+        "Chapter-wise NCERT Biology reading";
 
 
-    setText(
-        "courseTitle",
-        title
-    );
+    element.innerHTML = `
 
+        <div class="course-name">
 
-    setText(
-        "courseDescription",
-        description
-    );
+            ${escapeHTML(title)}
+
+        </div>
+
+        <div class="course-path">
+
+            ${escapeHTML(description)}
+
+        </div>
+
+    `;
 
 }
 
@@ -304,6 +341,17 @@ async function loadCourse() {
 
 async function loadChapters() {
 
+    chapters = [];
+
+
+    if (!currentCourseId) {
+
+        showNoCourse();
+
+        return;
+    }
+
+
     const chapterRef =
         db
             .collection("courses")
@@ -311,32 +359,47 @@ async function loadChapters() {
             .collection("chapters");
 
 
-    const snapshot =
-        await chapterRef.get();
+    let snap;
 
 
-    chapters = [];
+    try {
+
+        snap =
+            await chapterRef
+                .orderBy(
+                    "order",
+                    "asc"
+                )
+                .get();
+
+    } catch (error) {
+
+        console.warn(
+            "Chapter order query failed:",
+            error
+        );
 
 
-    snapshot.forEach(
+        snap =
+            await chapterRef.get();
+
+    }
+
+
+    snap.forEach(
         function (doc) {
 
             const data =
                 doc.data() || {};
 
 
-            /*
-              Published false হলে
-              student দেখবে না।
-            */
-
             if (
-                data.published !== undefined &&
+                data.published !==
+                    undefined &&
                 data.published === false
             ) {
 
                 return;
-
             }
 
 
@@ -353,25 +416,42 @@ async function loadChapters() {
     );
 
 
-    /*
-      Chapter order
-    */
+    sortChapters();
+
+
+    filteredChapters =
+        chapters.slice();
+
+
+    updateChapterCount();
+
+}
+
+
+
+/* ==========================================================
+   SORT CHAPTERS
+   ========================================================== */
+
+function sortChapters() {
 
     chapters.sort(
         function (a, b) {
 
             const aOrder =
                 Number(
-                    a.order ??
-                    a.chapterNumber ??
+                    a.order ||
+                    a.chapterOrder ||
+                    a.number ||
                     9999
                 );
 
 
             const bOrder =
                 Number(
-                    b.order ??
-                    b.chapterNumber ??
+                    b.order ||
+                    b.chapterOrder ||
+                    b.number ||
                     9999
                 );
 
@@ -400,29 +480,8 @@ function renderChapters() {
         );
 
 
-    const count =
-        document.getElementById(
-            "chapterCount"
-        );
-
-
     if (!container) {
-
         return;
-
-    }
-
-
-    if (count) {
-
-        count.textContent =
-            filteredChapters.length +
-            (
-                filteredChapters.length === 1
-                    ? " Chapter"
-                    : " Chapters"
-            );
-
     }
 
 
@@ -430,19 +489,21 @@ function renderChapters() {
 
         container.innerHTML = `
 
-            <div class="course-loading">
+            <div class="empty-box">
 
-                No NCERT chapters found.
+                📖
+
+                <br><br>
+
+                No NCERT chapters available.
 
             </div>
 
         `;
 
-
-        hideMessage();
+        updateChapterCount();
 
         return;
-
     }
 
 
@@ -467,7 +528,7 @@ function renderChapters() {
     );
 
 
-    hideMessage();
+    updateChapterCount();
 
 }
 
@@ -484,18 +545,18 @@ function createChapterCard(
 
     const card =
         document.createElement(
-            "div"
+            "article"
         );
 
 
     card.className =
-        "course-card";
+        "chapter-card";
 
 
-    const chapterNumber =
+    const number =
         Number(
+            chapter.number ||
             chapter.chapterNumber ||
-            chapter.chapterNo ||
             chapter.order ||
             index + 1
         );
@@ -505,15 +566,7 @@ function createChapterCard(
         chapter.name ||
         chapter.title ||
         chapter.chapterName ||
-        (
-            "Chapter " +
-            chapterNumber
-        );
-
-
-    const description =
-        chapter.description ||
-        "Read NCERT Biology chapter";
+        "Biology Chapter";
 
 
     const ncertUrl =
@@ -528,180 +581,120 @@ function createChapterCard(
         );
 
 
-    const completed =
-        isChapterRead(
-            chapter.id
-        );
+    const topicCount =
+        chapter.topicCount ||
+        chapter.topicsCount ||
+        "";
 
 
     card.innerHTML = `
 
-        <div class="course-badge">
-            CHAPTER ${escapeHTML(
-                String(chapterNumber)
-            )}
-        </div>
+        <div class="chapter-top">
+
+            <div class="chapter-number">
+
+                ${number}
+
+            </div>
 
 
-        <div class="course-title">
-            ${escapeHTML(title)}
-        </div>
+            <div>
+
+                <div class="chapter-name">
+
+                    ${escapeHTML(title)}
+
+                </div>
 
 
-        <div class="course-description">
-            ${escapeHTML(description)}
-        </div>
+                <div class="chapter-meta">
 
+                    ${
+                        topicCount
+                            ? escapeHTML(
+                                String(
+                                    topicCount
+                                )
+                              ) +
+                              " Topics"
+                            : "NCERT + PYQ"
+                    }
 
-        <div
-            style="
-                display:flex;
-                gap:8px;
-                flex-wrap:wrap;
-                margin-top:12px;
-            "
-        >
+                </div>
 
-            ${
-                ncertUrl
-                    ? `
-                        <button
-                            type="button"
-                            class="course-button ncert-read-button"
-                            style="
-                                flex:1;
-                                min-width:130px;
-                            "
-                        >
-                            📖 Read NCERT
-                        </button>
-                      `
-                    : `
-                        <button
-                            type="button"
-                            class="course-button"
-                            disabled
-                            style="
-                                flex:1;
-                                min-width:130px;
-                                opacity:.55;
-                                cursor:not-allowed;
-                            "
-                        >
-                            PDF Unavailable
-                        </button>
-                      `
-            }
-
-
-            ${
-                pyqUrl
-                    ? `
-                        <button
-                            type="button"
-                            class="ncert-pyq-button"
-                            style="
-                                flex:1;
-                                min-width:130px;
-                                padding:12px 10px;
-                                border:0;
-                                border-radius:10px;
-                                background:#1565c0;
-                                color:#fff;
-                                font-weight:800;
-                                cursor:pointer;
-                            "
-                        >
-                            📚 PYQ PDF
-                        </button>
-                      `
-                    : ""
-            }
+            </div>
 
         </div>
 
 
-        ${
-            completed
-                ? `
-                    <div
-                        style="
-                            margin-top:12px;
-                            color:#2e7d32;
-                            font-size:13px;
-                            font-weight:800;
-                        "
-                    >
-                        ✓ Reading Opened
-                    </div>
-                  `
-                : ""
-        }
+        <div class="chapter-buttons">
+
+            <button
+                type="button"
+                class="ncert-button"
+                data-action="ncert"
+            >
+                📖 NCERT
+            </button>
+
+
+            <button
+                type="button"
+                class="ncert-button pyq-button"
+                data-action="pyq"
+            >
+                📝 PYQ
+            </button>
+
+        </div>
 
     `;
 
 
-    /*
-      NCERT button
-    */
-
-    if (ncertUrl) {
-
-        const button =
-            card.querySelector(
-                ".ncert-read-button"
-            );
+    const ncertButton =
+        card.querySelector(
+            '[data-action="ncert"]'
+        );
 
 
-        if (button) {
+    const pyqButton =
+        card.querySelector(
+            '[data-action="pyq"]'
+        );
 
-            button.addEventListener(
-                "click",
-                function () {
 
-                    openReader(
-                        title,
-                        ncertUrl,
-                        pyqUrl,
-                        chapter.id
-                    );
+    ncertButton.addEventListener(
+        "click",
+        function () {
 
-                }
+            openPDF(
+                ncertUrl,
+                "NCERT PDF"
             );
 
         }
-
-    }
-
-
-    /*
-      PYQ button
-    */
-
-    if (pyqUrl) {
-
-        const pyqButton =
-            card.querySelector(
-                ".ncert-pyq-button"
-            );
+    );
 
 
-        if (pyqButton) {
+    pyqButton.addEventListener(
+        "click",
+        function () {
 
-            pyqButton.addEventListener(
-                "click",
-                function () {
-
-                    openPDFInNewTab(
-                        pyqUrl
-                    );
-
-                }
+            openPDF(
+                pyqUrl,
+                "PYQ PDF"
             );
 
         }
+    );
 
-    }
+
+    /*
+      If PDF is not available,
+      button stays usable and gives
+      a clear message instead of
+      breaking the page.
+    */
 
 
     return card;
@@ -711,46 +704,35 @@ function createChapterCard(
 
 
 /* ==========================================================
-   GET NCERT PDF URL
+   NCERT URL
    ========================================================== */
 
-function getNCERTUrl(
-    chapter
-) {
+function getNCERTUrl(chapter) {
 
-    const value =
+    return cleanValue(
 
         chapter.ncertPdfUrl ||
 
         chapter.ncertPDFUrl ||
 
-        chapter.ncertPdfURL ||
+        chapter.ncertUrl ||
 
-        chapter.ncertPDF ||
+        chapter.ncertURL ||
 
         chapter.ncertPdf ||
 
-        chapter.ncertPDFUrl ||
-
-        chapter.ncertBookUrl ||
-
-        chapter.ncertBook ||
+        chapter.ncertPDF ||
 
         chapter.pdfUrl ||
 
         chapter.pdfURL ||
 
-        chapter.pdf ||
-
         chapter.bookPdfUrl ||
 
-        chapter.bookPdf ||
+        chapter.bookPDFUrl ||
 
-        "";
+        ""
 
-
-    return cleanUrl(
-        value
     );
 
 }
@@ -758,38 +740,31 @@ function getNCERTUrl(
 
 
 /* ==========================================================
-   GET PYQ PDF URL
+   PYQ URL
    ========================================================== */
 
-function getPYQUrl(
-    chapter
-) {
+function getPYQUrl(chapter) {
 
-    const value =
+    return cleanValue(
 
         chapter.pyqPdfUrl ||
 
         chapter.pyqPDFUrl ||
 
-        chapter.pyqPdf ||
-
-        chapter.pyqPDF ||
-
         chapter.pyqUrl ||
 
         chapter.pyqURL ||
 
-        chapter.chapterPyqPdf ||
+        chapter.pyqPdf ||
 
-        chapter.chapterPYQPdf ||
+        chapter.pyqPDF ||
 
-        chapter.pyq ||
+        chapter.previousYearPdfUrl ||
 
-        "";
+        chapter.previousYearPDFUrl ||
 
+        ""
 
-    return cleanUrl(
-        value
     );
 
 }
@@ -797,314 +772,44 @@ function getPYQUrl(
 
 
 /* ==========================================================
-   CLEAN URL
+   OPEN PDF
    ========================================================== */
 
-function cleanUrl(value) {
-
-    if (
-        value === null ||
-        value === undefined
-    ) {
-
-        return "";
-
-    }
-
-
-    return String(
-        value
-    ).trim();
-
-}
-
-
-
-/* ==========================================================
-   OPEN NCERT READER
-   ========================================================== */
-
-function openReader(
-    title,
-    ncertUrl,
-    pyqUrl,
-    chapterId
+function openPDF(
+    url,
+    label
 ) {
-
-    if (!ncertUrl) {
-
-        return;
-
-    }
-
-
-    currentReaderUrl =
-        ncertUrl;
-
-
-    currentReaderPyqUrl =
-        pyqUrl || "";
-
-
-    const chapterSection =
-        document.getElementById(
-            "chapterSection"
-        );
-
-
-    const readerSection =
-        document.getElementById(
-            "readerSection"
-        );
-
-
-    const viewer =
-        document.getElementById(
-            "pdfViewer"
-        );
-
-
-    const readerTitle =
-        document.getElementById(
-            "readerTitle"
-        );
-
-
-    const pyqArea =
-        document.getElementById(
-            "readerPyqArea"
-        );
-
-
-    const pyqButton =
-        document.getElementById(
-            "readerPyqButton"
-        );
-
-
-    if (
-        !chapterSection ||
-        !readerSection ||
-        !viewer
-    ) {
-
-        openPDFInNewTab(
-            ncertUrl
-        );
-
-        return;
-
-    }
-
-
-    if (readerTitle) {
-
-        readerTitle.textContent =
-            title;
-
-    }
-
-
-    /*
-      Load PDF
-    */
-
-    viewer.src =
-        ncertUrl;
-
-
-    /*
-      PYQ button
-    */
-
-    if (
-        pyqArea &&
-        pyqButton
-    ) {
-
-        if (pyqUrl) {
-
-            pyqArea.style.display =
-                "block";
-
-
-            pyqButton.onclick =
-                function () {
-
-                    openPDFInNewTab(
-                        pyqUrl
-                    );
-
-                };
-
-        } else {
-
-            pyqArea.style.display =
-                "none";
-
-        }
-
-    }
-
-
-    chapterSection.style.display =
-        "none";
-
-
-    readerSection.style.display =
-        "block";
-
-
-    /*
-      Save reading state
-    */
-
-    if (chapterId) {
-
-        localStorage.setItem(
-            "lastNCERTChapter",
-            chapterId
-        );
-
-    }
-
-
-    window.scrollTo({
-
-        top: 0,
-
-        behavior: "smooth"
-
-    );
-
-}
-
-
-
-/* ==========================================================
-   OPEN PDF IN NEW TAB
-   ========================================================== */
-
-function openPDFInNewTab(url) {
 
     if (!url) {
 
-        return;
+        alert(
+            label +
+            " এই chapter-এর জন্য এখনো upload করা হয়নি."
+        );
 
+        return;
     }
 
+
+    /*
+      Save last opened PDF
+    */
+
+    localStorage.setItem(
+        "lastNCERTPdf",
+        url
+    );
+
+
+    /*
+      Open PDF
+    */
 
     window.open(
         url,
         "_blank",
         "noopener,noreferrer"
     );
-
-}
-
-
-
-/* ==========================================================
-   OPEN PDF BUTTON
-   ========================================================== */
-
-function setupReaderOpenButton() {
-
-    const button =
-        document.getElementById(
-            "openPdfButton"
-        );
-
-
-    if (!button) {
-
-        return;
-
-    }
-
-
-    button.addEventListener(
-        "click",
-        function () {
-
-            if (currentReaderUrl) {
-
-                openPDFInNewTab(
-                    currentReaderUrl
-                );
-
-            }
-
-        }
-    );
-
-}
-
-
-
-/* ==========================================================
-   CLOSE READER
-   ========================================================== */
-
-function closeReader() {
-
-    const readerSection =
-        document.getElementById(
-            "readerSection"
-        );
-
-
-    const chapterSection =
-        document.getElementById(
-            "chapterSection"
-        );
-
-
-    const viewer =
-        document.getElementById(
-            "pdfViewer"
-        );
-
-
-    if (viewer) {
-
-        viewer.src =
-            "";
-
-    }
-
-
-    currentReaderUrl =
-        "";
-
-
-    currentReaderPyqUrl =
-        "";
-
-
-    if (readerSection) {
-
-        readerSection.style.display =
-            "none";
-
-    }
-
-
-    if (chapterSection) {
-
-        chapterSection.style.display =
-            "block";
-
-    }
-
-
-    window.scrollTo({
-
-        top: 0,
-
-        behavior: "smooth"
-
-    });
 
 }
 
@@ -1123,9 +828,7 @@ function setupSearch() {
 
 
     if (!search) {
-
         return;
-
     }
 
 
@@ -1133,7 +836,7 @@ function setupSearch() {
         "input",
         function () {
 
-            const query =
+            const value =
                 String(
                     search.value || ""
                 )
@@ -1141,7 +844,7 @@ function setupSearch() {
                 .toLowerCase();
 
 
-            if (!query) {
+            if (!value) {
 
                 filteredChapters =
                     chapters.slice();
@@ -1152,22 +855,18 @@ function setupSearch() {
                     chapters.filter(
                         function (chapter) {
 
-                            const text = (
-
+                            const title =
                                 chapter.name ||
-
                                 chapter.title ||
-
                                 chapter.chapterName ||
-
-                                ""
-
-                            ).toLowerCase();
+                                "";
 
 
-                            return text.includes(
-                                query
-                            );
+                            return String(
+                                title
+                            )
+                            .toLowerCase()
+                            .includes(value);
 
                         }
                     );
@@ -1185,180 +884,43 @@ function setupSearch() {
 
 
 /* ==========================================================
-   CHAPTER READING STATE
+   CHAPTER COUNT
    ========================================================== */
 
-function isChapterRead(
-    chapterId
-) {
+function updateChapterCount() {
 
-    if (!chapterId) {
-
-        return false;
-
-    }
+    const element =
+        document.getElementById(
+            "chapterCount"
+        );
 
 
-    const key =
-        "mneet_ncert_read_" +
-        currentCourseId +
-        "_" +
-        chapterId;
-
-
-    return (
-        localStorage.getItem(
-            key
-        ) === "true"
-    );
-
-}
-
-
-
-/* ==========================================================
-   MARK CHAPTER READ
-   ========================================================== */
-
-function markChapterRead(
-    chapterId
-) {
-
-    if (!chapterId) {
-
+    if (!element) {
         return;
-
     }
 
 
-    const key =
-        "mneet_ncert_read_" +
-        currentCourseId +
-        "_" +
-        chapterId;
+    const count =
+        filteredChapters.length;
 
 
-    localStorage.setItem(
-        key,
-        "true"
-    );
-
-}
-
-
-
-/* ==========================================================
-   HOME
-   ========================================================== */
-
-function goHome() {
-
-    window.location.href =
-        "student.html";
+    element.textContent =
+        count +
+        (
+            count === 1
+                ? " Chapter"
+                : " Chapters"
+        );
 
 }
 
 
 
 /* ==========================================================
-   PRACTICE
+   NO COURSE
    ========================================================== */
 
-function openPractice() {
-
-    if (currentCourseId) {
-
-        window.location.href =
-            "course.html" +
-            "?courseId=" +
-            encodeURIComponent(
-                currentCourseId
-            );
-
-        return;
-
-    }
-
-
-    window.location.href =
-        "student.html";
-
-}
-
-
-
-/* ==========================================================
-   VIDEOS
-   ========================================================== */
-
-function openVideos() {
-
-    const url =
-        currentCourseId
-
-            ? (
-                "videos.html" +
-                "?courseId=" +
-                encodeURIComponent(
-                    currentCourseId
-                )
-            )
-
-            : "videos.html";
-
-
-    window.location.href =
-        url;
-
-}
-
-
-
-/* ==========================================================
-   PROFILE
-   ========================================================== */
-
-function openProfile() {
-
-    window.location.href =
-        "profile.html";
-
-}
-
-
-
-/* ==========================================================
-   BACK
-   ========================================================== */
-
-function goBack() {
-
-    if (
-        document.referrer &&
-        document.referrer.indexOf(
-            window.location.host
-        ) !== -1
-    ) {
-
-        window.history.back();
-
-        return;
-
-    }
-
-
-    window.location.href =
-        "student.html";
-
-}
-
-
-
-/* ==========================================================
-   LOADING
-   ========================================================== */
-
-function showLoading() {
+function showNoCourse() {
 
     const container =
         document.getElementById(
@@ -1367,17 +929,24 @@ function showLoading() {
 
 
     if (!container) {
-
         return;
-
     }
 
 
     container.innerHTML = `
 
-        <div class="course-loading">
+        <div class="empty-box">
 
-            Loading NCERT chapters...
+            📚
+
+            <br><br>
+
+            Course select করা হয়নি।
+
+            <br><br>
+
+            Dashboard থেকে একটি course
+            select করুন।
 
         </div>
 
@@ -1388,93 +957,161 @@ function showLoading() {
 
 
 /* ==========================================================
-   MESSAGE
+   ERROR
    ========================================================== */
 
-function showMessage(
-    message
-) {
+function showError(message) {
 
-    const element =
+    const container =
         document.getElementById(
-            "ncertMessage"
+            "chapterList"
         );
 
 
-    if (!element) {
+    if (!container) {
+        return;
+    }
+
+
+    container.innerHTML = `
+
+        <div class="error-box">
+
+            ⚠️
+
+            <br><br>
+
+            ${message}
+
+            <br><br>
+
+            <button
+                type="button"
+                onclick="location.reload()"
+                style="
+                    border:0;
+                    border-radius:10px;
+                    padding:11px 17px;
+                    background:#1b5e20;
+                    color:#fff;
+                    font-weight:900;
+                "
+            >
+                Retry
+            </button>
+
+        </div>
+
+    `;
+
+}
+
+
+
+/* ==========================================================
+   NAVIGATION
+   ========================================================== */
+
+function goBack() {
+
+    window.history.back();
+
+}
+
+
+function goHome() {
+
+    window.location.href =
+        "student.html";
+
+}
+
+
+function goTop() {
+
+    window.scrollTo({
+
+        top: 0,
+
+        behavior: "smooth"
+
+    });
+
+}
+
+
+function openPractice() {
+
+    const courseId =
+        currentCourseId ||
+        localStorage.getItem(
+            "activeCourse"
+        ) ||
+        "";
+
+
+    if (!courseId) {
+
+        window.location.href =
+            "student.html";
 
         return;
-
     }
 
 
-    element.innerHTML =
-        message;
+    localStorage.setItem(
+        "activeCourse",
+        courseId
+    );
 
 
-    element.style.display =
-        "block";
-
-}
-
-
-
-/* ==========================================================
-   HIDE MESSAGE
-   ========================================================== */
-
-function hideMessage() {
-
-    const element =
-        document.getElementById(
-            "ncertMessage"
+    window.location.href =
+        "course.html" +
+        "?courseId=" +
+        encodeURIComponent(
+            courseId
         );
 
+}
 
-    if (element) {
 
-        element.style.display =
-            "none";
+function openProfile() {
 
-    }
+    /*
+      Profile page না থাকলেও
+      dashboard-এ ফেরত যাবে।
+    */
+
+    window.location.href =
+        "student.html";
 
 }
 
 
 
 /* ==========================================================
-   SAFE TEXT
+   HELPERS
    ========================================================== */
 
-function setText(
-    id,
-    value
-) {
+function cleanValue(value) {
 
-    const element =
-        document.getElementById(
-            id
-        );
+    if (
+        value === null ||
+        value === undefined
+    ) {
 
-
-    if (element) {
-
-        element.textContent =
-            value;
+        return "";
 
     }
+
+
+    return String(value).trim();
 
 }
 
 
 
-/* ==========================================================
-   HTML ESCAPE
-   ========================================================== */
-
-function escapeHTML(
-    value
-) {
+function escapeHTML(value) {
 
     return String(value)
 
@@ -1504,11 +1141,3 @@ function escapeHTML(
         );
 
 }
-
-
-
-/* ==========================================================
-   INITIALIZE READER BUTTON
-   ========================================================== */
-
-setupReaderOpenButton();
