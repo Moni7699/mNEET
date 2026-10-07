@@ -1,6 +1,7 @@
 // ==========================================================
 // mNEET - NCERT READING
-// Fresh Complete Firebase Firestore + Storage Version
+// FINAL COMPLETE VERSION
+// Firebase Auth + Firestore + Storage
 // Chapter-wise NCERT + Chapter-wise PYQ
 // ==========================================================
 
@@ -27,6 +28,7 @@ let currentCourse = {};
 
 let firebaseReady = false;
 
+let searchReady = false;
 
 
 /* ==========================================================
@@ -37,13 +39,12 @@ document.addEventListener(
     "DOMContentLoaded",
     function () {
 
-        waitForFirebase();
-
         setupSearch();
+
+        waitForFirebase();
 
     }
 );
-
 
 
 /* ==========================================================
@@ -53,7 +54,19 @@ document.addEventListener(
 function waitForFirebase() {
 
     if (
-        typeof firebase === "undefined" ||
+        typeof firebase === "undefined"
+    ) {
+
+        setTimeout(
+            waitForFirebase,
+            300
+        );
+
+        return;
+    }
+
+
+    if (
         typeof firebase.auth !== "function"
     ) {
 
@@ -80,6 +93,9 @@ function waitForFirebase() {
     }
 
 
+    firebaseReady = true;
+
+
     firebase.auth().onAuthStateChanged(
         function (user) {
 
@@ -94,7 +110,6 @@ function waitForFirebase() {
 
             currentUser = user;
 
-            firebaseReady = true;
 
             initializeNCERT();
 
@@ -104,51 +119,52 @@ function waitForFirebase() {
 }
 
 
-
 /* ==========================================================
    INITIALIZE
    ========================================================== */
 
 async function initializeNCERT() {
 
-    db =
-        getFirestore();
+    try {
+
+        db = getFirestore();
+
+        storage = getStorage();
 
 
-    storage =
-        getStorage();
+        if (!db) {
+
+            showError(
+                "Firebase Firestore পাওয়া যায়নি।",
+                "js/firebase.js check করুন।"
+            );
+
+            return;
+        }
 
 
-    if (!db) {
-
-        showError(
-            "Firebase Firestore load হয়নি।<br><br>" +
-            "Please check js/firebase.js"
-        );
-
-        return;
-    }
+        const ids = getIds();
 
 
-    const ids =
-        getIds();
+        currentCourseId =
+            ids.courseId;
 
 
-    currentCourseId =
-        ids.courseId;
+        if (!currentCourseId) {
 
+            showNoCourse();
 
-    if (currentCourseId) {
+            updateCourseInfo();
+
+            return;
+        }
+
 
         localStorage.setItem(
             "activeCourse",
             currentCourseId
         );
 
-    }
-
-
-    try {
 
         await loadCourse();
 
@@ -156,26 +172,24 @@ async function initializeNCERT() {
 
         renderChapters();
 
+
     } catch (error) {
 
         console.error(
-            "NCERT loading error:",
+            "NCERT initialize error:",
             error
         );
 
 
         showError(
-            "NCERT page load করতে সমস্যা হয়েছে।<br><br>" +
-            escapeHTML(
-                error.message ||
-                "Unknown error"
-            )
+            "NCERT page load করতে সমস্যা হয়েছে।",
+            error.message ||
+            "Unknown error"
         );
 
     }
 
 }
-
 
 
 /* ==========================================================
@@ -187,8 +201,7 @@ function getFirestore() {
     try {
 
         if (
-            typeof firebase ===
-            "undefined"
+            typeof firebase === "undefined"
         ) {
 
             return null;
@@ -198,6 +211,15 @@ function getFirestore() {
         if (
             !firebase.apps ||
             !firebase.apps.length
+        ) {
+
+            return null;
+        }
+
+
+        if (
+            typeof firebase.firestore !==
+            "function"
         ) {
 
             return null;
@@ -219,7 +241,6 @@ function getFirestore() {
 }
 
 
-
 /* ==========================================================
    FIREBASE STORAGE
    ========================================================== */
@@ -229,8 +250,7 @@ function getStorage() {
     try {
 
         if (
-            typeof firebase ===
-            "undefined"
+            typeof firebase === "undefined"
         ) {
 
             return null;
@@ -270,9 +290,8 @@ function getStorage() {
 }
 
 
-
 /* ==========================================================
-   GET URL / STORAGE IDS
+   GET COURSE ID
    ========================================================== */
 
 function getIds() {
@@ -283,16 +302,29 @@ function getIds() {
         );
 
 
+    const fromURL =
+        params.get("courseId") ||
+        params.get("course");
+
+
+    const fromStorage =
+        localStorage.getItem(
+            "activeCourse"
+        );
+
+
+    const fromSession =
+        sessionStorage.getItem(
+            "activeCourse"
+        );
+
+
     const courseId =
         cleanValue(
-            params.get("courseId") ||
-            params.get("course") ||
-            localStorage.getItem(
-                "activeCourse"
-            ) ||
-            sessionStorage.getItem(
-                "activeCourse"
-            )
+            fromURL ||
+            fromStorage ||
+            fromSession ||
+            ""
         );
 
 
@@ -306,16 +338,16 @@ function getIds() {
 }
 
 
-
 /* ==========================================================
    LOAD COURSE
    ========================================================== */
 
 async function loadCourse() {
 
-    if (!currentCourseId) {
+    currentCourse = {};
 
-        currentCourse = {};
+
+    if (!currentCourseId) {
 
         updateCourseInfo();
 
@@ -325,46 +357,39 @@ async function loadCourse() {
 
     try {
 
-        const courseRef =
+        const ref =
             db
                 .collection("courses")
                 .doc(currentCourseId);
 
 
-        const snap =
-            await courseRef.get();
+        const snapshot =
+            await ref.get();
 
 
-        if (snap.exists) {
+        if (
+            snapshot.exists
+        ) {
 
             currentCourse =
-                snap.data() || {};
-
-        } else {
-
-            currentCourse = {};
+                snapshot.data() || {};
 
         }
 
 
-        updateCourseInfo();
-
     } catch (error) {
 
         console.warn(
-            "Course information error:",
+            "Course loading error:",
             error
         );
 
-
-        currentCourse = {};
-
-        updateCourseInfo();
-
     }
 
-}
 
+    updateCourseInfo();
+
+}
 
 
 /* ==========================================================
@@ -380,6 +405,7 @@ function updateCourseInfo() {
 
 
     if (!element) {
+
         return;
     }
 
@@ -398,21 +424,16 @@ function updateCourseInfo() {
     element.innerHTML = `
 
         <div class="course-name">
-
             ${escapeHTML(title)}
-
         </div>
 
         <div class="course-path">
-
             ${escapeHTML(description)}
-
         </div>
 
     `;
 
 }
-
 
 
 /* ==========================================================
@@ -422,6 +443,8 @@ function updateCourseInfo() {
 async function loadChapters() {
 
     chapters = [];
+
+    filteredChapters = [];
 
 
     if (!currentCourseId) {
@@ -439,12 +462,16 @@ async function loadChapters() {
             .collection("chapters");
 
 
-    let snap;
+    let snapshot = null;
 
+
+    /*
+       প্রথমে order
+    */
 
     try {
 
-        snap =
+        snapshot =
             await chapterRef
                 .orderBy(
                     "order",
@@ -455,14 +482,22 @@ async function loadChapters() {
     } catch (error) {
 
         console.warn(
-            "Chapter order query failed:",
+            "order query failed:",
             error
         );
 
+    }
+
+
+    /*
+       দ্বিতীয় fallback
+    */
+
+    if (!snapshot) {
 
         try {
 
-            snap =
+            snapshot =
                 await chapterRef
                     .orderBy(
                         "chapterOrder",
@@ -470,32 +505,51 @@ async function loadChapters() {
                     )
                     .get();
 
-        } catch (error2) {
+        } catch (error) {
 
             console.warn(
-                "ChapterOrder query failed:",
-                error2
+                "chapterOrder query failed:",
+                error
             );
-
-
-            snap =
-                await chapterRef.get();
 
         }
 
     }
 
 
-    snap.forEach(
+    /*
+       শেষ fallback
+    */
+
+    if (!snapshot) {
+
+        snapshot =
+            await chapterRef.get();
+
+    }
+
+
+    if (!snapshot) {
+
+        throw new Error(
+            "Chapter data পাওয়া যায়নি।"
+        );
+
+    }
+
+
+    snapshot.forEach(
         function (doc) {
 
             const data =
                 doc.data() || {};
 
 
+            /*
+               unpublished chapter hide
+            */
+
             if (
-                data.published !==
-                    undefined &&
                 data.published === false
             ) {
 
@@ -528,7 +582,6 @@ async function loadChapters() {
 }
 
 
-
 /* ==========================================================
    SORT CHAPTERS
    ========================================================== */
@@ -539,28 +592,43 @@ function sortChapters() {
         function (a, b) {
 
             const aOrder =
-                Number(
-                    a.order ??
-                    a.chapterOrder ??
-                    a.number ??
-                    a.chapterNumber ??
-                    9999
+                getChapterNumber(
+                    a,
+                    999999
                 );
 
 
             const bOrder =
-                Number(
-                    b.order ??
-                    b.chapterOrder ??
-                    b.number ??
-                    b.chapterNumber ??
-                    9999
+                getChapterNumber(
+                    b,
+                    999999
                 );
 
 
-            return (
-                aOrder -
-                bOrder
+            if (
+                aOrder !== bOrder
+            ) {
+
+                return (
+                    aOrder -
+                    bOrder
+                );
+
+            }
+
+
+            const aTitle =
+                getChapterTitle(a)
+                .toLowerCase();
+
+
+            const bTitle =
+                getChapterTitle(b)
+                .toLowerCase();
+
+
+            return aTitle.localeCompare(
+                bTitle
             );
 
         }
@@ -568,6 +636,91 @@ function sortChapters() {
 
 }
 
+
+/* ==========================================================
+   GET CHAPTER NUMBER
+   ========================================================== */
+
+function getChapterNumber(
+    chapter,
+    fallback
+) {
+
+    if (!chapter) {
+
+        return fallback;
+    }
+
+
+    const values = [
+
+        chapter.number,
+
+        chapter.chapterNumber,
+
+        chapter.order,
+
+        chapter.chapterOrder,
+
+        chapter.position,
+
+        chapter.index
+
+    ];
+
+
+    for (
+        let i = 0;
+        i < values.length;
+        i++
+    ) {
+
+        const value =
+            Number(values[i]);
+
+
+        if (
+            Number.isFinite(value)
+        ) {
+
+            return value;
+        }
+
+    }
+
+
+    return fallback;
+
+}
+
+
+/* ==========================================================
+   GET CHAPTER TITLE
+   ========================================================== */
+
+function getChapterTitle(chapter) {
+
+    if (!chapter) {
+
+        return "Biology Chapter";
+    }
+
+
+    return cleanValue(
+
+        chapter.name ||
+
+        chapter.title ||
+
+        chapter.chapterName ||
+
+        chapter.chapterTitle ||
+
+        "Biology Chapter"
+
+    );
+
+}
 
 
 /* ==========================================================
@@ -583,25 +736,27 @@ function renderChapters() {
 
 
     if (!container) {
+
         return;
     }
 
 
-    if (!filteredChapters.length) {
+    if (
+        !filteredChapters.length
+    ) {
 
-        container.innerHTML = `
+        if (
+            chapters.length
+        ) {
 
-            <div class="empty-box">
+            showSearchEmpty();
 
-                📖
+        } else {
 
-                <br><br>
+            showEmptyChapters();
 
-                No NCERT chapters available.
+        }
 
-            </div>
-
-        `;
 
         updateChapterCount();
 
@@ -635,7 +790,6 @@ function renderChapters() {
 }
 
 
-
 /* ==========================================================
    CREATE CHAPTER CARD
    ========================================================== */
@@ -656,38 +810,41 @@ function createChapterCard(
 
 
     const number =
-        Number(
-            chapter.number ??
-            chapter.chapterNumber ??
-            chapter.order ??
-            chapter.chapterOrder ??
+        getChapterNumber(
+            chapter,
             index + 1
         );
 
 
     const title =
-        chapter.name ||
-        chapter.title ||
-        chapter.chapterName ||
-        "Biology Chapter";
-
-
-    const ncertUrl =
-        getNCERTUrl(
+        getChapterTitle(
             chapter
         );
 
 
-    const pyqUrl =
-        getPYQUrl(
+    const ncertValue =
+        getNCERTValue(
+            chapter
+        );
+
+
+    const pyqValue =
+        getPYQValue(
             chapter
         );
 
 
     const topicCount =
-        chapter.topicCount ??
-        chapter.topicsCount ??
-        "";
+        getTopicCount(
+            chapter
+        );
+
+
+    const metaText =
+        topicCount !== ""
+            ? topicCount +
+              " Topics"
+            : "NCERT + PYQ";
 
 
     card.innerHTML = `
@@ -703,7 +860,7 @@ function createChapterCard(
             </div>
 
 
-            <div>
+            <div class="chapter-content">
 
                 <div class="chapter-name">
 
@@ -714,16 +871,9 @@ function createChapterCard(
 
                 <div class="chapter-meta">
 
-                    ${
-                        topicCount !== ""
-                            ? escapeHTML(
-                                String(
-                                    topicCount
-                                )
-                              ) +
-                              " Topics"
-                            : "NCERT + PYQ"
-                    }
+                    ${escapeHTML(
+                        metaText
+                    )}
 
                 </div>
 
@@ -736,7 +886,7 @@ function createChapterCard(
 
             <button
                 type="button"
-                class="ncert-button"
+                class="pdf-button ncert-button"
                 data-action="ncert"
             >
                 📖 NCERT
@@ -745,7 +895,7 @@ function createChapterCard(
 
             <button
                 type="button"
-                class="ncert-button pyq-button"
+                class="pdf-button pyq-button"
                 data-action="pyq"
             >
                 📝 PYQ
@@ -772,10 +922,10 @@ function createChapterCard(
 
         ncertButton.addEventListener(
             "click",
-            async function () {
+            function () {
 
-                await openPDF(
-                    ncertUrl,
+                openPDF(
+                    ncertValue,
                     "NCERT PDF",
                     chapter
                 );
@@ -790,10 +940,10 @@ function createChapterCard(
 
         pyqButton.addEventListener(
             "click",
-            async function () {
+            function () {
 
-                await openPDF(
-                    pyqUrl,
+                openPDF(
+                    pyqValue,
                     "PYQ PDF",
                     chapter
                 );
@@ -809,12 +959,61 @@ function createChapterCard(
 }
 
 
-
 /* ==========================================================
-   NCERT URL / PATH
+   TOPIC COUNT
    ========================================================== */
 
-function getNCERTUrl(chapter) {
+function getTopicCount(chapter) {
+
+    if (!chapter) {
+
+        return "";
+    }
+
+
+    const value =
+        chapter.topicCount ??
+        chapter.topicsCount;
+
+
+    if (
+        value === null ||
+        value === undefined ||
+        value === ""
+    ) {
+
+        return "";
+    }
+
+
+    const number =
+        Number(value);
+
+
+    if (
+        Number.isFinite(number)
+    ) {
+
+        return String(number);
+    }
+
+
+    return cleanValue(value);
+
+}
+
+
+/* ==========================================================
+   NCERT VALUE
+   ========================================================== */
+
+function getNCERTValue(chapter) {
+
+    if (!chapter) {
+
+        return "";
+    }
+
 
     return cleanValue(
 
@@ -834,6 +1033,10 @@ function getNCERTUrl(chapter) {
 
         chapter.ncert ||
 
+        chapter.ncertBookUrl ||
+
+        chapter.ncertBookURL ||
+
         chapter.bookPdfUrl ||
 
         chapter.bookPDFUrl ||
@@ -842,21 +1045,13 @@ function getNCERTUrl(chapter) {
 
         chapter.bookPDF ||
 
-        chapter.ncertBookUrl ||
-
-        chapter.ncertBookURL ||
-
-        chapter.pdfUrl ||
-
-        chapter.pdfURL ||
-
-        chapter.pdf ||
-
         chapter.ncertStoragePath ||
 
         chapter.ncertPdfPath ||
 
         chapter.ncertPath ||
+
+        chapter.ncertStorage ||
 
         ""
 
@@ -865,12 +1060,17 @@ function getNCERTUrl(chapter) {
 }
 
 
-
 /* ==========================================================
-   PYQ URL / PATH
+   PYQ VALUE
    ========================================================== */
 
-function getPYQUrl(chapter) {
+function getPYQValue(chapter) {
+
+    if (!chapter) {
+
+        return "";
+    }
+
 
     return cleanValue(
 
@@ -904,6 +1104,8 @@ function getPYQUrl(chapter) {
 
         chapter.pyqPath ||
 
+        chapter.pyqStorage ||
+
         ""
 
     );
@@ -911,9 +1113,8 @@ function getPYQUrl(chapter) {
 }
 
 
-
 /* ==========================================================
-   CHECK FIREBASE STORAGE PATH
+   STORAGE PATH DETECTION
    ========================================================== */
 
 function looksLikeStoragePath(value) {
@@ -923,17 +1124,17 @@ function looksLikeStoragePath(value) {
 
 
     if (!text) {
+
         return false;
     }
 
 
     /*
-      Normal URL হলে false.
+       Already URL
     */
 
     if (
-        text.startsWith("http://") ||
-        text.startsWith("https://") ||
+        isWebURL(text) ||
         text.startsWith("blob:") ||
         text.startsWith("data:")
     ) {
@@ -943,7 +1144,7 @@ function looksLikeStoragePath(value) {
 
 
     /*
-      Firebase Storage gs:// path
+       Firebase gs://
     */
 
     if (
@@ -955,16 +1156,11 @@ function looksLikeStoragePath(value) {
 
 
     /*
-      Common PDF/storage path
+       Common storage path
     */
 
     if (
-        text.includes("/") &&
-        (
-            text.toLowerCase().includes(".pdf") ||
-            text.toLowerCase().includes("ncert") ||
-            text.toLowerCase().includes("pyq")
-        )
+        text.includes("/")
     ) {
 
         return true;
@@ -976,12 +1172,35 @@ function looksLikeStoragePath(value) {
 }
 
 
-
 /* ==========================================================
-   RESOLVE STORAGE PATH
+   WEB URL CHECK
    ========================================================== */
 
-async function resolvePDFUrl(value) {
+function isWebURL(value) {
+
+    const text =
+        cleanValue(value);
+
+
+    return (
+        text.startsWith(
+            "http://"
+        ) ||
+        text.startsWith(
+            "https://"
+        )
+    );
+
+}
+
+
+/* ==========================================================
+   RESOLVE PDF URL
+   ========================================================== */
+
+async function resolvePDFUrl(
+    value
+) {
 
     const clean =
         cleanValue(value);
@@ -990,68 +1209,69 @@ async function resolvePDFUrl(value) {
     if (!clean) {
 
         return "";
-
     }
 
 
     /*
-      Already a URL
+       Direct URL
     */
 
     if (
-        clean.startsWith("http://") ||
-        clean.startsWith("https://") ||
+        isWebURL(clean) ||
         clean.startsWith("blob:") ||
         clean.startsWith("data:")
     ) {
 
         return clean;
-
     }
 
 
     /*
-      Storage unavailable
+       No storage
     */
 
+    if (!storage) {
+
+        return "";
+    }
+
+
     if (
-        !storage ||
         !looksLikeStoragePath(clean)
     ) {
 
-        return clean;
-
+        return "";
     }
 
 
     try {
 
-        const ref =
+        const reference =
             storage.ref(
                 clean
             );
 
 
-        const url =
-            await ref.getDownloadURL();
+        const downloadURL =
+            await reference.getDownloadURL();
 
 
-        return url || "";
+        return cleanValue(
+            downloadURL
+        );
 
     } catch (error) {
 
         console.warn(
-            "Storage PDF URL resolve failed:",
+            "Storage URL resolve failed:",
             error
         );
 
 
         return "";
-
     }
 
 }
-
 
 
 /* ==========================================================
@@ -1059,44 +1279,24 @@ async function resolvePDFUrl(value) {
    ========================================================== */
 
 async function openPDF(
-    url,
+    value,
     label,
     chapter
 ) {
 
-    let finalUrl =
-        cleanValue(url);
+    let finalURL =
+        cleanValue(value);
 
 
     /*
-      If Firestore stores Firebase
-      Storage path instead of URL,
-      convert it to download URL.
+       Empty PDF
     */
 
-    if (
-        finalUrl &&
-        !(
-            finalUrl.startsWith("http://") ||
-            finalUrl.startsWith("https://") ||
-            finalUrl.startsWith("blob:") ||
-            finalUrl.startsWith("data:")
-        )
-    ) {
+    if (!finalURL) {
 
-        finalUrl =
-            await resolvePDFUrl(
-                finalUrl
-            );
-
-    }
-
-
-    if (!finalUrl) {
-
-        alert(
+        showToast(
             label +
-            " এই chapter-এর জন্য এখনো upload করা হয়নি."
+            " এই chapter-এর জন্য এখনো upload করা হয়নি।"
         );
 
         return;
@@ -1104,12 +1304,41 @@ async function openPDF(
 
 
     /*
-      Save last opened PDF
+       Storage path হলে URL বানাবে
+    */
+
+    if (
+        !isWebURL(finalURL) &&
+        !finalURL.startsWith("blob:") &&
+        !finalURL.startsWith("data:")
+    ) {
+
+        finalURL =
+            await resolvePDFUrl(
+                finalURL
+            );
+
+    }
+
+
+    if (!finalURL) {
+
+        showToast(
+            label +
+            " open করা যাচ্ছে না। PDF upload/path check করুন।"
+        );
+
+        return;
+    }
+
+
+    /*
+       Save last opened information
     */
 
     localStorage.setItem(
         "lastNCERTPdf",
-        finalUrl
+        finalURL
     );
 
 
@@ -1117,33 +1346,47 @@ async function openPDF(
 
         localStorage.setItem(
             "lastNCERTChapter",
-            chapter.id ||
-            ""
+            cleanValue(
+                chapter.id
+            )
+        );
+
+
+        localStorage.setItem(
+            "lastNCERTChapterTitle",
+            getChapterTitle(
+                chapter
+            )
+        );
+
+    }
+
+
+    if (currentCourseId) {
+
+        localStorage.setItem(
+            "lastNCERTCourse",
+            currentCourseId
         );
 
     }
 
 
     /*
-      Open PDF
+       Open PDF
     */
 
     const opened =
         window.open(
-            finalUrl,
-            "_blank",
-            "noopener,noreferrer"
+            finalURL,
+            "_blank"
         );
 
 
-    /*
-      Browser popup blocker
-    */
-
     if (!opened) {
 
-        alert(
-            "PDF open করা যায়নি। Browser popup permission allow করুন।"
+        showToast(
+            "PDF open হয়নি। Browser popup permission allow করুন।"
         );
 
     }
@@ -1151,9 +1394,8 @@ async function openPDF(
 }
 
 
-
 /* ==========================================================
-   SEARCH
+   SEARCH SETUP
    ========================================================== */
 
 function setupSearch() {
@@ -1165,8 +1407,18 @@ function setupSearch() {
 
 
     if (!search) {
+
         return;
     }
+
+
+    if (searchReady) {
+
+        return;
+    }
+
+
+    searchReady = true;
 
 
     search.addEventListener(
@@ -1174,10 +1426,9 @@ function setupSearch() {
         function () {
 
             const value =
-                String(
-                    search.value || ""
+                cleanValue(
+                    search.value
                 )
-                .trim()
                 .toLowerCase();
 
 
@@ -1193,28 +1444,29 @@ function setupSearch() {
                         function (chapter) {
 
                             const title =
-                                chapter.name ||
-                                chapter.title ||
-                                chapter.chapterName ||
-                                "";
+                                getChapterTitle(
+                                    chapter
+                                );
 
 
                             const number =
-                                chapter.number ||
-                                chapter.chapterNumber ||
-                                chapter.order ||
-                                "";
+                                getChapterNumber(
+                                    chapter,
+                                    ""
+                                );
 
 
                             const combined =
-                                String(title) +
+                                title +
                                 " " +
-                                String(number);
+                                number;
 
 
                             return combined
                                 .toLowerCase()
-                                .includes(value);
+                                .includes(
+                                    value
+                                );
 
                         }
                     );
@@ -1230,7 +1482,6 @@ function setupSearch() {
 }
 
 
-
 /* ==========================================================
    CHAPTER COUNT
    ========================================================== */
@@ -1244,6 +1495,7 @@ function updateChapterCount() {
 
 
     if (!element) {
+
         return;
     }
 
@@ -1263,6 +1515,89 @@ function updateChapterCount() {
 }
 
 
+/* ==========================================================
+   EMPTY CHAPTERS
+   ========================================================== */
+
+function showEmptyChapters() {
+
+    const container =
+        document.getElementById(
+            "chapterList"
+        );
+
+
+    if (!container) {
+
+        return;
+    }
+
+
+    container.innerHTML = `
+
+        <div class="state-box">
+
+            <div class="state-icon">
+                📚
+            </div>
+
+            <div class="state-title">
+                No NCERT chapters available
+            </div>
+
+            <div class="state-text">
+                এই course-এর জন্য এখনো কোনো
+                chapter publish করা হয়নি।
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+/* ==========================================================
+   SEARCH EMPTY
+   ========================================================== */
+
+function showSearchEmpty() {
+
+    const container =
+        document.getElementById(
+            "chapterList"
+        );
+
+
+    if (!container) {
+
+        return;
+    }
+
+
+    container.innerHTML = `
+
+        <div class="state-box">
+
+            <div class="state-icon">
+                🔍
+            </div>
+
+            <div class="state-title">
+                Chapter পাওয়া যায়নি
+            </div>
+
+            <div class="state-text">
+                অন্য chapter name বা number দিয়ে
+                search করুন।
+            </div>
+
+        </div>
+
+    `;
+
+}
+
 
 /* ==========================================================
    NO COURSE
@@ -1277,24 +1612,35 @@ function showNoCourse() {
 
 
     if (!container) {
+
         return;
     }
 
 
     container.innerHTML = `
 
-        <div class="empty-box">
+        <div class="state-box">
 
-            📚
+            <div class="state-icon">
+                📚
+            </div>
 
-            <br><br>
+            <div class="state-title">
+                Course select করা হয়নি
+            </div>
 
-            Course select করা হয়নি।
+            <div class="state-text">
+                Dashboard থেকে একটি course
+                select করে আবার NCERT খুলুন।
+            </div>
 
-            <br><br>
-
-            Dashboard থেকে একটি course
-            select করুন।
+            <button
+                type="button"
+                class="retry-button"
+                onclick="goHome()"
+            >
+                Go to Dashboard
+            </button>
 
         </div>
 
@@ -1303,12 +1649,14 @@ function showNoCourse() {
 }
 
 
-
 /* ==========================================================
    ERROR
    ========================================================== */
 
-function showError(message) {
+function showError(
+    title,
+    detail
+) {
 
     const container =
         document.getElementById(
@@ -1317,33 +1665,45 @@ function showError(message) {
 
 
     if (!container) {
+
         return;
     }
 
 
+    const safeTitle =
+        escapeHTML(
+            title ||
+            "Something went wrong"
+        );
+
+
+    const safeDetail =
+        escapeHTML(
+            detail ||
+            "Please try again."
+        );
+
+
     container.innerHTML = `
 
-        <div class="error-box">
+        <div class="state-box">
 
-            ⚠️
+            <div class="state-icon">
+                ⚠️
+            </div>
 
-            <br><br>
+            <div class="state-title">
+                ${safeTitle}
+            </div>
 
-            ${message}
-
-            <br><br>
+            <div class="state-text">
+                ${safeDetail}
+            </div>
 
             <button
                 type="button"
+                class="retry-button"
                 onclick="location.reload()"
-                style="
-                    border:0;
-                    border-radius:10px;
-                    padding:11px 17px;
-                    background:#1b5e20;
-                    color:#fff;
-                    font-weight:900;
-                "
             >
                 Retry
             </button>
@@ -1355,6 +1715,61 @@ function showError(message) {
 }
 
 
+/* ==========================================================
+   TOAST
+   ========================================================== */
+
+let toastTimer = null;
+
+
+function showToast(message) {
+
+    const toast =
+        document.getElementById(
+            "toast"
+        );
+
+
+    if (!toast) {
+
+        alert(message);
+
+        return;
+    }
+
+
+    toast.textContent =
+        cleanValue(message);
+
+
+    toast.classList.add(
+        "show"
+    );
+
+
+    if (toastTimer) {
+
+        clearTimeout(
+            toastTimer
+        );
+
+    }
+
+
+    toastTimer =
+        setTimeout(
+            function () {
+
+                toast.classList.remove(
+                    "show"
+                );
+
+            },
+            2800
+        );
+
+}
+
 
 /* ==========================================================
    NAVIGATION
@@ -1362,11 +1777,24 @@ function showError(message) {
 
 function goBack() {
 
-    window.history.back();
+    if (
+        window.history.length > 1
+    ) {
+
+        window.history.back();
+
+    } else {
+
+        goHome();
+
+    }
 
 }
 
 
+/* ==========================================================
+   HOME
+   ========================================================== */
 
 function goHome() {
 
@@ -1376,20 +1804,9 @@ function goHome() {
 }
 
 
-
-function goTop() {
-
-    window.scrollTo({
-
-        top: 0,
-
-        behavior: "smooth"
-
-    });
-
-}
-
-
+/* ==========================================================
+   PRACTICE
+   ========================================================== */
 
 function openPractice() {
 
@@ -1403,8 +1820,7 @@ function openPractice() {
 
     if (!courseId) {
 
-        window.location.href =
-            "student.html";
+        goHome();
 
         return;
     }
@@ -1426,23 +1842,20 @@ function openPractice() {
 }
 
 
+/* ==========================================================
+   PROFILE
+   ========================================================== */
 
 function openProfile() {
 
-    /*
-      Profile page না থাকলেও
-      dashboard-এ ফেরত যাবে।
-    */
-
     window.location.href =
-        "student.html";
+        "profile.html";
 
 }
 
 
-
 /* ==========================================================
-   OPTIONAL QUICK NAVIGATION
+   NCERT
    ========================================================== */
 
 function openNCERT() {
@@ -1455,24 +1868,39 @@ function openNCERT() {
         "";
 
 
-    if (courseId) {
+    if (!courseId) {
 
-        window.location.href =
-            "ncert.html" +
-            "?courseId=" +
-            encodeURIComponent(
-                courseId
-            );
+        goHome();
 
-    } else {
-
-        window.location.href =
-            "student.html";
-
+        return;
     }
+
+
+    window.location.href =
+        "ncert.html" +
+        "?courseId=" +
+        encodeURIComponent(
+            courseId
+        );
 
 }
 
+
+/* ==========================================================
+   TOP
+   ========================================================== */
+
+function goTop() {
+
+    window.scrollTo({
+
+        top: 0,
+
+        behavior: "smooth"
+
+    });
+
+}
 
 
 /* ==========================================================
@@ -1487,14 +1915,14 @@ function cleanValue(value) {
     ) {
 
         return "";
-
     }
 
 
-    return String(value).trim();
+    return String(
+        value
+    ).trim();
 
 }
-
 
 
 /* ==========================================================
@@ -1503,7 +1931,9 @@ function cleanValue(value) {
 
 function escapeHTML(value) {
 
-    return String(value)
+    return String(
+        value
+    )
 
         .replace(
             /&/g,
