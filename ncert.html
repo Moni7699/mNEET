@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>mNEET - NCERT Reading</title>
+
+
+    <!-- =====================================================
+         MAIN CSS
+         ===================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="css/style.css"
+    >
+
+
+    <!-- =====================================================
+         FIREBASE
+         ===================================================== -->
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-storage-compat.js"></script>
+
+</head>
+
+
+<body>
+
+
+<div class="student-app">
+
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+
+    <header class="student-header">
+
+        <div class="header-left">
+
+            <div class="brand-logo">
+                <span>m</span>NEET
+            </div>
+
+            <div
+                id="welcomeText"
+                class="welcome-text"
+            >
+                NCERT Reading
+            </div>
+
+        </div>
+
+
+        <button
+            type="button"
+            class="header-logout"
+            onclick="goBack()"
+        >
+            ← Back
+        </button>
+
+    </header>
+
+
+
+    <!-- =====================================================
+         MAIN
+         ===================================================== -->
+
+    <main class="student-main">
+
+
+        <!-- =================================================
+             HERO
+             ================================================= -->
+
+        <section class="student-hero">
+
+            <div>
+
+                <div class="hero-small">
+                    NEET BIOLOGY
+                </div>
+
+                <h1>
+                    NCERT Reading
+                </h1>
+
+                <p>
+                    Read your Biology NCERT chapter by chapter
+                    and revise important concepts.
+                </p>
+
+            </div>
+
+
+            <div class="hero-icon">
+                📖
+            </div>
+
+        </section>
+
+
+
+        <!-- =================================================
+             COURSE INFORMATION
+             ================================================= -->
+
+        <section class="progress-card">
+
+            <div class="progress-top">
+
+                <div>
+
+                    <div class="card-label">
+                        Current Course
+                    </div>
+
+                    <div
+                        id="courseTitle"
+                        class="progress-percent"
+                        style="font-size:22px;"
+                    >
+                        Loading...
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div
+                id="courseDescription"
+                style="
+                    margin-top:10px;
+                    color:rgba(255,255,255,.82);
+                    line-height:1.5;
+                "
+            >
+                NCERT Biology Reading
+            </div>
+
+        </section>
+
+
+
+        <!-- =================================================
+             SEARCH
+             ================================================= -->
+
+        <section
+            style="
+                margin:18px 0;
+            "
+        >
+
+            <input
+                type="search"
+                id="chapterSearch"
+                placeholder="Search chapter..."
+                autocomplete="off"
+                style="
+                    width:100%;
+                    box-sizing:border-box;
+                    padding:15px 16px;
+                    border:1px solid #ddd;
+                    border-radius:14px;
+                    outline:none;
+                    font-size:16px;
+                    background:#fff;
+                "
+            >
+
+        </section>
+
+
+
+        <!-- =================================================
+             CHAPTER LIST
+             ================================================= -->
+
+        <section id="chapterSection">
+
+            <div class="section-heading">
+
+                <h2>
+                    NCERT Chapters
+                </h2>
+
+                <span id="chapterCount">
+                    0 Chapters
+                </span>
+
+            </div>
+
+
+            <section
+                id="chapterList"
+                class="course-grid"
+            >
+
+                <div class="course-loading">
+                    Loading NCERT chapters...
+                </div>
+
+            </section>
+
+        </section>
+
+
+
+        <!-- =================================================
+             PDF READER
+             ================================================= -->
+
+        <section
+            id="readerSection"
+            style="display:none;"
+        >
+
+            <div
+                class="section-heading"
+                style="margin-top:20px;"
+            >
+
+                <h2 id="readerTitle">
+                    NCERT Chapter
+                </h2>
+
+            </div>
+
+
+            <div
+                style="
+                    width:100%;
+                    background:#111;
+                    border-radius:16px;
+                    overflow:hidden;
+                    box-shadow:0 8px 25px rgba(0,0,0,.18);
+                "
+            >
+
+                <iframe
+                    id="pdfViewer"
+                    title="NCERT PDF Reader"
+                    style="
+                        width:100%;
+                        height:75vh;
+                        min-height:520px;
+                        border:0;
+                        display:block;
+                        background:#fff;
+                    "
+                ></iframe>
+
+            </div>
+
+
+            <div
+                style="
+                    display:grid;
+                    grid-template-columns:1fr 1fr;
+                    gap:10px;
+                    margin-top:14px;
+                "
+            >
+
+                <button
+                    type="button"
+                    id="openPdfButton"
+                    style="
+                        border:0;
+                        border-radius:12px;
+                        padding:14px;
+                        background:#2e7d32;
+                        color:#fff;
+                        font-size:15px;
+                        font-weight:800;
+                        cursor:pointer;
+                    "
+                >
+                    ↗ Open PDF
+                </button>
+
+
+                <button
+                    type="button"
+                    onclick="closeReader()"
+                    style="
+                        border:0;
+                        border-radius:12px;
+                        padding:14px;
+                        background:#555;
+                        color:#fff;
+                        font-size:15px;
+                        font-weight:800;
+                        cursor:pointer;
+                    "
+                >
+                    ← Chapters
+                </button>
+
+            </div>
+
+
+            <!-- PYQ AREA -->
+
+            <div
+                id="readerPyqArea"
+                style="
+                    margin-top:16px;
+                    display:none;
+                "
+            >
+
+                <button
+                    type="button"
+                    id="readerPyqButton"
+                    style="
+                        width:100%;
+                        border:0;
+                        border-radius:12px;
+                        padding:14px;
+                        background:#1565c0;
+                        color:#fff;
+                        font-size:15px;
+                        font-weight:800;
+                        cursor:pointer;
+                    "
+                >
+                    📚 Open Chapter PYQ PDF
+                </button>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =================================================
+             MESSAGE
+             ================================================= -->
+
+        <div
+            id="ncertMessage"
+            style="
+                display:none;
+                margin:18px 0;
+                padding:22px;
+                background:#fff;
+                border-radius:16px;
+                text-align:center;
+                line-height:1.6;
+                font-weight:700;
+            "
+        ></div>
+
+
+    </main>
+
+
+
+    <!-- =====================================================
+         BOTTOM NAVIGATION
+         ===================================================== -->
+
+    <nav class="bottom-nav">
+
+
+        <button
+            type="button"
+            class="bottom-item"
+            onclick="goHome()"
+        >
+
+            <span>
+                🏠
+            </span>
+
+            <small>
+                Home
+            </small>
+
+        </button>
+
+
+        <button
+            type="button"
+            class="bottom-item"
+            onclick="openPractice()"
+        >
+
+            <span>
+                📝
+            </span>
+
+            <small>
+                Practice
+            </small>
+
+        </button>
+
+
+        <button
+            type="button"
+            class="bottom-item active"
+        >
+
+            <span>
+                📖
+            </span>
+
+            <small>
+                NCERT
+            </small>
+
+        </button>
+
+
+        <button
+            type="button"
+            class="bottom-item"
+            onclick="openVideos()"
+        >
+
+            <span>
+                ▶️
+            </span>
+
+            <small>
+                Videos
+            </small>
+
+        </button>
+
+
+        <button
+            type="button"
+            class="bottom-item"
+            onclick="openProfile()"
+        >
+
+            <span>
+                👤
+            </span>
+
+            <small>
+                Profile
+            </small>
+
+        </button>
+
+
+    </nav>
+
+
+</div>
+
+
+
+<!-- =========================================================
+     APP FILES
+     ========================================================= -->
+
+<script src="js/firebase.js"></script>
+
+<script src="js/auth.js"></script>
+
+<script src="js/ncert.js"></script>
+
+
+</body>
+
+</html>
