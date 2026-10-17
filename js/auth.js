@@ -1,630 +1,839 @@
-// ==========================================
-// mNEET - Authentication System
-// ==========================================
+"use strict";
 
+(() => {
+  // ==========================================
+  // mNEET AUTHENTICATION SYSTEM
+  // Login, Registration, Password Reset,
+  // Remember Email, Student/Admin Routing
+  // ==========================================
 
-// ==========================================
-// PAGE LOAD
-// ==========================================
+  const $ = (id) => document.getElementById(id);
 
-document.addEventListener("DOMContentLoaded", function () {
+  const REMEMBERED_EMAIL_KEY = "mneetRememberedEmail";
 
-    // Check current login status
+  let auth = null;
+  let db = null;
 
-    auth.onAuthStateChanged(function (user) {
+  let isSubmitting = false;
+  let sessionCheckInProgress = false;
+  let redirectStarted = false;
 
-        if (user) {
+  const elements = {
+    message: $("message"),
 
-            // User already logged in.
-            // Don't show login page again.
+    loginForm: $("loginForm"),
+    registerForm: $("registerForm"),
 
-            if (
-                window.location.pathname.endsWith(
-                    "index.html"
-                ) ||
-                window.location.pathname === "/" ||
-                window.location.pathname === ""
-            ) {
+    loginTab: $("loginTab"),
+    registerTab: $("registerTab"),
 
-                window.location.href =
-                    "student.html";
+    loginEmail: $("loginEmail"),
+    loginPassword: $("loginPassword"),
 
-            }
+    registerName: $("registerName"),
+    registerPhone: $("registerPhone"),
+    registerEmail: $("registerEmail"),
+    registerCity: $("registerCity"),
+    registerPassword: $("registerPassword"),
+    confirmPassword: $("confirmPassword"),
 
+    loginButton: $("loginButton"),
+    registerButton: $("registerButton"),
+
+    forgotPassword: $("forgotPassword"),
+    rememberMe: $("rememberMe"),
+
+    formHeading: $("formHeading"),
+    formDescription: $("formDescription")
+  };
+
+  // ==========================================
+  // MESSAGE HELPERS
+  // ==========================================
+
+  function showMessage(message, type = "error") {
+    if (!elements.message) {
+      console.log(message);
+      return;
+    }
+
+    elements.message.textContent = message;
+    elements.message.className = "message " + type;
+    elements.message.hidden = false;
+  }
+
+  function clearMessage() {
+    if (!elements.message) return;
+
+    elements.message.textContent = "";
+    elements.message.hidden = true;
+    elements.message.className = "message";
+  }
+
+  // ==========================================
+  // ACCOUNT HELPERS
+  // ==========================================
+
+  function normalizeRole(role) {
+    return String(role || "")
+      .trim()
+      .toLowerCase();
+  }
+
+  function isAccountInactive(profile) {
+    return String(profile?.status || "")
+      .trim()
+      .toLowerCase() === "inactive";
+  }
+
+  async function getUserProfile(uid) {
+    if (!db || !uid) {
+      throw new Error("PROFILE_LOOKUP_UNAVAILABLE");
+    }
+
+    const snapshot = await db
+      .collection("users")
+      .doc(uid)
+      .get();
+
+    if (!snapshot.exists) {
+      return null;
+    }
+
+    return snapshot.data() || null;
+  }
+
+  // ==========================================
+  // DASHBOARD REDIRECT
+  // ==========================================
+
+  function redirectByRole(role) {
+    if (redirectStarted) return;
+
+    const normalizedRole = normalizeRole(role);
+
+    let destination = "";
+
+    if (normalizedRole === "admin") {
+      destination = "admin.html";
+    } else if (normalizedRole === "student") {
+      destination = "student.html";
+    } else {
+      showMessage(
+        "এই account-এর role student অথবা admin হতে হবে।",
+        "error"
+      );
+
+      return;
+    }
+
+    redirectStarted = true;
+
+    window.location.replace(destination);
+  }
+
+  // ==========================================
+  // REMEMBER EMAIL
+  // ==========================================
+
+  function saveRememberedEmail(email) {
+    try {
+      if (elements.rememberMe?.checked) {
+        localStorage.setItem(
+          REMEMBERED_EMAIL_KEY,
+          email
+        );
+      } else {
+        localStorage.removeItem(
+          REMEMBERED_EMAIL_KEY
+        );
+      }
+    } catch (error) {
+      console.warn(
+        "Remember email unavailable:",
+        error
+      );
+    }
+  }
+
+  function setupRememberedEmail() {
+    try {
+      const savedEmail = localStorage.getItem(
+        REMEMBERED_EMAIL_KEY
+      );
+
+      if (savedEmail && elements.loginEmail) {
+        elements.loginEmail.value = savedEmail;
+
+        if (elements.rememberMe) {
+          elements.rememberMe.checked = true;
         }
+      }
+    } catch (error) {
+      console.warn(
+        "Could not restore remembered email:",
+        error
+      );
+    }
+  }
 
-    });
+  // ==========================================
+  // BUTTON LOADING
+  // ==========================================
 
-});
+  function setSubmitting(loading, formType) {
+    isSubmitting = loading;
 
+    const button =
+      formType === "register"
+        ? elements.registerButton
+        : elements.loginButton;
 
-// ==========================================
-// REGISTER USER
-// ==========================================
+    if (!button) return;
 
-function registerUser() {
+    button.disabled = loading;
 
-    const name =
-        document
-            .getElementById("registerName")
-            .value
-            .trim();
+    const text = button.querySelector(".button-text");
+    const loader = button.querySelector(".button-loader");
 
+    if (text) {
+      if (!button.dataset.originalText) {
+        button.dataset.originalText = text.textContent;
+      }
+
+      if (loading) {
+        text.textContent =
+          formType === "register"
+            ? "Creating Account..."
+            : "Logging in...";
+      } else {
+        text.textContent = button.dataset.originalText;
+      }
+    }
+
+    if (loader) {
+      loader.hidden = !loading;
+    }
+  }
+
+  // ==========================================
+  // LOGIN / REGISTRATION TABS
+  // ==========================================
+
+  function showLoginForm() {
+    if (!elements.loginForm || !elements.registerForm) {
+      return;
+    }
+
+    elements.loginForm.hidden = false;
+    elements.registerForm.hidden = true;
+
+    elements.loginTab?.classList.add("active");
+    elements.registerTab?.classList.remove("active");
+
+    elements.loginTab?.setAttribute(
+      "aria-selected",
+      "true"
+    );
+
+    elements.registerTab?.setAttribute(
+      "aria-selected",
+      "false"
+    );
+
+    if (elements.formHeading) {
+      elements.formHeading.textContent = "Welcome Back!";
+    }
+
+    if (elements.formDescription) {
+      elements.formDescription.textContent =
+        "Login to continue your NEET preparation.";
+    }
+
+    clearMessage();
+  }
+
+  function showRegisterForm() {
+    if (!elements.loginForm || !elements.registerForm) {
+      return;
+    }
+
+    elements.loginForm.hidden = true;
+    elements.registerForm.hidden = false;
+
+    elements.loginTab?.classList.remove("active");
+    elements.registerTab?.classList.add("active");
+
+    elements.loginTab?.setAttribute(
+      "aria-selected",
+      "false"
+    );
+
+    elements.registerTab?.setAttribute(
+      "aria-selected",
+      "true"
+    );
+
+    if (elements.formHeading) {
+      elements.formHeading.textContent =
+        "Create Your Account";
+    }
+
+    if (elements.formDescription) {
+      elements.formDescription.textContent =
+        "Join mNEET and start your preparation.";
+    }
+
+    clearMessage();
+  }
+
+  function setupTabs() {
+    elements.loginTab?.addEventListener(
+      "click",
+      showLoginForm
+    );
+
+    elements.registerTab?.addEventListener(
+      "click",
+      showRegisterForm
+    );
+
+    $("openRegister")?.addEventListener(
+      "click",
+      showRegisterForm
+    );
+
+    $("openLogin")?.addEventListener(
+      "click",
+      showLoginForm
+    );
+  }
+
+  // ==========================================
+  // PASSWORD VISIBILITY
+  // ==========================================
+
+  function setupPasswordToggles() {
+    document
+      .querySelectorAll(".password-toggle")
+      .forEach((button) => {
+        button.addEventListener("click", () => {
+          const input = $(button.dataset.target);
+
+          if (!input) return;
+
+          const showPassword =
+            input.type === "password";
+
+          input.type = showPassword
+            ? "text"
+            : "password";
+
+          button.textContent = showPassword
+            ? "Hide"
+            : "Show";
+
+          button.setAttribute(
+            "aria-label",
+            showPassword
+              ? "Hide password"
+              : "Show password"
+          );
+        });
+      });
+  }
+
+  // ==========================================
+  // LOGIN
+  // ==========================================
+
+  async function handleLogin(event) {
+    event.preventDefault();
+
+    if (isSubmitting || redirectStarted) {
+      return;
+    }
+
+    if (!auth || !db) {
+      showMessage(
+        "Firebase চালু হয়নি। Firebase SDK এবং js/firebase.js পরীক্ষা করো।"
+      );
+
+      return;
+    }
 
     const email =
-        document
-            .getElementById("registerEmail")
-            .value
-            .trim();
-
+      elements.loginEmail?.value.trim().toLowerCase() || "";
 
     const password =
-        document
-            .getElementById("registerPassword")
-            .value;
+      elements.loginPassword?.value || "";
 
+    if (!email || !password) {
+      showMessage("Email এবং password দুটোই দাও।");
+      return;
+    }
+
+    if (!elements.loginEmail.checkValidity()) {
+      showMessage("সঠিক email address দাও।");
+      return;
+    }
+
+    saveRememberedEmail(email);
+
+    setSubmitting(true, "login");
+
+    try {
+      await auth.setPersistence(
+        firebase.auth.Auth.Persistence.LOCAL
+      );
+
+      const credential =
+        await auth.signInWithEmailAndPassword(
+          email,
+          password
+        );
+
+      const user = credential.user;
+
+      if (!user) {
+        throw new Error("AUTH_USER_MISSING");
+      }
+
+      const profile = await getUserProfile(user.uid);
+
+      if (!profile) {
+        await auth.signOut();
+
+        showMessage(
+          "তোমার users profile পাওয়া যায়নি। Firestore document পরীক্ষা করো।"
+        );
+
+        return;
+      }
+
+      if (isAccountInactive(profile)) {
+        await auth.signOut();
+
+        showMessage(
+          "এই account নিষ্ক্রিয়। Admin-এর সাহায্য নাও।"
+        );
+
+        return;
+      }
+
+      const role = normalizeRole(profile.role);
+
+      if (role !== "admin" && role !== "student") {
+        await auth.signOut();
+
+        showMessage(
+          "এই account-এর role student অথবা admin হতে হবে।"
+        );
+
+        return;
+      }
+
+      showMessage(
+        "Login successful. Dashboard খুলছে...",
+        "success"
+      );
+
+      redirectByRole(role);
+
+    } catch (error) {
+      console.error("Login error:", error);
+
+      showMessage(getFriendlyError(error));
+
+    } finally {
+      setSubmitting(false, "login");
+    }
+  }
+
+  // ==========================================
+  // REGISTRATION
+  // ==========================================
+
+  async function handleRegistration(event) {
+    event.preventDefault();
+
+    if (isSubmitting || redirectStarted) {
+      return;
+    }
+
+    if (!auth || !db) {
+      showMessage(
+        "Firebase চালু হয়নি। Firebase SDK এবং js/firebase.js পরীক্ষা করো।"
+      );
+
+      return;
+    }
+
+    const fullName =
+      elements.registerName?.value.trim() || "";
+
+    const phone =
+      elements.registerPhone?.value.trim() || "";
+
+    const email =
+      elements.registerEmail?.value.trim().toLowerCase() || "";
+
+    const city =
+      elements.registerCity?.value.trim() || "";
+
+    const password =
+      elements.registerPassword?.value || "";
 
     const confirmPassword =
-        document
-            .getElementById("registerConfirmPassword")
-            .value;
+      elements.confirmPassword?.value || "";
 
-
-    // --------------------------------------
-    // Validation
-    // --------------------------------------
-
-    if (!name) {
-
-        showMessage(
-            "Please enter your full name."
-        );
-
-        return;
+    if (
+      !fullName ||
+      !phone ||
+      !email ||
+      !city ||
+      !password ||
+      !confirmPassword
+    ) {
+      showMessage("সব তথ্য পূরণ করো.");
+      return;
     }
 
+    if (fullName.length < 2) {
+      showMessage(
+        "Full Name অন্তত 2 অক্ষরের হতে হবে।"
+      );
 
-    if (!email) {
-
-        showMessage(
-            "Please enter your email."
-        );
-
-        return;
+      return;
     }
 
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      showMessage(
+        "সঠিক 10-digit Indian mobile number দাও।"
+      );
 
-    if (!password) {
-
-        showMessage(
-            "Please enter a password."
-        );
-
-        return;
+      return;
     }
 
-
-    if (password.length < 6) {
-
-        showMessage(
-            "Password must contain at least 6 characters."
-        );
-
-        return;
+    if (!elements.registerEmail.checkValidity()) {
+      showMessage("সঠিক email address দাও।");
+      return;
     }
 
+    if (password.length < 8) {
+      showMessage(
+        "Password অন্তত 8 অক্ষরের হতে হবে।"
+      );
+
+      return;
+    }
 
     if (password !== confirmPassword) {
+      showMessage(
+        "Password এবং Confirm Password মিলছে না।"
+      );
 
-        showMessage(
-            "Passwords do not match."
-        );
-
-        return;
+      return;
     }
 
+    setSubmitting(true, "register");
 
-    // --------------------------------------
-    // Show Loading
-    // --------------------------------------
+    let createdUser = null;
 
-    setLoading(true);
+    try {
+      await auth.setPersistence(
+        firebase.auth.Auth.Persistence.LOCAL
+      );
 
+      const credential =
+        await auth.createUserWithEmailAndPassword(
+          email,
+          password
+        );
 
-    // --------------------------------------
-    // Create Firebase Account
-    // --------------------------------------
+      createdUser = credential.user;
 
-    auth
-        .createUserWithEmailAndPassword(
-            email,
-            password
-        )
+      if (!createdUser) {
+        throw new Error("AUTH_USER_MISSING");
+      }
 
-        .then(function (result) {
+      await createdUser.updateProfile({
+        displayName: fullName
+      });
 
-            const user = result.user;
+      const profile = {
+        uid: createdUser.uid,
+        fullName: fullName,
+        phone: phone,
+        email: email,
+        city: city,
+        role: "student",
+        status: "active",
+        createdAt:
+          firebase.firestore.FieldValue.serverTimestamp()
+      };
 
+      await db
+        .collection("users")
+        .doc(createdUser.uid)
+        .set(profile);
 
-            // ----------------------------------
-            // Save User Profile
-            // ----------------------------------
+      saveRememberedEmail(email);
 
-            return db
-                .collection("users")
-                .doc(user.uid)
-                .set({
+      showMessage(
+        "Account তৈরি হয়েছে। Student Dashboard খুলছে...",
+        "success"
+      );
 
-                    uid: user.uid,
+      redirectByRole("student");
 
-                    name: name,
+    } catch (error) {
+      console.error("Registration error:", error);
 
-                    email: email,
+      /*
+       * Registration failed after account creation.
+       * Do not silently delete the Firebase account.
+       * Report the error so the incomplete profile
+       * can be diagnosed safely.
+       */
 
-                    role: "student",
+      showMessage(getFriendlyError(error));
 
-                    createdAt:
-                        firebase.firestore
-                            .FieldValue
-                            .serverTimestamp()
+    } finally {
+      setSubmitting(false, "register");
+    }
+  }
 
-                });
+  // ==========================================
+  // FORGOT PASSWORD
+  // ==========================================
 
-        })
-
-        .then(function () {
-
-            setLoading(false);
-
-            showMessage(
-                "Account created successfully!"
-            );
-
-
-            // ----------------------------------
-            // Go to Student Dashboard
-            // ----------------------------------
-
-            setTimeout(function () {
-
-                window.location.href =
-                    "student.html";
-
-            }, 800);
-
-        })
-
-        .catch(function (error) {
-
-            setLoading(false);
-
-            showFirebaseError(error);
-
-        });
-
-}
-
-
-
-// ==========================================
-// LOGIN USER
-// ==========================================
-
-function loginUser() {
+  async function handleForgotPassword() {
+    if (!auth) {
+      showMessage("Firebase চালু হয়নি।");
+      return;
+    }
 
     const email =
-        document
-            .getElementById("loginEmail")
-            .value
-            .trim();
+      elements.loginEmail?.value.trim().toLowerCase() || "";
 
+    if (
+      !email ||
+      !elements.loginEmail.checkValidity()
+    ) {
+      showMessage(
+        "প্রথমে সঠিক Email Address দাও।"
+      );
 
-    const password =
-        document
-            .getElementById("loginPassword")
-            .value;
+      elements.loginEmail?.focus();
 
+      return;
+    }
 
-    // --------------------------------------
-    // Validation
-    // --------------------------------------
+    try {
+      if (elements.forgotPassword) {
+        elements.forgotPassword.disabled = true;
+      }
 
-    if (!email) {
+      await auth.sendPasswordResetEmail(email);
+
+      showMessage(
+        "যদি এই Email-এর জন্য reset করা যায়, তাহলে reset email পাঠানো হবে। Inbox ও Spam folder দেখো।",
+        "success"
+      );
+
+    } catch (error) {
+      console.error("Password reset error:", error);
+
+      showMessage(getFriendlyError(error));
+
+    } finally {
+      if (elements.forgotPassword) {
+        elements.forgotPassword.disabled = false;
+      }
+    }
+  }
+
+  // ==========================================
+  // EXISTING LOGIN SESSION
+  // ==========================================
+
+  async function routeAuthenticatedUser(user) {
+    if (
+      !user ||
+      !auth ||
+      !db ||
+      sessionCheckInProgress ||
+      isSubmitting ||
+      redirectStarted
+    ) {
+      return;
+    }
+
+    sessionCheckInProgress = true;
+
+    try {
+      const profile = await getUserProfile(user.uid);
+
+      if (!profile) {
+        showMessage(
+          "Login session আছে, কিন্তু users profile পাওয়া যায়নি।"
+        );
+
+        return;
+      }
+
+      if (isAccountInactive(profile)) {
+        showMessage(
+          "এই account নিষ্ক্রিয়। Admin-এর সাহায্য নাও।"
+        );
+
+        return;
+      }
+
+      const role = normalizeRole(profile.role);
+
+      if (role === "admin" || role === "student") {
+        redirectByRole(role);
+      } else {
+        showMessage(
+          "এই account-এর role সঠিকভাবে সেট করা নেই।"
+        );
+      }
+
+    } catch (error) {
+      console.error("Session routing error:", error);
+
+      showMessage(getFriendlyError(error));
+
+    } finally {
+      sessionCheckInProgress = false;
+    }
+  }
+
+  // ==========================================
+  // FRIENDLY ERROR MESSAGES
+  // ==========================================
+
+  function getFriendlyError(error) {
+    const code = error?.code || "";
+
+    switch (code) {
+      case "auth/invalid-email":
+        return "Email address সঠিক নয়।";
+
+      case "auth/user-not-found":
+      case "auth/wrong-password":
+      case "auth/invalid-credential":
+        return "Email অথবা Password সঠিক নয়।";
+
+      case "auth/email-already-in-use":
+        return "এই Email দিয়ে account আগে থেকেই আছে। Login করো।";
+
+      case "auth/weak-password":
+        return "আরও শক্তিশালী password ব্যবহার করো।";
+
+      case "auth/too-many-requests":
+        return "অনেকবার চেষ্টা হয়েছে। কিছুক্ষণ পরে আবার চেষ্টা করো।";
+
+      case "auth/network-request-failed":
+        return "Internet connection পরীক্ষা করে আবার চেষ্টা করো।";
+
+      case "auth/operation-not-allowed":
+        return "Firebase Console-এ Email/Password Authentication চালু করো।";
+
+      case "auth/invalid-api-key":
+        return "Firebase API key পরীক্ষা করো।";
+
+      case "permission-denied":
+      case "firestore/permission-denied":
+        return "Firestore permission-এর কারণে profile পড়া বা সংরক্ষণ করা যায়নি।";
+
+      case "PROFILE_LOOKUP_UNAVAILABLE":
+        return "Firestore profile পরীক্ষা করা যায়নি।";
+
+      case "AUTH_USER_MISSING":
+        return "Firebase user পাওয়া যায়নি। আবার চেষ্টা করো।";
+
+      default:
+        return (
+          "কাজটি সম্পন্ন হয়নি। Error: " +
+          (code || error?.message || "Unknown error")
+        );
+    }
+  }
+
+  // ==========================================
+  // INITIALIZATION
+  // ==========================================
+
+  function initialize() {
+    const year = $("currentYear");
+
+    if (year) {
+      year.textContent = new Date().getFullYear();
+    }
+
+    setupTabs();
+    setupPasswordToggles();
+    setupRememberedEmail();
+
+    elements.loginForm?.addEventListener(
+      "submit",
+      handleLogin
+    );
+
+    elements.registerForm?.addEventListener(
+      "submit",
+      handleRegistration
+    );
+
+    elements.forgotPassword?.addEventListener(
+      "click",
+      handleForgotPassword
+    );
+
+    if (
+      typeof window.firebase === "undefined" ||
+      !window.auth ||
+      !window.db
+    ) {
+      showMessage(
+        "Firebase চালু হয়নি। index.html-এ Firebase SDK এবং js/firebase.js-এর order পরীক্ষা করো।"
+      );
+
+      return;
+    }
+
+    auth = window.auth;
+    db = window.db;
+
+    auth.onAuthStateChanged(
+      async (user) => {
+        if (
+          user &&
+          !isSubmitting &&
+          !redirectStarted
+        ) {
+          await routeAuthenticatedUser(user);
+        }
+      },
+      (error) => {
+        console.error("Auth state error:", error);
 
         showMessage(
-            "Please enter your email."
+          "Login session যাচাই করা যায়নি। আবার চেষ্টা করো।"
         );
-
-        return;
-    }
-
-
-    if (!password) {
-
-        showMessage(
-            "Please enter your password."
-        );
-
-        return;
-    }
-
-
-    // --------------------------------------
-    // Loading
-    // --------------------------------------
-
-    setLoading(true);
-
-
-    // --------------------------------------
-    // Firebase Login
-    // --------------------------------------
-
-    auth
-        .signInWithEmailAndPassword(
-            email,
-            password
-        )
-
-        .then(function () {
-
-            showMessage(
-                "Login successful!"
-            );
-
-
-            setTimeout(function () {
-
-                window.location.href =
-                    "student.html";
-
-            }, 500);
-
-        })
-
-        .catch(function (error) {
-
-            setLoading(false);
-
-            showFirebaseError(error);
-
-        });
-
-}
-
-
-
-// ==========================================
-// LOGOUT
-// ==========================================
-
-function logoutUser() {
-
-    auth
-        .signOut()
-
-        .then(function () {
-
-            window.location.href =
-                "index.html";
-
-        })
-
-        .catch(function (error) {
-
-            console.error(
-                "Logout error:",
-                error
-            );
-
-        });
-
-}
-
-
-
-// ==========================================
-// SHOW LOGIN
-// ==========================================
-
-function showLogin() {
-
-    const loginBox =
-        document.getElementById(
-            "loginBox"
-        );
-
-
-    const registerBox =
-        document.getElementById(
-            "registerBox"
-        );
-
-
-    loginBox.classList.remove(
-        "hidden"
+      }
     );
+  }
 
-
-    registerBox.classList.add(
-        "hidden"
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      initialize
     );
-
-
-    clearMessage();
-
-}
-
-
-
-// ==========================================
-// SHOW REGISTER
-// ==========================================
-
-function showRegister() {
-
-    const loginBox =
-        document.getElementById(
-            "loginBox"
-        );
-
-
-    const registerBox =
-        document.getElementById(
-            "registerBox"
-        );
-
-
-    loginBox.classList.add(
-        "hidden"
-    );
-
-
-    registerBox.classList.remove(
-        "hidden"
-    );
-
-
-    clearMessage();
-
-}
-
-
-
-// ==========================================
-// MESSAGE
-// ==========================================
-
-function showMessage(message) {
-
-    const messageBox =
-        document.getElementById(
-            "message"
-        );
-
-
-    if (!messageBox) {
-
-        return;
-
-    }
-
-
-    messageBox.textContent =
-        message;
-
-}
-
-
-
-// ==========================================
-// CLEAR MESSAGE
-// ==========================================
-
-function clearMessage() {
-
-    const messageBox =
-        document.getElementById(
-            "message"
-        );
-
-
-    if (!messageBox) {
-
-        return;
-
-    }
-
-
-    messageBox.textContent =
-        "";
-
-}
-
-
-
-// ==========================================
-// LOADING STATE
-// ==========================================
-
-function setLoading(isLoading) {
-
-    const loading =
-        document.getElementById(
-            "authLoading"
-        );
-
-
-    const loginButton =
-        document.getElementById(
-            "loginButton"
-        );
-
-
-    const registerButton =
-        document.getElementById(
-            "registerButton"
-        );
-
-
-    if (isLoading) {
-
-        if (loading) {
-
-            loading.classList.remove(
-                "hidden"
-            );
-
-        }
-
-
-        if (loginButton) {
-
-            loginButton.disabled =
-                true;
-
-        }
-
-
-        if (registerButton) {
-
-            registerButton.disabled =
-                true;
-
-        }
-
-    }
-
-    else {
-
-        if (loading) {
-
-            loading.classList.add(
-                "hidden"
-            );
-
-        }
-
-
-        if (loginButton) {
-
-            loginButton.disabled =
-                false;
-
-        }
-
-
-        if (registerButton) {
-
-            registerButton.disabled =
-                false;
-
-        }
-
-    }
-
-}
-
-
-
-// ==========================================
-// FIREBASE ERROR HANDLER
-// ==========================================
-
-function showFirebaseError(error) {
-
-    console.error(
-        "Firebase Error:",
-        error
-    );
-
-
-    let message =
-        "Something went wrong. Please try again.";
-
-
-    switch (error.code) {
-
-        case "auth/email-already-in-use":
-
-            message =
-                "This email is already registered.";
-
-            break;
-
-
-        case "auth/invalid-email":
-
-            message =
-                "Please enter a valid email address.";
-
-            break;
-
-
-        case "auth/weak-password":
-
-            message =
-                "Password is too weak. Use at least 6 characters.";
-
-            break;
-
-
-        case "auth/user-not-found":
-
-            message =
-                "No account found with this email.";
-
-            break;
-
-
-        case "auth/wrong-password":
-
-            message =
-                "Incorrect password.";
-
-            break;
-
-
-        case "auth/invalid-credential":
-
-            message =
-                "Email or password is incorrect.";
-
-            break;
-
-
-        case "auth/too-many-requests":
-
-            message =
-                "Too many attempts. Please try again later.";
-
-            break;
-
-
-        case "auth/network-request-failed":
-
-            message =
-                "Network error. Check your internet connection.";
-
-            break;
-
-
-        default:
-
-            if (error.message) {
-
-                message =
-                    error.message;
-
-            }
-
-            break;
-
-    }
-
-
-    setLoading(false);
-
-    showMessage(message);
-
-}
+  } else {
+    initialize();
+  }
+})();
