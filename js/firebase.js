@@ -5,15 +5,17 @@
 
 (function () {
   "use strict";
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyB9rQwRfcclCV7NItONW0VovZJ1XdETGWA",
-  authDomain: "m-neet-921dc.firebaseapp.com",
-  projectId: "m-neet-921dc",
-  storageBucket: "m-neet-921dc.firebasestorage.app",
-  messagingSenderId: "1091393586491",
-  appId: "1:1091393586491:web:07492d95943f03a62ee31e",
-  measurementId: "G-PH23Z707ME"
+
+  // Firebase configuration
+  // নিজের Firebase Console থেকে আসল তথ্য বসাতে হবে।
+  const firebaseConfig = {
+  apiKey: "AIzaSyApQOM_mtFZ16RiNJEaIUhb4iYFBIBRK58",
+  authDomain: "mneet-spark.firebaseapp.com",
+  databaseURL: "https://mneet-spark-default-rtdb.firebaseio.com",
+  projectId: "mneet-spark",
+  storageBucket: "mneet-spark.firebasestorage.app",
+  messagingSenderId: "252201633700",
+  appId: "1:252201633700:web:1a1e7a2cff1f0b168ea331"
 };
 
   // Check required Firebase configuration
